@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Background circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+    
+    <!-- Green quadrant (top-left) -->
+    <path
+        android:fillColor="#00AA00"
+        android:pathData="M54,54 L54,10 A44,44 0,0 1,98,54 L54,54 Z" />
+    
+    <!-- Red quadrant (top-right) -->
+    <path
+        android:fillColor="#FF6666"
+        android:pathData="M54,54 L98,54 A44,44 0,0 1,54,98 L54,54 Z" />
+    
+    <!-- Yellow quadrant (bottom-right) -->
+    <path
+        android:fillColor="#FFDD00"
+        android:pathData="M54,54 L54,98 A44,44 0,0 1,10,54 L54,54 Z" />
+    
+    <!-- Blue quadrant (bottom-left) -->
+    <path
+        android:fillColor="#2288FF"
+        android:pathData="M54,54 L10,54 A44,44 0,0 1,54,10 L54,54 Z" />
+    
+    <!-- Center circle -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M54,54m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0" />
+        
+</vector>

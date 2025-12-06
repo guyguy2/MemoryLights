@@ -33,3 +33,8 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Temporary files
+PLAN.md
+MEMORY_LIGHTS_PLUS_PLAN.md
+screenshot.png

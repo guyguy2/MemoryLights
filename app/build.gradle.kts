@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.guy.myapplication"
+    namespace = "com.happypuppy.memorylights"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.guy.myapplication"
+        applicationId = "com.happypuppy.memorylights"
         minSdk = 31
         targetSdk = 35
         versionCode = 1
