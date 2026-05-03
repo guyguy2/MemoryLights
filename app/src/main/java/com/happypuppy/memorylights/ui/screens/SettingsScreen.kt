@@ -72,6 +72,18 @@ fun SettingsScreen(
     val soundPackListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
+    // Snackbar host for transient settings-change confirmations (#33)
+    val snackbarHostState = remember { SnackbarHostState() }
+    fun toast(message: String) {
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
     // Check if the list can scroll down
     val canScrollDown by remember {
         derivedStateOf {
@@ -98,6 +110,7 @@ fun SettingsScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Black
     ) { paddingValues ->
         Column(
@@ -144,7 +157,10 @@ fun SettingsScreen(
                         SoundPackOption(
                             soundPack = soundPack,
                             isSelected = soundPack == currentSoundPack,
-                            onSelect = { onSoundPackSelected(soundPack) }
+                            onSelect = {
+                                onSoundPackSelected(soundPack)
+                                toast("Sound pack: ${soundPack.displayName}")
+                            }
                         )
                     }
 
@@ -221,8 +237,12 @@ fun SettingsScreen(
 
             
             // Difficulty setting card
+            val toggleDifficulty: (Boolean) -> Unit = { value ->
+                onDifficultyToggled(value)
+                toast("Difficulty: ${if (value) "On" else "Off"}")
+            }
             SettingsCard(
-                onClick = { onDifficultyToggled(!difficultyEnabled) }
+                onClick = { toggleDifficulty(!difficultyEnabled) }
             ) {
                 Row(
                     modifier = Modifier
@@ -255,7 +275,7 @@ fun SettingsScreen(
 
                     Switch(
                         checked = difficultyEnabled,
-                        onCheckedChange = onDifficultyToggled,
+                        onCheckedChange = toggleDifficulty,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -272,6 +292,7 @@ fun SettingsScreen(
                     pendingMemoryLightsPlusToggle = newValue
                 } else {
                     onMemoryLightsPlusToggled(newValue)
+                    toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
                 }
             }
             SettingsCard(
@@ -622,6 +643,7 @@ fun SettingsScreen(
                 TextButton(
                     onClick = {
                         onMemoryLightsPlusToggled(newValue)
+                        toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
                         pendingMemoryLightsPlusToggle = null
                     },
                     colors = ButtonDefaults.textButtonColors(

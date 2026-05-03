@@ -2,7 +2,7 @@ package com.happypuppy.memorylights.ui.viewmodels
 
 import androidx.lifecycle.LifecycleOwner
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
-import com.happypuppy.memorylights.data.manager.StatisticsManager
+import com.happypuppy.memorylights.data.repository.StatisticsRepository
 import com.happypuppy.memorylights.data.repository.AppSettings
 import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
@@ -36,7 +36,7 @@ class SimonGameViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var soundManager: SimonSoundManager
-    private lateinit var statisticsManager: StatisticsManager
+    private lateinit var statisticsRepository: StatisticsRepository
     private lateinit var settingsRepository: SettingsRepository
     private lateinit var settingsFlow: MutableStateFlow<AppSettings>
     private lateinit var statisticsFlow: MutableStateFlow<GameStatistics>
@@ -49,9 +49,9 @@ class SimonGameViewModelTest {
         every { soundManager.areSoundsLoaded() } returns true
         every { soundManager.getLoadError() } returns null
 
-        statisticsManager = mockk(relaxed = true)
+        statisticsRepository = mockk(relaxed = true)
         statisticsFlow = MutableStateFlow(GameStatistics())
-        every { statisticsManager.statisticsFlow } returns statisticsFlow
+        every { statisticsRepository.statisticsFlow } returns statisticsFlow
 
         settingsRepository = mockk(relaxed = true)
         settingsFlow = MutableStateFlow(AppSettings())
@@ -65,7 +65,7 @@ class SimonGameViewModelTest {
 
     private fun createViewModel(initial: AppSettings = AppSettings()): SimonGameViewModel {
         settingsFlow.value = initial
-        return SimonGameViewModel(soundManager, statisticsManager, settingsRepository)
+        return SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
     }
 
     /**
@@ -146,7 +146,7 @@ class SimonGameViewModelTest {
         assertEquals(1, vm.uiState.value.highScore4Button)
         assertTrue(vm.uiState.value.showHighScoreText || vm.uiState.value.showHighScoreParticles)
         verify { settingsRepository.setHighScore4Button(1) }
-        verify { statisticsManager.recordGameResult(1, any()) }
+        verify { statisticsRepository.recordGameResult(1, any()) }
     }
 
     @Test
@@ -182,7 +182,7 @@ class SimonGameViewModelTest {
         assertEquals(0, vm.uiState.value.highScore4Button)
         // 6-button score untouched (current mode is 4-button)
         assertEquals(8, vm.uiState.value.highScore6Button)
-        verify { statisticsManager.resetStatistics() }
+        verify { statisticsRepository.resetStatistics() }
         verify { settingsRepository.setHighScore4Button(0) }
     }
 

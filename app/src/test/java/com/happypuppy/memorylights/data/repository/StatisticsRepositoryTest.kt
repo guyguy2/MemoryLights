@@ -1,4 +1,4 @@
-package com.happypuppy.memorylights.data.manager
+package com.happypuppy.memorylights.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -19,14 +19,14 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StatisticsManagerTest {
+class StatisticsRepositoryTest {
 
     @get:Rule
     val tempFolder = TemporaryFolder()
 
     private lateinit var testScope: TestScope
     private lateinit var dataStore: DataStore<Preferences>
-    private lateinit var manager: StatisticsManager
+    private lateinit var repository: StatisticsRepository
 
     @Before
     fun setUp() {
@@ -36,7 +36,7 @@ class StatisticsManagerTest {
             scope = testScope,
             produceFile = { file }
         )
-        manager = StatisticsManager(dataStore, scope = testScope)
+        repository = StatisticsRepository(dataStore, scope = testScope)
     }
 
     @After
@@ -46,7 +46,7 @@ class StatisticsManagerTest {
 
     @Test
     fun `empty store emits zeroed statistics`() = runTest(testScope.testScheduler) {
-        manager.statisticsFlow.test {
+        repository.statisticsFlow.test {
             assertEquals(GameStatistics(), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
@@ -55,21 +55,21 @@ class StatisticsManagerTest {
     @Test
     fun `recordGameResult accumulates totals and tracks best streak`() =
         runTest(testScope.testScheduler) {
-            manager.statisticsFlow.test {
+            repository.statisticsFlow.test {
                 awaitItem()
-                manager.recordGameResult(score = 5, sequenceLength = 7)
+                repository.recordGameResult(score = 5, sequenceLength = 7)
                 val a = awaitItem()
                 assertEquals(1, a.gamesPlayed)
                 assertEquals(5, a.totalScore)
                 assertEquals(7, a.bestStreak)
 
-                manager.recordGameResult(score = 3, sequenceLength = 4)
+                repository.recordGameResult(score = 3, sequenceLength = 4)
                 val b = awaitItem()
                 assertEquals(2, b.gamesPlayed)
                 assertEquals(8, b.totalScore)
                 assertEquals(7, b.bestStreak) // not lowered
 
-                manager.recordGameResult(score = 9, sequenceLength = 10)
+                repository.recordGameResult(score = 9, sequenceLength = 10)
                 val c = awaitItem()
                 assertEquals(3, c.gamesPlayed)
                 assertEquals(17, c.totalScore)
@@ -80,12 +80,12 @@ class StatisticsManagerTest {
 
     @Test
     fun `resetStatistics clears all values`() = runTest(testScope.testScheduler) {
-        manager.statisticsFlow.test {
+        repository.statisticsFlow.test {
             awaitItem()
-            manager.recordGameResult(score = 8, sequenceLength = 9)
+            repository.recordGameResult(score = 8, sequenceLength = 9)
             assertEquals(8, awaitItem().totalScore)
 
-            manager.resetStatistics()
+            repository.resetStatistics()
             val cleared = awaitItem()
             assertEquals(GameStatistics(), cleared)
             cancelAndIgnoreRemainingEvents()
@@ -95,11 +95,11 @@ class StatisticsManagerTest {
     @Test
     fun `averageScore computes correctly across recordings`() =
         runTest(testScope.testScheduler) {
-            manager.statisticsFlow.test {
+            repository.statisticsFlow.test {
                 awaitItem()
-                manager.recordGameResult(score = 10, sequenceLength = 5)
+                repository.recordGameResult(score = 10, sequenceLength = 5)
                 awaitItem()
-                manager.recordGameResult(score = 20, sequenceLength = 5)
+                repository.recordGameResult(score = 20, sequenceLength = 5)
                 val state = awaitItem()
                 assertEquals(15.0, state.averageScore, 0.001)
                 cancelAndIgnoreRemainingEvents()

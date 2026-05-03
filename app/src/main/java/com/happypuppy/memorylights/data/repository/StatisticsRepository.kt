@@ -1,4 +1,4 @@
-package com.happypuppy.memorylights.data.manager
+package com.happypuppy.memorylights.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
@@ -30,7 +30,7 @@ private val Context.statisticsDataStore: DataStore<Preferences> by preferencesDa
  * Writes are fire-and-forget on an IO scope; persistence completes asynchronously.
  * Automatically migrates data from SharedPreferences on first access when constructed via [fromContext].
  */
-class StatisticsManager(
+class StatisticsRepository(
     private val dataStore: DataStore<Preferences>,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
@@ -40,8 +40,8 @@ class StatisticsManager(
         private val KEY_TOTAL_SCORE = intPreferencesKey("total_score")
         private val KEY_BEST_STREAK = intPreferencesKey("best_streak")
 
-        fun fromContext(context: Context): StatisticsManager =
-            StatisticsManager(context.statisticsDataStore)
+        fun fromContext(context: Context): StatisticsRepository =
+            StatisticsRepository(context.statisticsDataStore)
     }
 
     val statisticsFlow: Flow<GameStatistics> = dataStore.data.map { prefs ->

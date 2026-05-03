@@ -7,7 +7,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
-import com.happypuppy.memorylights.data.manager.StatisticsManager
+import com.happypuppy.memorylights.data.repository.StatisticsRepository
 import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.calculateSequenceTiming
@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
  */
 class SimonGameViewModel(
     private val soundManager: SimonSoundManager,
-    private val statisticsManager: StatisticsManager,
+    private val statisticsRepository: StatisticsRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel(), DefaultLifecycleObserver {
 
@@ -92,7 +92,7 @@ class SimonGameViewModel(
         }
 
         // Continuously sync statistics from repository so any write is reflected in UI
-        statisticsManager.statisticsFlow
+        statisticsRepository.statisticsFlow
             .onEach { stats -> _uiState.update { it.copy(statistics = stats) } }
             .launchIn(viewModelScope)
 
@@ -368,9 +368,9 @@ class SimonGameViewModel(
     fun resetHighScore() {
         Log.d(TAG, "Resetting high score for ${if (_uiState.value.memoryLightsPlusEnabled) "6-button" else "4-button"} mode and all statistics")
 
-        // Reset all statistics in the StatisticsManager (statisticsFlow collector
+        // Reset all statistics in the StatisticsRepository (statisticsFlow collector
         // updates uiState.statistics asynchronously)
-        statisticsManager.resetStatistics()
+        statisticsRepository.resetStatistics()
 
         // Optimistically zero the per-mode high score so the UI reflects the reset
         // without waiting for DataStore to round-trip.
@@ -394,7 +394,7 @@ class SimonGameViewModel(
      */
     fun resetStatistics() {
         Log.d(TAG, "Resetting all game statistics")
-        statisticsManager.resetStatistics()
+        statisticsRepository.resetStatistics()
     }
 
     // Initialize game state for a new game without animation
@@ -946,7 +946,7 @@ class SimonGameViewModel(
 
         // Record game result in statistics. The statisticsFlow collector updates
         // uiState.statistics once DataStore has persisted the new values.
-        statisticsManager.recordGameResult(currentLevel, _uiState.value.sequence.size)
+        statisticsRepository.recordGameResult(currentLevel, _uiState.value.sequence.size)
 
         // Persist the new high score for the active mode (per-key write).
         if (isNewHighScore) {
