@@ -10,7 +10,7 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 |---|---|
 | Architecture | MVVM with Koin DI, single `:app` module. `SimonGameViewModel` ~1,100 lines (large but functional). Repository pattern done for settings, statistics still in `data/manager/` (rename pending — item #29). |
 | Persistence | DataStore migration complete. **Off-main-thread Flow-based reads in place** (`settingsFlow`, `statisticsFlow`). `recordGameResult` now read+write inside single `dataStore.edit` — no more race. |
-| Sound | 4 real packs (standard, funny, electronic, retro), 3 placeholders (musical, nature, sci-fi) all aliased to `standard`. Lazy loading + memory trim done. Audio focus done. |
+| Sound | 7 real packs (standard, funny, electronic, retro, **musical**, **sci-fi**, **nature** — last 3 synth-generated 2026-05-03). Lazy loading + memory trim done. Audio focus done. |
 | Tests | 52 unit tests, all green (one removed when `GameState.Settings` was deleted in step 3). |
 | A11y | Content descriptions, state descriptions, role, level/state announcements, 48dp touch targets — all done. "HIGH SCORE!" still not announced (item #15). |
 | Build | **R8 + resource shrinking ON** for release. APK shrunk 35.5 MB → 7.2 MB. Koin + Activity keep rules in `proguard-rules.pro`. `Instantiatable` lint false positive suppressed via `tools:ignore` on MainActivity. `rootProject.name = "My Application"` still pending (item #23). `versionCode 1` `versionName 1.0` still pending. |
@@ -44,7 +44,7 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 | 10 | Guard all `Log.d` + reflection-based `listAllRawResources()` / `debugResourceNotFound()` with `BuildConfig.DEBUG` | ✅ Phase 2 step 3 (reflection helpers early-return when not debug; `buildConfig = true` enabled) | S | `app/build.gradle.kts`, `data/manager/SimonSoundManager.kt` |
 | 11 | Add `SimonGameViewModelTest` with `mockk` + `UnconfinedTestDispatcher` (deps already in catalog). Cover sequence-match, wrong-button → game over, timeout, high-score, lifecycle save/restore. | ✅ Phase 2 step 1 | L | `app/src/test/java/.../ui/viewmodels/SimonGameViewModelTest.kt` (8 tests), `app/src/test/java/.../domain/SequenceTimingTest.kt` (7 tests) |
 | 12 | Add `Turbine` to catalog; write flow tests for `DataStoreSettingsRepository` and `StatisticsManager` | ✅ Phase 2 step 2 | M | `gradle/libs.versions.toml`, `DataStoreSettingsRepositoryTest`, `StatisticsManagerTest` (10 tests, in-memory `PreferenceDataStoreFactory.create` + temp folder) |
-| 13 | Mark MUSICAL/NATURE/SCI_FI as "Coming Soon" in UI (see Sound Track below — implementing them obsoletes this) | ❌ 🆕 | S | `ui/screens/SettingsScreen.kt`, `domain/enums/SoundPack.kt` |
+| 13 | Mark MUSICAL/NATURE/SCI_FI as "Coming Soon" in UI (see Sound Track below — implementing them obsoletes this) | ⏭️ Phase 3 obsoleted (all 3 packs shipped 2026-05-03; descriptions now reflect actual content) | S | `ui/screens/SettingsScreen.kt`, `domain/enums/SoundPack.kt` |
 | 14 | Delete orphan `app/src/main/res/raw/guy/blue_tone.wav` (Android does not load nested raw resources) | ✅ Phase 0 | S | deleted |
 | 15 | Add HIGH SCORE accessibility announcement | ✅ Phase 2 step 3 | S | `ui/screens/SimonGameScreen.kt` |
 | 38 | `calculateSequenceTiming` has a dead `if` branch — difficulty trigger evaluates differently at level 5 vs 6-8. Collapse to `(currentLevel - 1) / DIFFICULTY_INTERVAL`, gated on `currentLevel >= 5`. | ✅ Phase 2 step 1 (collapsed during extraction to pure helper `domain/SequenceTiming.kt`; numeric output unchanged, locked by `SequenceTimingTest`) | S | `domain/SequenceTiming.kt`, `viewmodels/SimonGameViewModel.kt` |
@@ -250,12 +250,15 @@ After packs ship: remove the "Coming Soon" badge work from item #13. Until they 
    - Step 5 (multi-agent fixes — device-verified on Pixel_8_API_34): ✅ #39 (Warning icon + message replaces silent spinner when `soundLoadError != null`), #42 (themes.xml `windowBackground` + system bars set to black so splash matches the all-black UI), #44 (mode-switch confirm dialog when toggling Memory Lights+ during active game; verified: dialog shown, Cancel keeps mode unchanged), #46 (game-over center disc stacks final score / best score / play arrow). Smoke-tested through Settings → ML+ toggle → Cancel flow.
    - Step 4: P1 multi-agent finds — fix #38 (dead `if` branch in difficulty), #39 (render `soundLoadError`), #40 (vibration test-buzz side-effect), #41 (settings card double-tap), #42 (splash white flash), #43 (saveSettings write storm), #44 (mid-game mode-switch confirm), #45 (reset card title clarity), #46 (game-over score summary).
    - Step 5: #13 "Coming Soon" badge — throwaway, removed when sound packs ship in Phase 3. Skip if Phase 3 starts immediately after.
-4. **Phase 3 — Sound packs (2–3 days)** — Sound Track steps 1–6:
-   - Musical first (deterministic Python synth, fastest to iterate).
-   - Sci-Fi second (jsfxr exports + normalize via `sox`).
-   - Nature last (Freesound CC0 sourcing + license file + trim/normalize).
-   - Update `SoundPack.resourcePrefix` for all three; remove the "Coming Soon" badge added in Phase 2.
-   - Open Questions 1-3 (mapping, chiptune vs cinematic, sounds to favor/avoid) still need user input before starting.
+4. **Phase 3 — Sound packs (2026-05-03)** ✅ DONE — all 3 packs synth-generated, no third-party samples (license-clean):
+   - Musical: Python `numpy` additive synth (sine + 2 harmonics + ADSR), pentatonic piano-style: C5/E5/G5/A5/D5/F#5 + minor-2nd error cluster.
+   - Sci-Fi: Python synth, chiptune retro: ascending/descending bleeps, modulated square, filter sweep, laser zap, warp whoosh, klaxon error.
+   - Nature: Python synth approximations (Freesound/Pixabay CC0 sourcing requires account-gated downloads): bird chirp, water drop, wind chime, frog ribbit, cricket, thunder rumble, hawk screech.
+   - 21 WAVs at 44100 Hz mono 16-bit PCM, peak −1 dBFS, 220–500 ms each.
+   - `SoundPack.resourcePrefix` updated for all three; descriptions reflect actual content.
+   - `SimonSoundManager.getResourceId` `when` table extended with 21 new entries.
+   - Verified on Pixel_8_API_34 emulator: switching each pack triggers `Loading sound pack: X with prefix: x`, all 7 sounds `Successfully loaded`, no fallback warnings. Release APK builds at 7.8 MB (was 7.2 MB, +600 KB for new WAVs).
+   - `tools/sounds/{musical,scifi,nature}/generate.py` deterministic — re-running produces byte-identical output. License notes in `tools/sounds/SOUND_LICENSES.md`.
 5. **Phase 4 — Play Store prep (1 day):** item #23 (rootProject.name), signed AAB, store listing, screenshots showing all 7 packs, privacy policy.
 6. **Phase 5 — P2 polish (ongoing post-launch):** items #16–#37 (existing audit) **plus #47–#64** (multi-agent finds: thread-safety annotation, strings.xml, color dedupe, dead `index` field, narrow ProGuard keep, lambda/brush `remember`, animated lit/overlay transitions, tap-to-start affordance, Statistics icons, Typography migration, ripple cleanup, persistent turn cue, timeout countdown, speed-up signal, varied preview, sequence-progress indicator).
 7. **Phase 5 step 1 — P2 code-only cluster (2026-05-03):** ✅ #47 (`@MainThread` on `onButtonClick`), #49 (5 semantic dark surface tokens in `theme/Color.kt`), #50 (drop `SimonButton.index`), #52 (`remember`ed `handleButtonInteraction`), #53 (`remember`ed `buttonColors` + `buttonBrush` in `SimonPanel`). 50 unit tests green, lint clean.
@@ -301,8 +304,8 @@ Tweak the last line if you want to push further per session — e.g., "go throug
 
 ---
 
-## Open Questions (still need user input before Phase 3)
+## Open Questions (resolved 2026-05-03)
 
-1. **Musical pack mapping** — confirm pentatonic-style mapping (C5 / E5 / G5 / A5 / D5 / F#5 + dissonant error) or prefer a different scale / instrument? Current proposal stays consonant in any random sequence.
-2. **Sci-Fi pack** — preference for chiptune/8-bit feel (jsfxr default) vs more cinematic synth (would need different tooling)?
-3. **Nature pack** — any specific sounds to favor or avoid (e.g., no animal calls, only ambient)? Matters for Freesound search.
+1. **Musical pack mapping** — ✅ resolved: pentatonic piano-only (C5 / E5 / G5 / A5 / D5 / F#5 + minor-2nd error cluster). Single-instrument for consistent feel.
+2. **Sci-Fi pack** — ✅ resolved: chiptune retro (Python synth, jsfxr-style presets — square/saw with sweeps, klaxon error). License-free vs jsfxr GUI export.
+3. **Nature pack** — ✅ resolved: synth approximations rather than Freesound CC0. CC0 sourcing requires account-gated downloads; synth keeps the pipeline reproducible and license-clean. Documented in `tools/sounds/SOUND_LICENSES.md`.

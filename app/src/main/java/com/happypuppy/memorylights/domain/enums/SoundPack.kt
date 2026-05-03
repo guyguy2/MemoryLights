@@ -31,17 +31,17 @@ enum class SoundPack(
     ),
     MUSICAL(
         displayName = "Musical",
-        description = "Musical instrument tones",
-        resourcePrefix = "standard" // Uses standard sounds until musical sounds are added
+        description = "Pentatonic piano tones",
+        resourcePrefix = "musical"
     ),
     NATURE(
         displayName = "Nature",
-        description = "Peaceful sounds from nature",
-        resourcePrefix = "standard" // Uses standard sounds until nature sounds are added
+        description = "Birds, water, chimes, and rumble",
+        resourcePrefix = "nature"
     ),
     SCI_FI(
         displayName = "Sci-Fi",
-        description = "Futuristic space sounds",
-        resourcePrefix = "standard" // Uses standard sounds until sci-fi sounds are added
+        description = "Chiptune bleeps and zaps",
+        resourcePrefix = "scifi"
     )
 }

@@ -450,6 +450,33 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
             "retro_orange_tone" -> R.raw.retro_orange_tone
             "retro_error_tone" -> R.raw.retro_error_tone
 
+            // Musical sound pack - all 6 buttons
+            "musical_green_tone" -> R.raw.musical_green_tone
+            "musical_red_tone" -> R.raw.musical_red_tone
+            "musical_yellow_tone" -> R.raw.musical_yellow_tone
+            "musical_blue_tone" -> R.raw.musical_blue_tone
+            "musical_purple_tone" -> R.raw.musical_purple_tone
+            "musical_orange_tone" -> R.raw.musical_orange_tone
+            "musical_error_tone" -> R.raw.musical_error_tone
+
+            // Sci-Fi sound pack - all 6 buttons
+            "scifi_green_tone" -> R.raw.scifi_green_tone
+            "scifi_red_tone" -> R.raw.scifi_red_tone
+            "scifi_yellow_tone" -> R.raw.scifi_yellow_tone
+            "scifi_blue_tone" -> R.raw.scifi_blue_tone
+            "scifi_purple_tone" -> R.raw.scifi_purple_tone
+            "scifi_orange_tone" -> R.raw.scifi_orange_tone
+            "scifi_error_tone" -> R.raw.scifi_error_tone
+
+            // Nature sound pack - all 6 buttons
+            "nature_green_tone" -> R.raw.nature_green_tone
+            "nature_red_tone" -> R.raw.nature_red_tone
+            "nature_yellow_tone" -> R.raw.nature_yellow_tone
+            "nature_blue_tone" -> R.raw.nature_blue_tone
+            "nature_purple_tone" -> R.raw.nature_purple_tone
+            "nature_orange_tone" -> R.raw.nature_orange_tone
+            "nature_error_tone" -> R.raw.nature_error_tone
+
             // For all other resources, return 0 (not found)
             else -> {
                 Log.w(TAG, "Resource not found in direct mapping: $resourceName")
