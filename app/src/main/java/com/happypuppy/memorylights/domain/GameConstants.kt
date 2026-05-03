@@ -34,6 +34,7 @@ object GameConstants {
     // Difficulty scaling
     const val DIFFICULTY_REDUCTION_PERCENT = 0.2
     const val DIFFICULTY_INTERVAL = 4 // Speed increases every 4 rounds starting at round 5
+    const val SPEED_UP_TEXT_DISPLAY_MS = 1200L
 
     // Sound settings
     const val DEFAULT_MASTER_VOLUME = 1.0f

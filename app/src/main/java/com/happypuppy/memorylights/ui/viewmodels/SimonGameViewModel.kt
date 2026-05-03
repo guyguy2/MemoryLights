@@ -138,6 +138,7 @@ class SimonGameViewModel(
     private var activeSequenceJob: Job? = null
     private var gameOverTextAnimationJob: Job? = null
     private var highScoreTextAnimationJob: Job? = null
+    private var speedUpTextJob: Job? = null
 
     /**
      * Switch to settings screen.
@@ -313,7 +314,9 @@ class SimonGameViewModel(
             gameOverTextAnimationJob = null
             highScoreTextAnimationJob?.cancel()
             highScoreTextAnimationJob = null
-            
+            speedUpTextJob?.cancel()
+            speedUpTextJob = null
+
             // Update UI state with new mode and reset game
             _uiState.update { it.copy(
                 memoryLightsPlusEnabled = enabled,
@@ -325,6 +328,7 @@ class SimonGameViewModel(
                 currentlyLit = null,
                 allButtonsLit = false,
                 showYourTurnText = false,
+                showSpeedUpText = false,
                 showHighScoreParticles = false,
                 showHighScoreText = false,
                 showGameOverText = false
@@ -430,6 +434,8 @@ class SimonGameViewModel(
         gameOverTextAnimationJob = null
         highScoreTextAnimationJob?.cancel()
         highScoreTextAnimationJob = null
+        speedUpTextJob?.cancel()
+        speedUpTextJob = null
         cancelTimeoutTimer()
 
         _uiState.update {
@@ -441,7 +447,8 @@ class SimonGameViewModel(
                 showHighScoreParticles = false,
                 showHighScoreText = false,
                 showGameOverText = false,
-                showYourTurnText = false
+                showYourTurnText = false,
+                showSpeedUpText = false
             )
         }
         showSequence()
@@ -455,9 +462,11 @@ class SimonGameViewModel(
         gameOverTextAnimationJob = null
         highScoreTextAnimationJob?.cancel()
         highScoreTextAnimationJob = null
-        
+        speedUpTextJob?.cancel()
+        speedUpTextJob = null
+
         // Clear particle effects, high score text, game over text, and YOUR TURN text when starting new game
-        _uiState.update { it.copy(showHighScoreParticles = false, showHighScoreText = false, showGameOverText = false, showYourTurnText = false) }
+        _uiState.update { it.copy(showHighScoreParticles = false, showHighScoreText = false, showGameOverText = false, showYourTurnText = false, showSpeedUpText = false) }
         // No startup animation on manual game restart
         initializeNewGame()
     }
@@ -752,13 +761,32 @@ class SimonGameViewModel(
 
     // Advance to the next level
     private fun advanceToNextLevel() {
-        Log.d(TAG, "Advancing to level ${_uiState.value.level + 1}")
+        val newLevel = _uiState.value.level + 1
+        Log.d(TAG, "Advancing to level $newLevel")
+
+        // Detect crossing into a faster difficulty tier so the UI can flash
+        // a "Speed Up!" cue. Mirrors the threshold in calculateSequenceTiming:
+        // every DIFFICULTY_INTERVAL levels starting at level 5 (5, 9, 13, ...).
+        val crossedSpeedTier = _uiState.value.difficultyEnabled &&
+                newLevel >= 5 &&
+                (newLevel - 1) % GameConstants.DIFFICULTY_INTERVAL == 0
+
         _uiState.update { it.copy(
-            level = it.level + 1,
+            level = newLevel,
             roundCount = it.roundCount + 1,
             gameState = GameState.ShowingSequence,
-            playerSequence = emptyList()
+            playerSequence = emptyList(),
+            showSpeedUpText = crossedSpeedTier
         ) }
+
+        if (crossedSpeedTier) {
+            speedUpTextJob?.cancel()
+            speedUpTextJob = viewModelScope.launch {
+                delay(GameConstants.SPEED_UP_TEXT_DISPLAY_MS)
+                _uiState.update { it.copy(showSpeedUpText = false) }
+                speedUpTextJob = null
+            }
+        }
 
         // Generate new sequence that includes the previous one
         generateNextSequence()
@@ -1041,6 +1069,8 @@ class SimonGameViewModel(
         gameOverTextAnimationJob = null
         highScoreTextAnimationJob?.cancel()
         highScoreTextAnimationJob = null
+        speedUpTextJob?.cancel()
+        speedUpTextJob = null
 
         soundManager.release()
     }

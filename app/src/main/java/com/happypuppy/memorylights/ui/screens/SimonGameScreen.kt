@@ -736,6 +736,19 @@ fun SimonGameScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
+                                // Sequence-progress indicator under the level number
+                                // during the player's turn. Players lose count of
+                                // long sequences without a visible step counter (#64).
+                                if (uiState.gameState == GameState.PlayerRepeating &&
+                                    uiState.sequence.isNotEmpty()
+                                ) {
+                                    Text(
+                                        text = "${uiState.playerSequence.size} / ${uiState.sequence.size}",
+                                        color = Color.Gray,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
 
@@ -842,6 +855,32 @@ fun SimonGameScreen(
                 }
             }
 
+            // SPEED UP! transient overlay when difficulty crosses a faster tier
+            // (level 5, 9, 13, ... with difficulty enabled). Clears itself via
+            // SPEED_UP_TEXT_DISPLAY_MS. Surfaces a change that was previously
+            // invisible to the player (#62).
+            AnimatedVisibility(
+                visible = uiState.showSpeedUpText,
+                enter = fadeIn() + scaleIn(initialScale = 0.7f),
+                exit = fadeOut() + scaleOut(targetScale = 0.7f),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SPEED UP!",
+                        color = Color(0xFFFF7043),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
+                            .shadow(4.dp)
+                    )
+                }
+            }
+
             // YOUR TURN text overlay when it's player's turn to repeat the sequence
             AnimatedVisibility(
                 visible = uiState.gameState == GameState.PlayerRepeating && uiState.showYourTurnText,
@@ -865,20 +904,40 @@ fun SimonGameScreen(
                 }
             }
             
-            // Subtle interactive indicator for later rounds when YOUR TURN text is not shown
-            if (uiState.gameState == GameState.PlayerRepeating && !uiState.showYourTurnText) {
-                // Add a subtle pulse glow around the center circle to indicate interactivity
+            // Persistent player-turn cue: a pulsing halo around the center disc
+            // for the entire PlayerRepeating phase. The "YOUR TURN" text only
+            // shows for the first 3 rounds (#15 a11y) — after that, this halo
+            // is the sole turn indicator, so it animates to stay legible
+            // peripherally even at high levels (#60).
+            if (uiState.gameState == GameState.PlayerRepeating) {
+                val turnTransition = rememberInfiniteTransition(label = "turnPulse")
+                val turnAlpha by turnTransition.animateFloat(
+                    initialValue = 0.06f,
+                    targetValue = 0.18f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "turnAlpha"
+                )
+                val turnScale by turnTransition.animateFloat(
+                    initialValue = 1.0f,
+                    targetValue = 1.05f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "turnScale"
+                )
                 Box(
                     modifier = Modifier
-                        .size(130.dp) // Slightly larger than center circle
+                        .size(130.dp)
+                        .graphicsLayer(scaleX = turnScale, scaleY = turnScale)
                         .background(
-                            Color.White.copy(alpha = 0.1f),
+                            Color.White.copy(alpha = turnAlpha),
                             RoundedCornerShape(65.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(modifier = Modifier.size(110.dp)) // Match center circle size
-                }
+                        )
+                )
             }
             
             // Particle effect overlay for new high score celebration

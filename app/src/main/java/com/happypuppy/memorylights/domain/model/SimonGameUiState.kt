@@ -35,6 +35,7 @@ data class SimonGameUiState(
     val showHighScoreText: Boolean = false, // Whether to show flashing HIGH SCORE text
     val showGameOverText: Boolean = false, // Whether to show flashing GAME OVER text
     val showYourTurnText: Boolean = false, // Whether to show YOUR TURN text overlay
+    val showSpeedUpText: Boolean = false, // Whether to show transient SPEED UP! overlay (difficulty tier crossed)
     val statistics: GameStatistics = GameStatistics(), // Current game statistics
     val soundsLoaded: Boolean = false, // Whether all game sounds have finished loading
     val soundLoadError: String? = null, // Error message if sound loading failed
