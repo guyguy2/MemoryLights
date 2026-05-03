@@ -1,7 +1,11 @@
 package com.happypuppy.memorylights.data.manager
 
+import android.content.ComponentCallbacks2
 import android.content.Context
+import android.content.res.Configuration
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.SoundPool
 import android.os.Build
 import android.os.VibrationEffect
@@ -9,25 +13,77 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Manages sound effects for the Memory Lights game with support for multiple sound packs
- * Enhanced with debug logging and lifecycle awareness
+ * Manages sound effects for the Memory Lights game with support for multiple sound packs.
+ * Features:
+ * - Lazy loading: Only loads current sound pack at startup, others on demand
+ * - Memory-aware: Releases unused sound packs when memory is low
+ * - Audio focus: Properly handles audio focus for integration with other apps
+ * - Graceful degradation: Falls back to haptic feedback when sounds fail
+ * - Volume control: Supports master volume adjustment
  */
-class SimonSoundManager(private val context: Context) {
+class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
 
-    private val TAG = "SimonSoundManager"
+    companion object {
+        private const val TAG = "SimonSoundManager"
+    }
 
     private val soundPool: SoundPool
+    private val audioManager: AudioManager by lazy {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+
+    // Audio focus handling
+    private var hasAudioFocus = false
+    private val audioFocusRequest: AudioFocusRequest by lazy {
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+            .setAudioAttributes(audioAttributes)
+            .setOnAudioFocusChangeListener(audioFocusChangeListener)
+            .build()
+    }
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                Log.d(TAG, "Audio focus lost permanently")
+                hasAudioFocus = false
+                pauseSounds()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                Log.d(TAG, "Audio focus lost transiently")
+                hasAudioFocus = false
+                pauseSounds()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                Log.d(TAG, "Audio focus lost - ducking")
+                // Lower volume instead of pausing for short interruptions
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                Log.d(TAG, "Audio focus gained")
+                hasAudioFocus = true
+                resumeSounds()
+            }
+        }
+    }
+
+    // Audio attributes for game sounds
+    private val audioAttributes = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_GAME)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
 
     // Flag to track if sounds are paused when app is in background
     private var isPaused = false
-    
+
     // Flag to track if sounds are muted
     private var isMuted = false
+
+    // Master volume control (0.0 to 1.0)
+    private var masterVolume = GameConstants.DEFAULT_MASTER_VOLUME
 
     // Vibration settings and control
     private var vibrateEnabled = true
@@ -41,6 +97,9 @@ class SimonSoundManager(private val context: Context) {
     private val soundPackMap = mutableMapOf<SoundPack, Map<SimonButton, Int>>()
     private val errorSoundMap = mutableMapOf<SoundPack, Int>()
 
+    // Track which sound packs are currently loaded
+    private val loadedSoundPacks = mutableSetOf<SoundPack>()
+
     // Currently active sound pack
     private var currentSoundPack = SoundPack.STANDARD
 
@@ -50,17 +109,25 @@ class SimonSoundManager(private val context: Context) {
     // Track currently playing sound streams to be able to stop them
     private var activeStreamId: Int = 0
 
+    // Callback for sound loading completion
+    private var onSoundsLoadedCallback: ((Boolean, String?) -> Unit)? = null
+
+    // Track total sounds to load and loaded count for current loading operation
+    private var totalSoundsToLoad = 0
+    private var soundsLoadedCount = 0
+    private var loadError: String? = null
+
+    // Track if initial loading is complete
+    private var initialLoadComplete = false
+
     init {
         Log.d(TAG, "Initializing SimonSoundManager")
 
+        // Register for memory callbacks
+        context.applicationContext.registerComponentCallbacks(this)
+
         // List all raw resources to verify what's available
         listAllRawResources()
-
-        // Configure audio attributes for game sounds
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_GAME)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
 
         // Create a SoundPool optimized for short game sounds
         soundPool = SoundPool.Builder()
@@ -73,10 +140,50 @@ class SimonSoundManager(private val context: Context) {
             val success = status == 0
             loadStatusMap[sampleId] = success
             Log.d(TAG, "Sound loaded: ID=$sampleId, Success=$success")
+
+            soundsLoadedCount++
+            if (!success) {
+                loadError = "Failed to load sound ID: $sampleId"
+            }
+
+            // Check if all sounds are loaded for current operation
+            if (soundsLoadedCount >= totalSoundsToLoad && totalSoundsToLoad > 0) {
+                Log.d(TAG, "Sound pack loaded: $soundsLoadedCount/$totalSoundsToLoad, error=$loadError")
+                if (!initialLoadComplete) {
+                    initialLoadComplete = true
+                    onSoundsLoadedCallback?.invoke(loadError == null, loadError)
+                }
+            }
         }
 
-        // Load all sound packs
-        loadAllSounds()
+        // Lazy loading: Only load the default/current sound pack at startup
+        loadCurrentSoundPackOnly()
+    }
+
+    /**
+     * Set a callback to be notified when all sounds are loaded
+     * @param callback Called with (success, errorMessage) when loading completes
+     */
+    fun setOnSoundsLoadedListener(callback: (Boolean, String?) -> Unit) {
+        onSoundsLoadedCallback = callback
+        // If sounds are already loaded, call immediately
+        if (soundsLoadedCount >= totalSoundsToLoad && totalSoundsToLoad > 0) {
+            callback(loadError == null, loadError)
+        }
+    }
+
+    /**
+     * Check if all sounds are loaded
+     */
+    fun areSoundsLoaded(): Boolean {
+        return soundsLoadedCount >= totalSoundsToLoad && totalSoundsToLoad > 0
+    }
+
+    /**
+     * Get sound loading error message if any
+     */
+    fun getLoadError(): String? {
+        return loadError
     }
 
     /**
@@ -110,20 +217,53 @@ class SimonSoundManager(private val context: Context) {
     }
 
     /**
-     * Load sounds for all available sound packs
+     * Load only the current sound pack at startup (lazy loading)
      */
-    private fun loadAllSounds() {
+    private fun loadCurrentSoundPackOnly() {
         try {
-            // Log available sound packs
-            Log.d(TAG, "Available sound packs: ${SoundPack.entries.joinToString { it.name }}")
+            Log.d(TAG, "Lazy loading: Loading only current sound pack: ${currentSoundPack.name}")
 
-            // Load each sound pack
-            for (soundPack in SoundPack.entries) {
-                loadSoundPack(soundPack)
-            }
+            // Calculate total sounds to load for just one pack: buttons + error
+            totalSoundsToLoad = SimonButton.entries.size + 1
+            soundsLoadedCount = 0
+            loadError = null
+            Log.d(TAG, "Total sounds to load: $totalSoundsToLoad")
+
+            // Load only the current sound pack
+            loadSoundPack(currentSoundPack)
         } catch (e: Exception) {
             Log.e(TAG, "Error loading sounds", e)
+            loadError = e.message
         }
+    }
+
+    /**
+     * Ensure a sound pack is loaded, loading it on-demand if necessary
+     * @return true if the sound pack is ready to use
+     */
+    private fun ensureSoundPackLoaded(soundPack: SoundPack): Boolean {
+        if (loadedSoundPacks.contains(soundPack)) {
+            return true
+        }
+
+        Log.d(TAG, "On-demand loading sound pack: ${soundPack.name}")
+
+        // Check if this pack shares resources with an already loaded pack
+        val existingPack = loadedSoundPacks.find { it.resourcePrefix == soundPack.resourcePrefix }
+        if (existingPack != null) {
+            Log.d(TAG, "Sound pack ${soundPack.name} uses same resources as ${existingPack.name}, reusing")
+            soundPackMap[soundPack] = soundPackMap[existingPack] ?: emptyMap()
+            errorSoundMap[soundPack] = errorSoundMap[existingPack] ?: 0
+            loadedSoundPacks.add(soundPack)
+            return true
+        }
+
+        // Load the sound pack
+        loadSoundPack(soundPack)
+
+        // Note: Loading is asynchronous, so we return false and the caller should retry
+        // For simplicity in this implementation, we load synchronously by returning after adding to set
+        return loadedSoundPacks.contains(soundPack)
     }
 
     /**
@@ -192,6 +332,9 @@ class SimonSoundManager(private val context: Context) {
 
             // Add the button sound map to the pack map
             soundPackMap[soundPack] = buttonSoundMap
+
+            // Mark this sound pack as loaded
+            loadedSoundPacks.add(soundPack)
 
             // Log summary of loaded sounds for this pack
             logSoundPackSummary(soundPack, buttonSoundMap)
@@ -314,6 +457,26 @@ class SimonSoundManager(private val context: Context) {
     }
 
     /**
+     * Request audio focus before playing sounds
+     * @return true if audio focus was granted
+     */
+    fun requestAudioFocus(): Boolean {
+        val result = audioManager.requestAudioFocus(audioFocusRequest)
+        hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        Log.d(TAG, "Audio focus request result: $result, hasAudioFocus=$hasAudioFocus")
+        return hasAudioFocus
+    }
+
+    /**
+     * Abandon audio focus when done playing
+     */
+    fun abandonAudioFocus() {
+        audioManager.abandonAudioFocusRequest(audioFocusRequest)
+        hasAudioFocus = false
+        Log.d(TAG, "Audio focus abandoned")
+    }
+
+    /**
      * Pause all sounds
      * Called when app goes to background
      */
@@ -326,6 +489,9 @@ class SimonSoundManager(private val context: Context) {
 
         // Auto-pause SoundPool
         soundPool.autoPause()
+
+        // Abandon audio focus
+        abandonAudioFocus()
     }
 
     /**
@@ -338,13 +504,21 @@ class SimonSoundManager(private val context: Context) {
 
         // Auto-resume SoundPool
         soundPool.autoResume()
+
+        // Request audio focus
+        requestAudioFocus()
     }
 
     /**
      * Change the active sound pack
+     * This method ensures the new pack is loaded on-demand if necessary
      */
     fun setSoundPack(soundPack: SoundPack) {
         Log.d(TAG, "Changing sound pack to: ${soundPack.name}")
+
+        // Ensure the sound pack is loaded before switching
+        ensureSoundPackLoaded(soundPack)
+
         currentSoundPack = soundPack
     }
 
@@ -431,7 +605,8 @@ class SimonSoundManager(private val context: Context) {
     }
     
     /**
-     * Play the sound associated with a specific Simon button using the current sound pack
+     * Play the sound associated with a specific Simon button using the current sound pack.
+     * Implements graceful degradation - if sound fails, haptic feedback is still provided.
      *
      * @param button The button to play sound for
      * @param isPlayerPressed Whether this sound is from a player pressing a button (for vibration)
@@ -439,10 +614,9 @@ class SimonSoundManager(private val context: Context) {
     fun playSound(button: SimonButton, isPlayerPressed: Boolean = false) {
         Log.d(TAG, "🔊 Request to play sound for button: $button with sound pack: ${currentSoundPack.name}, player pressed: $isPlayerPressed")
 
-        // Handle vibration first, independently from sound state
+        // Handle vibration first, independently from sound state (graceful degradation)
         if (isPlayerPressed) {
             Log.d(TAG, "📳 Player pressed button, triggering vibration")
-            // Force this to run on the main thread - it might be getting lost otherwise
             android.os.Handler(android.os.Looper.getMainLooper()).post {
                 vibrate()
             }
@@ -454,44 +628,35 @@ class SimonSoundManager(private val context: Context) {
             return
         }
 
+        // Ensure current sound pack is loaded
+        if (!loadedSoundPacks.contains(currentSoundPack)) {
+            Log.w(TAG, "Sound pack ${currentSoundPack.name} not loaded, attempting to load")
+            ensureSoundPackLoaded(currentSoundPack)
+        }
+
         // Stop any currently playing sound
         stopAllSounds()
 
         val soundMap = soundPackMap[currentSoundPack]
         if (soundMap == null) {
             Log.e(TAG, "❌ Sound map not found for sound pack: ${currentSoundPack.name}")
-            // Log all available sound packs for debugging
             Log.e(TAG, "Available sound packs: ${soundPackMap.keys.joinToString { it.name }}")
+            // Graceful degradation: vibration was already handled above
             return
         }
 
         val soundId = soundMap[button]
         if (soundId == null) {
-            Log.e(TAG, "❌ Sound ID not found for button: $button in sound pack: ${currentSoundPack.name}")
-            // Log all available buttons in the sound map for debugging
-            Log.e(TAG, "Available buttons in ${currentSoundPack.name}: ${soundMap.keys.joinToString { it.name }}")
-            // Extra debugging - show what resource name we're looking for
-            val prefix = currentSoundPack.resourcePrefix
-            val expectedResourceName = "${prefix}_${button.name.lowercase()}_tone"
-            Log.e(TAG, "Expected resource name: $expectedResourceName")
-            val resourceId = getResourceId(expectedResourceName)
-            Log.e(TAG, "Resource ID lookup result: $resourceId")
-            
-            // FALLBACK: Try to use a working sound as substitute (for PURPLE/ORANGE buttons only)
-            if (button == SimonButton.PURPLE || button == SimonButton.ORANGE) {
-                Log.w(TAG, "🔧 FALLBACK: Attempting to use GREEN button sound for ${button.name}")
-                val fallbackSoundId = soundMap[SimonButton.GREEN]
-                if (fallbackSoundId != null) {
-                    Log.i(TAG, "✓ Using GREEN button sound as fallback for ${button.name}")
-                    // Play the fallback sound
-                    val playId = soundPool.play(fallbackSoundId, 1.0f, 1.0f, 1, 0, 1.0f)
-                    if (playId != 0) {
-                        activeStreamId = playId
-                        Log.i(TAG, "✓ Fallback sound playing successfully")
-                    }
-                    return
-                }
+            Log.w(TAG, "Sound not available for $button in ${currentSoundPack.name}, using haptic feedback only")
+
+            // FALLBACK: Try to use a working sound as substitute
+            val fallbackSoundId = soundMap[SimonButton.GREEN]
+            if (fallbackSoundId != null) {
+                Log.i(TAG, "Using GREEN button sound as fallback for ${button.name}")
+                playSoundWithVolume(fallbackSoundId)
+                return
             }
+            // Graceful degradation: vibration was already handled above
             return
         }
 
@@ -499,35 +664,26 @@ class SimonSoundManager(private val context: Context) {
         Log.d(TAG, "🎵 Playing ${currentSoundPack.name} sound for button $button (ID=$soundId, Loaded=$loadStatus)")
 
         if (!loadStatus) {
-            Log.w(TAG, "⚠️ Attempting to play sound that hasn't finished loading: $soundId")
+            Log.w(TAG, "Sound hasn't finished loading: $soundId, using haptic feedback only")
+            // Graceful degradation: vibration was already handled above
+            return
         }
 
-        // Check audio state before playing
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        val currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-        val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
-        Log.d(TAG, "🔊 Current audio state: Volume=${currentVolume}/${maxVolume}")
+        playSoundWithVolume(soundId)
+    }
 
-        // Special logging for PURPLE and ORANGE buttons to debug the issue
-        if (button == SimonButton.PURPLE || button == SimonButton.ORANGE) {
-            Log.i(TAG, "🟣🟠 DEBUGGING ${button.name} BUTTON:")
-            Log.i(TAG, "  - SoundID: $soundId")
-            Log.i(TAG, "  - LoadStatus: $loadStatus")
-            Log.i(TAG, "  - Sound Pack: ${currentSoundPack.name}")
-            Log.i(TAG, "  - Resource Prefix: ${currentSoundPack.resourcePrefix}")
-            Log.i(TAG, "  - Expected Resource: ${currentSoundPack.resourcePrefix}_${button.name.lowercase()}_tone")
-        }
+    /**
+     * Play a sound with the current master volume setting
+     */
+    private fun playSoundWithVolume(soundId: Int, volumeMultiplier: Float = 1.0f) {
+        val volume = masterVolume * volumeMultiplier
+        val clampedVolume = volume.coerceIn(GameConstants.MIN_VOLUME, GameConstants.MAX_VOLUME)
 
-        // Play sound with default priority, no loop, normal rate
-        val playId = soundPool.play(soundId, 1.0f, 1.0f, 1, 0, 1.0f)
+        val playId = soundPool.play(soundId, clampedVolume, clampedVolume, 1, 0, 1.0f)
         if (playId == 0) {
-            Log.e(TAG, "❌ Failed to play sound for button $button (playId=0)")
-            // Extra logging for PURPLE/ORANGE failures
-            if (button == SimonButton.PURPLE || button == SimonButton.ORANGE) {
-                Log.e(TAG, "🚨 ${button.name} BUTTON SOUND FAILED TO PLAY! SoundID=$soundId, LoadStatus=$loadStatus")
-            }
+            Log.e(TAG, "❌ Failed to play sound (playId=0)")
         } else {
-            Log.d(TAG, "✓ Successfully playing sound for button $button (playId=$playId)")
+            Log.d(TAG, "✓ Playing sound (playId=$playId, volume=$clampedVolume)")
             activeStreamId = playId
         }
     }
@@ -544,17 +700,18 @@ class SimonSoundManager(private val context: Context) {
     }
 
     /**
-     * Play the error sound for when player makes a mistake using the current sound pack
+     * Play the error sound for when player makes a mistake using the current sound pack.
+     * Implements graceful degradation - if sound fails, haptic feedback is still provided.
      */
     fun playErrorSound() {
         Log.d(TAG, "Request to play error sound with sound pack: ${currentSoundPack.name}")
 
-        // Handle error vibration first, independently from sound state
+        // Handle error vibration first, independently from sound state (graceful degradation)
         if (vibrateEnabled && !isPaused) {
             try {
                 Log.d(TAG, "📳 Triggering error vibration")
                 // Create a pattern for error: vibrate-pause-vibrate
-                val timings = longArrayOf(0, 100, 100, 100)
+                val timings = longArrayOf(0, GameConstants.VIBRATION_DURATION_MS, 100, GameConstants.VIBRATION_DURATION_MS)
                 val amplitudes = intArrayOf(0, VibrationEffect.DEFAULT_AMPLITUDE, 0, VibrationEffect.DEFAULT_AMPLITUDE)
                 vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
             } catch (e: Exception) {
@@ -568,12 +725,19 @@ class SimonSoundManager(private val context: Context) {
             return
         }
 
+        // Ensure current sound pack is loaded
+        if (!loadedSoundPacks.contains(currentSoundPack)) {
+            Log.w(TAG, "Sound pack ${currentSoundPack.name} not loaded, attempting to load")
+            ensureSoundPackLoaded(currentSoundPack)
+        }
+
         // Stop any currently playing sound
         stopAllSounds()
 
         val errorSoundId = errorSoundMap[currentSoundPack]
         if (errorSoundId == null) {
-            Log.e(TAG, "❌ Error sound ID not found for sound pack: ${currentSoundPack.name}")
+            Log.w(TAG, "Error sound not available for ${currentSoundPack.name}, using haptic feedback only")
+            // Graceful degradation: vibration was already handled above
             return
         }
 
@@ -581,22 +745,13 @@ class SimonSoundManager(private val context: Context) {
         Log.d(TAG, "Playing ${currentSoundPack.name} error sound (ID=$errorSoundId, Loaded=$loadStatus)")
 
         if (!loadStatus) {
-            Log.w(TAG, "⚠️ Attempting to play error sound that hasn't finished loading")
+            Log.w(TAG, "Error sound hasn't finished loading, using haptic feedback only")
+            // Graceful degradation: vibration was already handled above
+            return
         }
 
-        // Check audio state before playing
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-        val currentVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
-        Log.d(TAG, "Current audio state: Volume=$currentVolume")
-
-        // Play error sound with slightly higher priority, no loop, normal rate
-        val playId = soundPool.play(errorSoundId, 1.2f, 1.2f, 2, 0, 1.0f)
-        if (playId == 0) {
-            Log.e(TAG, "Failed to play error sound (playId=0)")
-        } else {
-            Log.d(TAG, "✓ Successfully playing error sound (playId=$playId)")
-            activeStreamId = playId
-        }
+        // Play error sound with slightly higher volume
+        playSoundWithVolume(errorSoundId, GameConstants.ERROR_SOUND_VOLUME_BOOST)
     }
 
     /**
@@ -605,6 +760,120 @@ class SimonSoundManager(private val context: Context) {
     fun release() {
         Log.d(TAG, "Releasing SoundPool resources")
         stopAllSounds()
+        abandonAudioFocus()
+        context.applicationContext.unregisterComponentCallbacks(this)
         soundPool.release()
+    }
+
+    // --- Volume Control Methods ---
+
+    /**
+     * Set the master volume for all sounds
+     * @param volume Volume level from 0.0 (silent) to 1.0 (full volume)
+     */
+    fun setMasterVolume(volume: Float) {
+        masterVolume = volume.coerceIn(GameConstants.MIN_VOLUME, GameConstants.MAX_VOLUME)
+        Log.d(TAG, "Master volume set to: $masterVolume")
+    }
+
+    /**
+     * Get the current master volume
+     * @return Volume level from 0.0 to 1.0
+     */
+    fun getMasterVolume(): Float {
+        return masterVolume
+    }
+
+    // --- ComponentCallbacks2 Implementation (Memory-aware loading) ---
+
+    /**
+     * Called when the system needs to reclaim memory.
+     * Releases unused sound packs to free memory.
+     */
+    @Suppress("DEPRECATION")
+    override fun onTrimMemory(level: Int) {
+        Log.d(TAG, "onTrimMemory called with level: $level")
+
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE -> {
+                Log.d(TAG, "Memory running moderate - no action needed")
+            }
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                Log.d(TAG, "Memory running low - releasing unused sound packs")
+                releaseUnusedSoundPacks()
+            }
+            ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            ComponentCallbacks2.TRIM_MEMORY_MODERATE,
+            ComponentCallbacks2.TRIM_MEMORY_COMPLETE -> {
+                Log.d(TAG, "Critical memory situation - releasing all unused sound packs")
+                releaseUnusedSoundPacks()
+            }
+            else -> {
+                Log.d(TAG, "Unknown trim memory level: $level")
+            }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        // No action needed for configuration changes
+        Log.d(TAG, "Configuration changed")
+    }
+
+    @Deprecated("Deprecated in ComponentCallbacks2", ReplaceWith("onTrimMemory(level)"))
+    override fun onLowMemory() {
+        Log.d(TAG, "onLowMemory called - releasing unused sound packs")
+        releaseUnusedSoundPacks()
+    }
+
+    /**
+     * Release sound packs that are not currently in use to free memory.
+     * Always keeps the current sound pack loaded.
+     */
+    private fun releaseUnusedSoundPacks() {
+        val packsToRelease = loadedSoundPacks.filter { it != currentSoundPack }
+
+        if (packsToRelease.isEmpty()) {
+            Log.d(TAG, "No unused sound packs to release")
+            return
+        }
+
+        Log.d(TAG, "Releasing ${packsToRelease.size} unused sound packs: ${packsToRelease.joinToString { it.name }}")
+
+        for (soundPack in packsToRelease) {
+            // Remove from tracking
+            loadedSoundPacks.remove(soundPack)
+
+            // Unload the sounds
+            soundPackMap[soundPack]?.values?.forEach { soundId ->
+                soundPool.unload(soundId)
+                loadStatusMap.remove(soundId)
+            }
+            soundPackMap.remove(soundPack)
+
+            errorSoundMap[soundPack]?.let { errorSoundId ->
+                soundPool.unload(errorSoundId)
+                loadStatusMap.remove(errorSoundId)
+            }
+            errorSoundMap.remove(soundPack)
+
+            Log.d(TAG, "Released sound pack: ${soundPack.name}")
+        }
+    }
+
+    /**
+     * Get the number of currently loaded sound packs
+     * Useful for debugging and testing memory management
+     */
+    fun getLoadedSoundPackCount(): Int {
+        return loadedSoundPacks.size
+    }
+
+    /**
+     * Get list of currently loaded sound packs
+     * Useful for debugging and testing memory management
+     */
+    fun getLoadedSoundPacks(): Set<SoundPack> {
+        return loadedSoundPacks.toSet()
     }
 }
