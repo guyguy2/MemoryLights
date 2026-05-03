@@ -687,9 +687,12 @@ fun SoundPackOption(
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // onClick = null so the RadioButton itself doesn't ripple — the Row
+        // clickable handles selection (and ripples once over the full row),
+        // avoiding the previous double-ripple on every pack-row tap (#59).
         RadioButton(
             selected = isSelected,
-            onClick = onSelect,
+            onClick = null,
             colors = RadioButtonDefaults.colors(
                 selectedColor = MaterialTheme.colorScheme.primary,
                 unselectedColor = Color.Gray

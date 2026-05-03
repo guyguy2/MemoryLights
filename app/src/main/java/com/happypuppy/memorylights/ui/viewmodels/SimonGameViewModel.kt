@@ -66,6 +66,11 @@ class SimonGameViewModel(
     // and viewModelScope launches default to Dispatchers.Main.immediate.
     private val activePresses = mutableSetOf<SimonButton>()
 
+    // Cursor for the sound-pack preview tone. Advances each time the player
+    // taps a pack so they audition multiple colors rather than only GREEN
+    // every time (#63). Wraps around the available button list.
+    private var previewToneIndex = 0
+
     init {
         Log.d(TAG, "Initializing SimonGameViewModel")
 
@@ -250,7 +255,13 @@ class SimonGameViewModel(
 
         soundManager.setSoundPack(soundPack)
         _uiState.update { it.copy(currentSoundPack = soundPack) }
-        soundManager.playSound(SimonButton.GREEN)
+
+        // Cycle the preview tone across the available buttons so the player
+        // hears the pack's full character, not always GREEN.
+        val availableButtons = SimonButton.getAvailableButtons(_uiState.value.memoryLightsPlusEnabled)
+        val previewButton = availableButtons[previewToneIndex % availableButtons.size]
+        previewToneIndex = (previewToneIndex + 1) % availableButtons.size
+        soundManager.playSound(previewButton)
 
         settingsRepository.setSoundPack(soundPack)
     }

@@ -33,6 +33,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -62,6 +63,15 @@ import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.SimonPanel
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
+
+// Bias-based alignment for the four center-anchored text overlays
+// (HIGH SCORE, GAME OVER, SPEED UP, YOUR TURN). Each overlay sits above
+// the center disc; the bias is roughly proportional to screen height so
+// the text floats consistently across phone sizes without a magic dp
+// offset (#31).
+private val OverlayBias6Button = BiasAlignment(0f, -0.18f)
+private val OverlayBias4Button = BiasAlignment(0f, -0.07f)
+private val OverlayBias4ButtonTurn = BiasAlignment(0f, -0.13f)
 
 @Composable
 fun MemoryLightsGame(viewModel: SimonGameViewModel) {
@@ -264,9 +274,14 @@ fun SimonGameScreen(
                         .background(Color.Black)
                 )
 
-                // Simon Says colored panels - Dynamic layout based on mode and orientation
-                val configuration = LocalConfiguration.current
-                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                // Simon Says colored panels - Dynamic layout based on mode and orientation.
+                // remember keyed on the orientation int so the boolean is stable
+                // across unrelated Configuration changes (font scale, locale,
+                // density). Full panel extraction tracked separately as #17.
+                val orientation = LocalConfiguration.current.orientation
+                val isLandscape = remember(orientation) {
+                    orientation == Configuration.ORIENTATION_LANDSCAPE
+                }
                 
                 if (uiState.memoryLightsPlusEnabled) {
                     // 6-button mode: Layout changes based on orientation
@@ -394,7 +409,7 @@ fun SimonGameScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .padding(2.dp),
+                                    .padding(4.dp),
                                 onTouchStateChanged = { isPressed ->
                                     handleButtonInteraction(SimonButton.GREEN, isPressed)
                                 }
@@ -826,7 +841,7 @@ fun SimonGameScreen(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
+                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
                     )
                 }
@@ -849,7 +864,7 @@ fun SimonGameScreen(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
+                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
                     )
                 }
@@ -875,7 +890,7 @@ fun SimonGameScreen(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
+                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
                     )
                 }
@@ -898,7 +913,7 @@ fun SimonGameScreen(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-140).dp)
+                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4ButtonTurn)
                             .shadow(4.dp)
                     )
                 }

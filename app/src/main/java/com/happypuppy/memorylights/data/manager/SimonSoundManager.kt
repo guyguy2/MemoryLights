@@ -627,12 +627,13 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
     fun playSound(button: SimonButton, isPlayerPressed: Boolean = false) {
         Log.d(TAG, "🔊 Request to play sound for button: $button with sound pack: ${currentSoundPack.name}, player pressed: $isPlayerPressed")
 
-        // Handle vibration first, independently from sound state (graceful degradation)
+        // Handle vibration first, independently from sound state (graceful degradation).
+        // playSound is only invoked from @MainThread callers (ViewModel.onButtonClick
+        // and viewModelScope launches default to Dispatchers.Main.immediate), and
+        // VibrationManager itself is thread-safe — no Handler indirection needed.
         if (isPlayerPressed) {
             Log.d(TAG, "📳 Player pressed button, triggering vibration")
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                vibrate()
-            }
+            vibrate()
         }
 
         // Don't play sound if paused or muted, but vibration was already handled above

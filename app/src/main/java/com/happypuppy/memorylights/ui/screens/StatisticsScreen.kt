@@ -7,8 +7,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -81,11 +85,12 @@ fun StatisticsScreen(
                 )
             }
 
-            // Statistics Cards
+            // Statistics Cards. Each row gets a distinct icon so the eye can
+            // anchor on the metric without reading every label (#57).
             StatisticCard(
                 title = "Games Played",
                 value = statistics.gamesPlayed.toString(),
-                icon = Icons.Default.DateRange,
+                icon = Icons.Default.PlayArrow,
                 color = Color(0xFF2196F3)
             )
 
@@ -99,21 +104,21 @@ fun StatisticsScreen(
             StatisticCard(
                 title = "Average Score",
                 value = String.format("%.1f", statistics.averageScore),
-                icon = Icons.Default.DateRange,
+                icon = Icons.AutoMirrored.Filled.List,
                 color = Color(0xFF4CAF50)
             )
 
             StatisticCard(
                 title = "Total Score",
                 value = statistics.totalScore.toString(),
-                icon = Icons.Default.DateRange,
+                icon = Icons.Default.AddCircle,
                 color = Color(0xFF9C27B0)
             )
 
             StatisticCard(
                 title = "Best Streak",
                 value = statistics.bestStreak.toString(),
-                icon = Icons.Default.Star,
+                icon = Icons.Default.CheckCircle,
                 color = Color(0xFFFF5722)
             )
 
