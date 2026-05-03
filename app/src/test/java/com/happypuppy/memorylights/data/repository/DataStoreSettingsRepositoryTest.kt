@@ -124,4 +124,14 @@ class DataStoreSettingsRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `setPracticeModeEnabled persists`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(false, awaitItem().practiceModeEnabled)
+            repo.setPracticeModeEnabled(true)
+            assertEquals(true, awaitItem().practiceModeEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

@@ -28,7 +28,8 @@ data class AppSettings(
     val soundEnabled: Boolean = true,
     val difficultyEnabled: Boolean = false,
     val memoryLightsPlusEnabled: Boolean = false,
-    val playerTimeoutSeconds: Int = 10
+    val playerTimeoutSeconds: Int = 10,
+    val practiceModeEnabled: Boolean = false
 )
 
 /**
@@ -48,6 +49,7 @@ interface SettingsRepository {
     fun setDifficultyEnabled(enabled: Boolean)
     fun setMemoryLightsPlusEnabled(enabled: Boolean)
     fun setPlayerTimeoutSeconds(seconds: Int)
+    fun setPracticeModeEnabled(enabled: Boolean)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -79,6 +81,7 @@ class DataStoreSettingsRepository(
         private val KEY_DIFFICULTY_ENABLED = booleanPreferencesKey("difficulty_enabled")
         private val KEY_MEMORY_LIGHTS_PLUS_ENABLED = booleanPreferencesKey("memory_lights_plus_enabled")
         private val KEY_PLAYER_TIMEOUT_SECONDS = intPreferencesKey("player_timeout_seconds")
+        private val KEY_PRACTICE_MODE_ENABLED = booleanPreferencesKey("practice_mode_enabled")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -93,7 +96,8 @@ class DataStoreSettingsRepository(
             soundEnabled = prefs[KEY_SOUND_ENABLED] ?: true,
             difficultyEnabled = prefs[KEY_DIFFICULTY_ENABLED] ?: false,
             memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false,
-            playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10
+            playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10,
+            practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false
         )
     }
 
@@ -115,6 +119,7 @@ class DataStoreSettingsRepository(
     override fun setDifficultyEnabled(enabled: Boolean) = write { it[KEY_DIFFICULTY_ENABLED] = enabled }
     override fun setMemoryLightsPlusEnabled(enabled: Boolean) = write { it[KEY_MEMORY_LIGHTS_PLUS_ENABLED] = enabled }
     override fun setPlayerTimeoutSeconds(seconds: Int) = write { it[KEY_PLAYER_TIMEOUT_SECONDS] = seconds }
+    override fun setPracticeModeEnabled(enabled: Boolean) = write { it[KEY_PRACTICE_MODE_ENABLED] = enabled }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

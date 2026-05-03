@@ -55,10 +55,12 @@ fun SettingsScreen(
     highScore: Int = 0,
     hasActiveGame: Boolean = false,
     playerTimeoutSeconds: Int = 10,
+    practiceModeEnabled: Boolean = false,
     onSoundPackSelected: (SoundPack) -> Unit,
     onDifficultyToggled: (Boolean) -> Unit = {},
     onMemoryLightsPlusToggled: (Boolean) -> Unit = {},
     onPlayerTimeoutChanged: (Int) -> Unit = {},
+    onPracticeModeToggled: (Boolean) -> Unit = {},
     onResetHighScore: () -> Unit = {},
     onStatisticsClicked: () -> Unit = {},
     onBackPressed: () -> Unit
@@ -288,6 +290,58 @@ fun SettingsScreen(
                 }
             }
             
+            // Practice Mode card (F15). Toggle: wrong buttons replay the
+            // sequence instead of ending the run. High scores do not advance
+            // while enabled — by design, practice runs are never recorded.
+            val togglePractice: (Boolean) -> Unit = { value ->
+                onPracticeModeToggled(value)
+                toast("Practice Mode: ${if (value) "On" else "Off"}")
+            }
+            SettingsCard(
+                onClick = { togglePractice(!practiceModeEnabled) }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.reset_score_24px),
+                        contentDescription = "Practice Mode",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Practice Mode",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+
+                        Text(
+                            text = "Wrong buttons replay the sequence instead of ending the run. High scores are not recorded while enabled.",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Switch(
+                        checked = practiceModeEnabled,
+                        onCheckedChange = togglePractice,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.DarkGray
+                        )
+                    )
+                }
+            }
+
             // Timeout duration card — segmented control of inactivity timeouts.
             // Pairs with the countdown ring (#61): the ring drains over the
             // selected duration, so this slider lets fast/slow players tune the

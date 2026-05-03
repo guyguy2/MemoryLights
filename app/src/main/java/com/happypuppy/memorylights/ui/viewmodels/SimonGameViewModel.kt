@@ -132,7 +132,8 @@ class SimonGameViewModel(
             soundEnabled = settings.soundEnabled,
             difficultyEnabled = settings.difficultyEnabled,
             memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled,
-            playerTimeoutSeconds = settings.playerTimeoutSeconds
+            playerTimeoutSeconds = settings.playerTimeoutSeconds,
+            practiceModeEnabled = settings.practiceModeEnabled
         )}
     }
 
@@ -363,6 +364,18 @@ class SimonGameViewModel(
         if (_uiState.value.gameState == GameState.PlayerRepeating) {
             resetTimeoutTimer()
         }
+    }
+
+    /**
+     * Toggle Practice Mode (F15). When enabled, a wrong button does not end
+     * the game — the sequence replays from the start so the player can try
+     * again. High scores never advance in practice mode because the game-
+     * over → recordGameResult path is never taken.
+     */
+    fun setPracticeModeEnabled(enabled: Boolean) {
+        Log.d(TAG, "Setting practice mode enabled: $enabled")
+        _uiState.update { it.copy(practiceModeEnabled = enabled) }
+        settingsRepository.setPracticeModeEnabled(enabled)
     }
 
     /**
@@ -754,26 +767,14 @@ class SimonGameViewModel(
         // Safety check: make sure index is valid for both sequences
         if (index < 0 || index >= _uiState.value.sequence.size) {
             Log.e(TAG, "Invalid index $index: player sequence=${playerSequence.size}, game sequence=${_uiState.value.sequence.size}")
-
-            // Player has clicked beyond the expected sequence length
-            // This is a game over condition - the player made an error by entering too many buttons
-            viewModelScope.launch {
-                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-                handleGameOver("Game over - player entered too many buttons")
-            }
+            handleWrongButton("Game over - player entered too many buttons")
             return
         }
 
         if (playerSequence[index] != _uiState.value.sequence[index]) {
             // Wrong button
             Log.d(TAG, "Wrong button selected! Expected: ${_uiState.value.sequence[index]}, Got: ${playerSequence[index]}")
-
-            // Brief delay before game over to allow button sound to play
-            viewModelScope.launch {
-                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-                // Wrong button - game over
-                handleGameOver()
-            }
+            handleWrongButton("Wrong button pressed")
             return
         }
 
@@ -794,6 +795,36 @@ class SimonGameViewModel(
     // Handle game over state - Simplified version that calls the main implementation
     private fun handleGameOver() {
         handleGameOver("Wrong button pressed")
+    }
+
+    /**
+     * Wrong-button branch shared by [checkSequenceMatch]'s "out of bounds" and
+     * "mismatch" paths. In normal play this routes to [handleGameOver]; in
+     * practice mode (F15) it plays the error tone, briefly waits, clears the
+     * player's progress, and replays the same sequence so the player can try
+     * again without losing their level.
+     */
+    private fun handleWrongButton(reason: String) {
+        if (_uiState.value.practiceModeEnabled) {
+            Log.d(TAG, "Practice mode: $reason — replaying sequence instead of game over")
+            cancelTimeoutTimer()
+            soundManager.playErrorSound()
+            viewModelScope.launch {
+                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
+                if (!isAppInForeground) return@launch
+                _uiState.update { it.copy(
+                    playerSequence = emptyList(),
+                    currentlyLit = null,
+                    showYourTurnText = false
+                )}
+                showSequence()
+            }
+            return
+        }
+        viewModelScope.launch {
+            delay(GameConstants.BUTTON_SOUND_DURATION_MS)
+            handleGameOver(reason)
+        }
     }
 
     // Flash all buttons to indicate game over

@@ -237,5 +237,29 @@ class SimonGameViewModelTest {
             assertEquals(1, state.level)
             verify { settingsRepository.setMemoryLightsPlusEnabled(true) }
         }
+
+    @Test
+    fun `practice mode wrong button replays sequence instead of game over`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true, highScore4Button = 0))
+            advanceToPlayerTurn()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val correct = vm.uiState.value.sequence[0]
+            val wrong = available.first { it != correct }
+
+            vm.onButtonClick(wrong, isPress = true)
+            // wrong-button delay (300) + showSequence redraw (500 + 600 + 400) = ~1800ms
+            advanceTimeBy(2_500)
+            runCurrent()
+
+            // Game must NOT be over; sequence replays so we land back in PlayerRepeating
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            // High score must not advance — practice mode never reaches handleGameOver
+            assertEquals(0, vm.uiState.value.highScore4Button)
+            verify(exactly = 0) { settingsRepository.setHighScore4Button(any()) }
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+        }
 }
 
