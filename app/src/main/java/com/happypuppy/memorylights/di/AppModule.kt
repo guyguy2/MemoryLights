@@ -17,10 +17,10 @@ val appModule = module {
     single { SimonSoundManager(androidContext()) }
 
     // Single instance of StatisticsManager using constructor reference
-    single { StatisticsManager(androidContext()) }
+    single { StatisticsManager.fromContext(androidContext()) }
 
     // Settings repository for persisting game settings (uses DataStore with SharedPreferences migration)
-    single<SettingsRepository> { DataStoreSettingsRepository(androidContext()) }
+    single<SettingsRepository> { DataStoreSettingsRepository.fromContext(androidContext()) }
 
     // ViewModel using the core module dsl syntax for Koin 4.x
     viewModelOf(::SimonGameViewModel)

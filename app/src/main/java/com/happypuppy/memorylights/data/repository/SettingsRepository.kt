@@ -59,9 +59,12 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 /**
  * DataStore implementation of SettingsRepository.
- * Automatically migrates data from SharedPreferences on first access.
+ * Automatically migrates data from SharedPreferences on first access when constructed via [fromContext].
  */
-class DataStoreSettingsRepository(context: Context) : SettingsRepository {
+class DataStoreSettingsRepository(
+    private val dataStore: DataStore<Preferences>,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+) : SettingsRepository {
 
     companion object {
         private const val TAG = "SettingsRepository"
@@ -73,10 +76,10 @@ class DataStoreSettingsRepository(context: Context) : SettingsRepository {
         private val KEY_SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         private val KEY_DIFFICULTY_ENABLED = booleanPreferencesKey("difficulty_enabled")
         private val KEY_MEMORY_LIGHTS_PLUS_ENABLED = booleanPreferencesKey("memory_lights_plus_enabled")
-    }
 
-    private val dataStore = context.settingsDataStore
-    private val scope = CoroutineScope(Dispatchers.IO)
+        fun fromContext(context: Context): DataStoreSettingsRepository =
+            DataStoreSettingsRepository(context.settingsDataStore)
+    }
 
     override val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
         AppSettings(

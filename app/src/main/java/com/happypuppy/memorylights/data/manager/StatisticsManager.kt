@@ -28,19 +28,22 @@ private val Context.statisticsDataStore: DataStore<Preferences> by preferencesDa
  *
  * Reads are exposed as a Flow so callers stay off the main thread.
  * Writes are fire-and-forget on an IO scope; persistence completes asynchronously.
- * Automatically migrates data from SharedPreferences on first access.
+ * Automatically migrates data from SharedPreferences on first access when constructed via [fromContext].
  */
-class StatisticsManager(context: Context) {
+class StatisticsManager(
+    private val dataStore: DataStore<Preferences>,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+) {
 
     companion object {
         private val KEY_GAMES_PLAYED = intPreferencesKey("games_played")
         private val KEY_HIGH_SCORE = intPreferencesKey("high_score")
         private val KEY_TOTAL_SCORE = intPreferencesKey("total_score")
         private val KEY_BEST_STREAK = intPreferencesKey("best_streak")
-    }
 
-    private val dataStore = context.statisticsDataStore
-    private val scope = CoroutineScope(Dispatchers.IO)
+        fun fromContext(context: Context): StatisticsManager =
+            StatisticsManager(context.statisticsDataStore)
+    }
 
     val statisticsFlow: Flow<GameStatistics> = dataStore.data.map { prefs ->
         GameStatistics(
