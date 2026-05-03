@@ -38,3 +38,6 @@ google-services.json
 PLAN.md
 MEMORY_LIGHTS_PLUS_PLAN.md
 screenshot.png
+
+# Claude Code local config
+.claude/
