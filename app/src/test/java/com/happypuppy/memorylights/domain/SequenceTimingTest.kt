@@ -24,38 +24,38 @@ class SequenceTimingTest {
     }
 
     @Test
-    fun `level 5 triggers first speed reduction`() {
+    fun `level 5 produces first reduction below base`() {
         val (lit, pause) = calculateSequenceTiming(level = 5, difficultyEnabled = true)
-        // 600 * 0.8 = 480, 400 * 0.8 = 320
-        assertEquals(480L, lit)
-        assertEquals(320L, pause)
+        assertEquals(510L, lit)
+        assertEquals(340L, pause)
     }
 
     @Test
-    fun `levels 6 7 8 carry one speed reduction`() {
-        listOf(6, 7, 8).forEach { level ->
+    fun `each level above baseline reduces timing further`() {
+        // F5: smooth log curve, every level past 4 shaves a little more.
+        var prevLit = GameConstants.BASE_LIT_DURATION_MS
+        var prevPause = GameConstants.BASE_PAUSE_DURATION_MS
+        for (level in 5..15) {
             val (lit, pause) = calculateSequenceTiming(level, difficultyEnabled = true)
-            assertEquals("level=$level lit", 480L, lit)
-            assertEquals("level=$level pause", 320L, pause)
+            assert(lit < prevLit) { "level=$level lit $lit should be < prev $prevLit" }
+            assert(pause < prevPause) { "level=$level pause $pause should be < prev $prevPause" }
+            prevLit = lit
+            prevPause = pause
         }
     }
 
     @Test
-    fun `level 9 triggers second speed reduction`() {
+    fun `level 9 timing matches expected log curve value`() {
         val (lit, pause) = calculateSequenceTiming(level = 9, difficultyEnabled = true)
-        // factor = 1 - 2*0.2 = 0.6
-        assertEquals(360L, lit)
-        assertEquals(240L, pause)
+        assertEquals(369L, lit)
+        assertEquals(246L, pause)
     }
 
     @Test
-    fun `timing decreases monotonically across speed thresholds`() {
-        val l5 = calculateSequenceTiming(5, difficultyEnabled = true)
-        val l9 = calculateSequenceTiming(9, difficultyEnabled = true)
-        val l13 = calculateSequenceTiming(13, difficultyEnabled = true)
-        assert(l5.first > l9.first) { "L5 lit ${l5.first} should exceed L9 lit ${l9.first}" }
-        assert(l9.first > l13.first) { "L9 lit ${l9.first} should exceed L13 lit ${l13.first}" }
-        assert(l5.second > l9.second) { "L5 pause ${l5.second} should exceed L9 pause ${l9.second}" }
+    fun `level 13 timing matches expected log curve value`() {
+        val (lit, pause) = calculateSequenceTiming(level = 13, difficultyEnabled = true)
+        assertEquals(303L, lit)
+        assertEquals(202L, pause)
     }
 
     @Test

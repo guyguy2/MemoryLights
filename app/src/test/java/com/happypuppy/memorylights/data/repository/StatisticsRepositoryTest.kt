@@ -57,23 +57,54 @@ class StatisticsRepositoryTest {
         runTest(testScope.testScheduler) {
             repository.statisticsFlow.test {
                 awaitItem()
+                // First game: score 5 > 0 baseline, streak becomes 1.
                 repository.recordGameResult(score = 5, sequenceLength = 7)
                 val a = awaitItem()
                 assertEquals(1, a.gamesPlayed)
                 assertEquals(5, a.totalScore)
-                assertEquals(7, a.bestStreak)
+                assertEquals(1, a.bestStreak)
 
-                repository.recordGameResult(score = 3, sequenceLength = 4)
+                // Second game: score 7 > previous 5, streak grows to 2.
+                repository.recordGameResult(score = 7, sequenceLength = 9)
                 val b = awaitItem()
                 assertEquals(2, b.gamesPlayed)
-                assertEquals(8, b.totalScore)
-                assertEquals(7, b.bestStreak) // not lowered
+                assertEquals(12, b.totalScore)
+                assertEquals(2, b.bestStreak)
 
-                repository.recordGameResult(score = 9, sequenceLength = 10)
+                // Third game: score 3 < previous 7, streak resets to 0,
+                // bestStreak holds at 2.
+                repository.recordGameResult(score = 3, sequenceLength = 5)
                 val c = awaitItem()
                 assertEquals(3, c.gamesPlayed)
-                assertEquals(17, c.totalScore)
-                assertEquals(10, c.bestStreak)
+                assertEquals(15, c.totalScore)
+                assertEquals(2, c.bestStreak)
+
+                // Fourth game: score 9 > previous 3, new run begins at 1.
+                repository.recordGameResult(score = 9, sequenceLength = 11)
+                val d = awaitItem()
+                assertEquals(4, d.gamesPlayed)
+                assertEquals(24, d.totalScore)
+                assertEquals(2, d.bestStreak)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun `streak counts consecutive level improvements not raw sequence length`() =
+        runTest(testScope.testScheduler) {
+            repository.statisticsFlow.test {
+                awaitItem()
+                // Three consecutive improvements should yield streak 3.
+                repository.recordGameResult(score = 2, sequenceLength = 2)
+                assertEquals(1, awaitItem().bestStreak)
+                repository.recordGameResult(score = 5, sequenceLength = 5)
+                assertEquals(2, awaitItem().bestStreak)
+                repository.recordGameResult(score = 8, sequenceLength = 8)
+                assertEquals(3, awaitItem().bestStreak)
+
+                // Equal score (no improvement) breaks the run; bestStreak frozen.
+                repository.recordGameResult(score = 8, sequenceLength = 8)
+                assertEquals(3, awaitItem().bestStreak)
                 cancelAndIgnoreRemainingEvents()
             }
         }

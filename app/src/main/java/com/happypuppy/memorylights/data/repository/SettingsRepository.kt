@@ -29,7 +29,8 @@ data class AppSettings(
     val difficultyEnabled: Boolean = false,
     val memoryLightsPlusEnabled: Boolean = false,
     val playerTimeoutSeconds: Int = 10,
-    val practiceModeEnabled: Boolean = false
+    val practiceModeEnabled: Boolean = false,
+    val reverseModeEnabled: Boolean = false
 )
 
 /**
@@ -50,6 +51,7 @@ interface SettingsRepository {
     fun setMemoryLightsPlusEnabled(enabled: Boolean)
     fun setPlayerTimeoutSeconds(seconds: Int)
     fun setPracticeModeEnabled(enabled: Boolean)
+    fun setReverseModeEnabled(enabled: Boolean)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -82,6 +84,7 @@ class DataStoreSettingsRepository(
         private val KEY_MEMORY_LIGHTS_PLUS_ENABLED = booleanPreferencesKey("memory_lights_plus_enabled")
         private val KEY_PLAYER_TIMEOUT_SECONDS = intPreferencesKey("player_timeout_seconds")
         private val KEY_PRACTICE_MODE_ENABLED = booleanPreferencesKey("practice_mode_enabled")
+        private val KEY_REVERSE_MODE_ENABLED = booleanPreferencesKey("reverse_mode_enabled")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -97,7 +100,8 @@ class DataStoreSettingsRepository(
             difficultyEnabled = prefs[KEY_DIFFICULTY_ENABLED] ?: false,
             memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false,
             playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10,
-            practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false
+            practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false,
+            reverseModeEnabled = prefs[KEY_REVERSE_MODE_ENABLED] ?: false
         )
     }
 
@@ -120,6 +124,7 @@ class DataStoreSettingsRepository(
     override fun setMemoryLightsPlusEnabled(enabled: Boolean) = write { it[KEY_MEMORY_LIGHTS_PLUS_ENABLED] = enabled }
     override fun setPlayerTimeoutSeconds(seconds: Int) = write { it[KEY_PLAYER_TIMEOUT_SECONDS] = seconds }
     override fun setPracticeModeEnabled(enabled: Boolean) = write { it[KEY_PRACTICE_MODE_ENABLED] = enabled }
+    override fun setReverseModeEnabled(enabled: Boolean) = write { it[KEY_REVERSE_MODE_ENABLED] = enabled }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

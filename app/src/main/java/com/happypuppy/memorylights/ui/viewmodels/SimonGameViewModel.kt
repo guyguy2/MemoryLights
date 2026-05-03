@@ -133,7 +133,8 @@ class SimonGameViewModel(
             difficultyEnabled = settings.difficultyEnabled,
             memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled,
             playerTimeoutSeconds = settings.playerTimeoutSeconds,
-            practiceModeEnabled = settings.practiceModeEnabled
+            practiceModeEnabled = settings.practiceModeEnabled,
+            reverseModeEnabled = settings.reverseModeEnabled
         )}
     }
 
@@ -376,6 +377,17 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting practice mode enabled: $enabled")
         _uiState.update { it.copy(practiceModeEnabled = enabled) }
         settingsRepository.setPracticeModeEnabled(enabled)
+    }
+
+    /**
+     * Toggle Reverse Mode (F1). When enabled, the player must repeat the
+     * sequence in reverse order — the watch-then-recall puzzle inverts.
+     * The display still plays forward; only the comparison flips.
+     */
+    fun setReverseModeEnabled(enabled: Boolean) {
+        Log.d(TAG, "Setting reverse mode enabled: $enabled")
+        _uiState.update { it.copy(reverseModeEnabled = enabled) }
+        settingsRepository.setReverseModeEnabled(enabled)
     }
 
     /**
@@ -763,17 +775,26 @@ class SimonGameViewModel(
 
     private fun checkSequenceMatch(playerSequence: List<SimonButton>) {
         val index = playerSequence.size - 1
+        val sequence = _uiState.value.sequence
 
         // Safety check: make sure index is valid for both sequences
-        if (index < 0 || index >= _uiState.value.sequence.size) {
-            Log.e(TAG, "Invalid index $index: player sequence=${playerSequence.size}, game sequence=${_uiState.value.sequence.size}")
+        if (index < 0 || index >= sequence.size) {
+            Log.e(TAG, "Invalid index $index: player sequence=${playerSequence.size}, game sequence=${sequence.size}")
             handleWrongButton("Game over - player entered too many buttons")
             return
         }
 
-        if (playerSequence[index] != _uiState.value.sequence[index]) {
-            // Wrong button
-            Log.d(TAG, "Wrong button selected! Expected: ${_uiState.value.sequence[index]}, Got: ${playerSequence[index]}")
+        // Reverse mode (F1) inverts the expected order: player watches the
+        // sequence forward but must press buttons in reverse. The display
+        // path is untouched — only the per-step comparison flips.
+        val expected = if (_uiState.value.reverseModeEnabled) {
+            sequence[sequence.size - 1 - index]
+        } else {
+            sequence[index]
+        }
+
+        if (playerSequence[index] != expected) {
+            Log.d(TAG, "Wrong button selected! Expected: $expected, Got: ${playerSequence[index]}")
             handleWrongButton("Wrong button pressed")
             return
         }

@@ -41,7 +41,8 @@ data class SimonGameUiState(
     val soundLoadError: String? = null, // Error message if sound loading failed
     val timeoutResetTick: Int = 0, // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
     val playerTimeoutSeconds: Int = 10, // Configurable inactivity timeout (5/10/15/30 sec). Drives both the timer and ring drain duration
-    val practiceModeEnabled: Boolean = false // Practice mode (F15): wrong button replays sequence instead of ending game
+    val practiceModeEnabled: Boolean = false, // Practice mode (F15): wrong button replays sequence instead of ending game
+    val reverseModeEnabled: Boolean = false // Reverse mode (F1): player must repeat sequence in reverse order
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int

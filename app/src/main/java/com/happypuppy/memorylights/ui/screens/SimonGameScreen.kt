@@ -95,11 +95,13 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                         previousState is GameState.Paused,
                 playerTimeoutSeconds = uiState.playerTimeoutSeconds,
                 practiceModeEnabled = uiState.practiceModeEnabled,
+                reverseModeEnabled = uiState.reverseModeEnabled,
                 onSoundPackSelected = { viewModel.setSoundPack(it) },
                 onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
                 onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
                 onPlayerTimeoutChanged = { viewModel.setPlayerTimeoutSeconds(it) },
                 onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
+                onReverseModeToggled = { viewModel.setReverseModeEnabled(it) },
                 onResetHighScore = { viewModel.resetHighScore() },
                 onStatisticsClicked = { viewModel.showStatistics() },
                 onBackPressed = { viewModel.exitSettings() }

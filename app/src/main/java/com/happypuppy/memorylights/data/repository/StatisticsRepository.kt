@@ -39,6 +39,8 @@ class StatisticsRepository(
         private val KEY_GAMES_PLAYED = intPreferencesKey("games_played")
         private val KEY_TOTAL_SCORE = intPreferencesKey("total_score")
         private val KEY_BEST_STREAK = intPreferencesKey("best_streak")
+        private val KEY_CURRENT_STREAK = intPreferencesKey("current_streak")
+        private val KEY_PREVIOUS_LEVEL = intPreferencesKey("previous_level")
 
         fun fromContext(context: Context): StatisticsRepository =
             StatisticsRepository(context.statisticsDataStore)
@@ -52,16 +54,30 @@ class StatisticsRepository(
         )
     }
 
+    /**
+     * Record a finished game's result. F7 win-streak semantics:
+     * `bestStreak` tracks the longest run of consecutive games where each
+     * exceeded the previous game's level. A run is broken whenever the
+     * player matches or fails to beat the prior level. The first game of
+     * a run counts as 1 (any score > 0 starts a streak from a baseline of 0).
+     */
     fun recordGameResult(score: Int, sequenceLength: Int) {
         scope.launch {
             dataStore.edit { prefs ->
                 val gamesPlayed = prefs[KEY_GAMES_PLAYED] ?: 0
                 val totalScore = prefs[KEY_TOTAL_SCORE] ?: 0
                 val bestStreak = prefs[KEY_BEST_STREAK] ?: 0
+                val currentStreak = prefs[KEY_CURRENT_STREAK] ?: 0
+                val previousLevel = prefs[KEY_PREVIOUS_LEVEL] ?: 0
+
+                val newCurrentStreak = if (score > previousLevel) currentStreak + 1 else 0
+                val newBestStreak = maxOf(bestStreak, newCurrentStreak)
 
                 prefs[KEY_GAMES_PLAYED] = gamesPlayed + 1
                 prefs[KEY_TOTAL_SCORE] = totalScore + score
-                prefs[KEY_BEST_STREAK] = maxOf(bestStreak, sequenceLength)
+                prefs[KEY_BEST_STREAK] = newBestStreak
+                prefs[KEY_CURRENT_STREAK] = newCurrentStreak
+                prefs[KEY_PREVIOUS_LEVEL] = score
             }
         }
     }

@@ -56,11 +56,13 @@ fun SettingsScreen(
     hasActiveGame: Boolean = false,
     playerTimeoutSeconds: Int = 10,
     practiceModeEnabled: Boolean = false,
+    reverseModeEnabled: Boolean = false,
     onSoundPackSelected: (SoundPack) -> Unit,
     onDifficultyToggled: (Boolean) -> Unit = {},
     onMemoryLightsPlusToggled: (Boolean) -> Unit = {},
     onPlayerTimeoutChanged: (Int) -> Unit = {},
     onPracticeModeToggled: (Boolean) -> Unit = {},
+    onReverseModeToggled: (Boolean) -> Unit = {},
     onResetHighScore: () -> Unit = {},
     onStatisticsClicked: () -> Unit = {},
     onBackPressed: () -> Unit
@@ -290,6 +292,58 @@ fun SettingsScreen(
                 }
             }
             
+            // Reverse Mode card (F1). Toggle: player watches the sequence
+            // forward but must press buttons in reverse order. Inverts the
+            // recall puzzle without changing display or scoring rules.
+            val toggleReverse: (Boolean) -> Unit = { value ->
+                onReverseModeToggled(value)
+                toast("Reverse Mode: ${if (value) "On" else "Off"}")
+            }
+            SettingsCard(
+                onClick = { toggleReverse(!reverseModeEnabled) }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.speed_24px),
+                        contentDescription = "Reverse Mode",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Reverse Mode",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+
+                        Text(
+                            text = "Watch the sequence forward, then repeat it in reverse",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Switch(
+                        checked = reverseModeEnabled,
+                        onCheckedChange = toggleReverse,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.DarkGray
+                        )
+                    )
+                }
+            }
+
             // Practice Mode card (F15). Toggle: wrong buttons replay the
             // sequence instead of ending the run. High scores do not advance
             // while enabled — by design, practice runs are never recorded.
