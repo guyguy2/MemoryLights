@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ripple
 import androidx.compose.material3.*
@@ -45,6 +46,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -58,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.happypuppy.memorylights.ui.share.ScoreShareHelper
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.happypuppy.memorylights.R
@@ -1047,10 +1050,10 @@ fun SimonGameScreen(
                 )
             }
 
-            // Replay-last-sequence affordance, visible only on GameOver. The
-            // disc itself starts a fresh run; this button lets the player
-            // retry the same sequence they just lost on (highest-leverage
-            // retention loop in pattern-memory games).
+            // Replay-last-sequence + share affordances, visible only on GameOver.
+            // The disc itself starts a fresh run; Replay lets the player retry
+            // the same sequence (highest-leverage retention loop), Share fires
+            // an Android share sheet with a 1080x1080 score-card PNG (F10).
             AnimatedVisibility(
                 visible = uiState.gameState == GameState.GameOver &&
                         uiState.sequence.isNotEmpty(),
@@ -1058,25 +1061,52 @@ fun SimonGameScreen(
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize()
             ) {
+                val context = LocalContext.current
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    OutlinedButton(
-                        onClick = onReplayLastSequence,
+                    Row(
                         modifier = Modifier.padding(bottom = 24.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.White
-                        ),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Replay last sequence", fontSize = 13.sp)
+                        OutlinedButton(
+                            onClick = onReplayLastSequence,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            ),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Replay", fontSize = 13.sp)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                ScoreShareHelper.shareScore(
+                                    context = context,
+                                    level = uiState.level,
+                                    bestScore = uiState.currentHighScore,
+                                    is6ButtonMode = uiState.memoryLightsPlusEnabled
+                                )
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            ),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Share", fontSize = 13.sp)
+                        }
                     }
                 }
             }
