@@ -40,6 +40,7 @@ import com.happypuppy.memorylights.domain.model.ScreenState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.SimonPanel
+import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 
 // Extension function to capitalize first letter
@@ -151,18 +152,18 @@ fun SimonGameScreen(
         }
     }
 
-    // Function to handle both press and release events
-    val handleButtonInteraction = { button: SimonButton, isPress: Boolean ->
-        if (isPress) {
-            // Update local state for immediate visual feedback
-            localPressedButtons = localPressedButtons + (button to true)
-        } else {
-            // Release this button
-            localPressedButtons = localPressedButtons - button
+    // Function to handle both press and release events. Memoized so SimonPanel
+    // children don't get a fresh lambda — and a fresh recomposition — on every
+    // parent update.
+    val handleButtonInteraction = remember(onButtonClick) {
+        { button: SimonButton, isPress: Boolean ->
+            if (isPress) {
+                localPressedButtons = localPressedButtons + (button to true)
+            } else {
+                localPressedButtons = localPressedButtons - button
+            }
+            onButtonClick(button, isPress)
         }
-
-        // Pass all events to ViewModel with isPress parameter
-        onButtonClick(button, isPress)
     }
 
     Scaffold(
@@ -446,7 +447,7 @@ fun SimonGameScreen(
                                         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                     )
                                     .clip(CircleShape)
-                                    .background(Color(0xFF1D1D1D))
+                                    .background(CardBackground)
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = ripple(),

@@ -1,6 +1,7 @@
 package com.happypuppy.memorylights.ui.viewmodels
 
 import android.util.Log
+import androidx.annotation.MainThread
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -61,6 +62,8 @@ class SimonGameViewModel(
 
     // Buttons currently held by the player. Used to debounce simultaneous touches —
     // not exposed in UiState because the UI tracks its own visual press state.
+    // Main-thread only: mutated exclusively by [onButtonClick] (annotated @MainThread)
+    // and viewModelScope launches default to Dispatchers.Main.immediate.
     private val activePresses = mutableSetOf<SimonButton>()
 
     init {
@@ -568,6 +571,7 @@ class SimonGameViewModel(
     }
 
     // Handle player button presses
+    @MainThread
     fun onButtonClick(button: SimonButton, isPress: Boolean) {
         Log.d(TAG, "Button ${if (isPress) "press" else "release"}: $button")
 

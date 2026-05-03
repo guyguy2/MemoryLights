@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.domain.model.GameStatistics
+import com.happypuppy.memorylights.ui.theme.CardBackground
+import com.happypuppy.memorylights.ui.theme.DialogBackground
+import com.happypuppy.memorylights.ui.theme.SurfaceSelected
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +123,7 @@ fun StatisticsScreen(
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 thickness = 1.dp,
-                color = Color(0xFF303030)
+                color = SurfaceSelected
             )
 
             SettingsCard(
@@ -211,7 +214,7 @@ fun StatisticsScreen(
                     Text("Cancel")
                 }
             },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = DialogBackground,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -230,7 +233,7 @@ fun StatisticCard(
             .fillMaxWidth()
             .padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1D1D1D)
+            containerColor = CardBackground
         ),
         shape = RoundedCornerShape(12.dp)
     ) {

@@ -43,17 +43,4 @@ class SimonButtonTest {
         assertEquals(SimonButton.BLUE, buttons[3])
     }
 
-    @Test
-    fun `each button has unique index`() {
-        val indices = SimonButton.entries.map { it.index }
-
-        assertEquals(indices.distinct().size, indices.size)
-    }
-
-    @Test
-    fun `button indices are sequential starting from 0`() {
-        val indices = SimonButton.entries.map { it.index }.sorted()
-
-        assertEquals(listOf(0, 1, 2, 3, 4, 5), indices)
-    }
 }

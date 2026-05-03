@@ -34,6 +34,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.ui.theme.CardBackground
+import com.happypuppy.memorylights.ui.theme.DialogBackground
+import com.happypuppy.memorylights.ui.theme.SurfaceContainer
+import com.happypuppy.memorylights.ui.theme.SurfaceContainerFade
+import com.happypuppy.memorylights.ui.theme.SurfaceSelected
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 
@@ -127,7 +132,7 @@ fun SettingsScreen(
                     .height(280.dp)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF121212))
+                    .background(SurfaceContainer)
             ) {
                 // Main list of sound packs
                 LazyColumn(
@@ -155,7 +160,7 @@ fun SettingsScreen(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color(0xE6121212)
+                                        SurfaceContainerFade
                                     )
                                 )
                             )
@@ -203,7 +208,7 @@ fun SettingsScreen(
                             .background(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        Color(0xE6121212),
+                                        SurfaceContainerFade,
                                         Color.Transparent
                                     )
                                 )
@@ -398,7 +403,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 thickness = 1.dp,
-                color = Color(0xFF303030)
+                color = SurfaceSelected
             )
 
             // Rate app card
@@ -540,7 +545,7 @@ fun SettingsScreen(
                     )
                 }
             },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = DialogBackground,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -587,7 +592,7 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = DialogBackground,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -634,7 +639,7 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             },
-            containerColor = Color(0xFF1A1A1A),
+            containerColor = DialogBackground,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -652,7 +657,7 @@ fun SettingsCard(
             .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1D1D1D)
+            containerColor = CardBackground
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -667,7 +672,7 @@ fun SoundPackOption(
     onSelect: () -> Unit
 ) {
     val backgroundColor = if (isSelected) {
-        Color(0xFF303030)
+        SurfaceSelected
     } else {
         Color.Transparent
     }

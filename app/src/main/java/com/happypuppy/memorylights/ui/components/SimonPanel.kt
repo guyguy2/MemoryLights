@@ -106,21 +106,27 @@ fun SimonPanel(
     val startPaddingValue = pressAnimation * 3f
 
     // Color and gradient setup based on button state
-    val buttonColors = when {
-        userPressed -> {
-            // When pressed: darker gradient to simulate shadow
-            listOf(shadowColor, brightColor, brightColor)
+    val buttonColors = remember(userPressed, isLit, color, brightColor, highlightColor, shadowColor) {
+        when {
+            userPressed -> listOf(shadowColor, brightColor, brightColor)
+            isLit -> listOf(
+                brightColor,
+                brightColor,
+                brightColor.copy(
+                    red = brightColor.red * 0.95f,
+                    green = brightColor.green * 0.95f,
+                    blue = brightColor.blue * 0.95f
+                )
+            )
+            else -> listOf(highlightColor, color, shadowColor)
         }
-        isLit -> {
-            // When lit but not pressed: bright overall with slight gradient
-            listOf(brightColor, brightColor, brightColor.copy(red = brightColor.red * 0.95f,
-                green = brightColor.green * 0.95f,
-                blue = brightColor.blue * 0.95f))
-        }
-        else -> {
-            // Default state: standard gradient
-            listOf(highlightColor, color, shadowColor)
-        }
+    }
+    val buttonBrush = remember(buttonColors) {
+        Brush.linearGradient(
+            colors = buttonColors,
+            start = Offset(0f, 0f),
+            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+        )
     }
 
     // *** Use an offset instead of padding ***
@@ -165,13 +171,7 @@ fun SimonPanel(
                 // Reduce size to account for the offset
                 .fillMaxSize()
                 .clip(RoundedCornerShape(14.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = buttonColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                    )
-                )
+                .background(brush = buttonBrush)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onPress = {
