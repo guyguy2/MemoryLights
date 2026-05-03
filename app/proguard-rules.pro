@@ -19,3 +19,17 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Koin reflection-based DI module wiring
+-keep class org.koin.** { *; }
+-keep class com.happypuppy.memorylights.di.** { *; }
+
+# Keep Activity classes so the system can instantiate them (also satisfies the
+# Instantiatable lint check during lintVitalRelease).
+-keep public class * extends androidx.activity.ComponentActivity
+-keep public class * extends androidx.appcompat.app.AppCompatActivity
+-keep public class * extends android.app.Activity
+
+# Preserve line numbers in release stack traces, hide original source filenames
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

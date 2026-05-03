@@ -27,7 +27,6 @@ data class SimonGameUiState(
     val highScore4Button: Int = 0,
     val highScore6Button: Int = 0,
     val currentSoundPack: SoundPack = SoundPack.STANDARD,
-    val activeButtonPresses: Map<SimonButton, Boolean> = emptyMap(), // Track which buttons are currently pressed
     val vibrateEnabled: Boolean = true, // Whether button vibration is enabled
     val soundEnabled: Boolean = true, // Whether sound is enabled (mute/unmute)
     val difficultyEnabled: Boolean = false, // Whether progressive difficulty is enabled

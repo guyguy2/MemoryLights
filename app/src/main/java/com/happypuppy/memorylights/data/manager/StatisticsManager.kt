@@ -10,9 +10,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 private const val LEGACY_PREFS_NAME = "simon_statistics"
 
@@ -25,6 +25,9 @@ private val Context.statisticsDataStore: DataStore<Preferences> by preferencesDa
 
 /**
  * DataStore-backed statistics manager.
+ *
+ * Reads are exposed as a Flow so callers stay off the main thread.
+ * Writes are fire-and-forget on an IO scope; persistence completes asynchronously.
  * Automatically migrates data from SharedPreferences on first access.
  */
 class StatisticsManager(context: Context) {
@@ -39,13 +42,8 @@ class StatisticsManager(context: Context) {
     private val dataStore = context.statisticsDataStore
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    private fun getPreferences(): Preferences = runBlocking {
-        dataStore.data.first()
-    }
-
-    fun getStatistics(): GameStatistics {
-        val prefs = getPreferences()
-        return GameStatistics(
+    val statisticsFlow: Flow<GameStatistics> = dataStore.data.map { prefs ->
+        GameStatistics(
             gamesPlayed = prefs[KEY_GAMES_PLAYED] ?: 0,
             highScore = prefs[KEY_HIGH_SCORE] ?: 0,
             totalScore = prefs[KEY_TOTAL_SCORE] ?: 0,
@@ -54,14 +52,17 @@ class StatisticsManager(context: Context) {
     }
 
     fun recordGameResult(score: Int, sequenceLength: Int) {
-        val currentStats = getStatistics()
-
         scope.launch {
             dataStore.edit { prefs ->
-                prefs[KEY_GAMES_PLAYED] = currentStats.gamesPlayed + 1
-                prefs[KEY_HIGH_SCORE] = maxOf(currentStats.highScore, score)
-                prefs[KEY_TOTAL_SCORE] = currentStats.totalScore + score
-                prefs[KEY_BEST_STREAK] = maxOf(currentStats.bestStreak, sequenceLength)
+                val gamesPlayed = prefs[KEY_GAMES_PLAYED] ?: 0
+                val highScore = prefs[KEY_HIGH_SCORE] ?: 0
+                val totalScore = prefs[KEY_TOTAL_SCORE] ?: 0
+                val bestStreak = prefs[KEY_BEST_STREAK] ?: 0
+
+                prefs[KEY_GAMES_PLAYED] = gamesPlayed + 1
+                prefs[KEY_HIGH_SCORE] = maxOf(highScore, score)
+                prefs[KEY_TOTAL_SCORE] = totalScore + score
+                prefs[KEY_BEST_STREAK] = maxOf(bestStreak, sequenceLength)
             }
         }
     }

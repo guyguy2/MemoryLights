@@ -8,6 +8,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+
 class SimonGameUiStateTest {
 
     @Test
@@ -25,7 +26,6 @@ class SimonGameUiStateTest {
         assertEquals(0, state.highScore4Button)
         assertEquals(0, state.highScore6Button)
         assertEquals(SoundPack.STANDARD, state.currentSoundPack)
-        assertTrue(state.activeButtonPresses.isEmpty())
         assertTrue(state.vibrateEnabled)
         assertTrue(state.soundEnabled)
         assertFalse(state.difficultyEnabled)
@@ -69,16 +69,6 @@ class SimonGameUiStateTest {
         assertEquals(5, updated.level)
         assertEquals(0, original.roundCount)
         assertEquals(4, updated.roundCount)
-    }
-
-    @Test
-    fun `activeButtonPresses map is immutable`() {
-        val state = SimonGameUiState(
-            activeButtonPresses = mapOf(SimonButton.GREEN to true)
-        )
-
-        assertTrue(state.activeButtonPresses.containsKey(SimonButton.GREEN))
-        assertEquals(1, state.activeButtonPresses.size)
     }
 
     @Test

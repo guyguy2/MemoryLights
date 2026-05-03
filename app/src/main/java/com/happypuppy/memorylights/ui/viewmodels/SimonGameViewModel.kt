@@ -20,6 +20,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -55,11 +58,12 @@ class SimonGameViewModel(
     private val _uiState = MutableStateFlow(SimonGameUiState())
     val uiState: StateFlow<SimonGameUiState> = _uiState.asStateFlow()
 
+    // Buttons currently held by the player. Used to debounce simultaneous touches —
+    // not exposed in UiState because the UI tracks its own visual press state.
+    private val activePresses = mutableSetOf<SimonButton>()
+
     init {
         Log.d(TAG, "Initializing SimonGameViewModel")
-
-        // Load settings from preferences
-        loadSettings()
 
         // Set up sound loading callback
         soundManager.setOnSoundsLoadedListener { success, error ->
@@ -78,43 +82,47 @@ class SimonGameViewModel(
             )}
         }
 
-        // Play startup animation once when app starts, then start the game
-        playStartupAnimation {
-            hasPlayedStartupAnimation = true
-            initializeNewGame()
+        // Continuously sync statistics from repository so any write is reflected in UI
+        statisticsManager.statisticsFlow
+            .onEach { stats -> _uiState.update { it.copy(statistics = stats) } }
+            .launchIn(viewModelScope)
+
+        // Load initial settings off the main thread, then start the game.
+        viewModelScope.launch {
+            loadInitialSettings()
+
+            // Play startup animation once when app starts, then start the game
+            playStartupAnimation {
+                hasPlayedStartupAnimation = true
+                initializeNewGame()
+            }
         }
     }
 
     /**
-     * Load saved settings from repository
+     * Load the first emission of saved settings into UI state and the sound manager.
+     * Suspends until DataStore returns the persisted snapshot, so this MUST be called
+     * from a coroutine — do not block the main thread.
      */
-    private fun loadSettings() {
-        val savedSoundPack = settingsRepository.getSoundPack()
-        val savedHighScore4Button = settingsRepository.getHighScore4Button()
-        val savedHighScore6Button = settingsRepository.getHighScore6Button()
-        val savedVibrateEnabled = settingsRepository.isVibrateEnabled()
-        val savedSoundEnabled = settingsRepository.isSoundEnabled()
-        val savedDifficultyEnabled = settingsRepository.isDifficultyEnabled()
-        val savedMemoryLightsPlusEnabled = settingsRepository.isMemoryLightsPlusEnabled()
-        val currentStatistics = statisticsManager.getStatistics()
+    private suspend fun loadInitialSettings() {
+        val settings = settingsRepository.settingsFlow.first()
 
-        Log.d(TAG, "Loaded settings - Sound Pack: $savedSoundPack, High Score 4-button: $savedHighScore4Button, High Score 6-button: $savedHighScore6Button, Vibrate: $savedVibrateEnabled, Sound Enabled: $savedSoundEnabled, Difficulty: $savedDifficultyEnabled, Memory Lights+: $savedMemoryLightsPlusEnabled")
+        Log.d(TAG, "Loaded settings - Sound Pack: ${settings.soundPack}, High Score 4-button: ${settings.highScore4Button}, High Score 6-button: ${settings.highScore6Button}, Vibrate: ${settings.vibrateEnabled}, Sound Enabled: ${settings.soundEnabled}, Difficulty: ${settings.difficultyEnabled}, Memory Lights+: ${settings.memoryLightsPlusEnabled}")
 
         // Update sound manager with saved settings
-        soundManager.setSoundPack(savedSoundPack)
-        soundManager.setVibrationEnabled(savedVibrateEnabled)
-        soundManager.setSoundMuted(!savedSoundEnabled)
+        soundManager.setSoundPack(settings.soundPack)
+        soundManager.setVibrationEnabled(settings.vibrateEnabled)
+        soundManager.setSoundMuted(!settings.soundEnabled)
 
         // Update UI state with saved settings
         _uiState.update { it.copy(
-            currentSoundPack = savedSoundPack,
-            highScore4Button = savedHighScore4Button,
-            highScore6Button = savedHighScore6Button,
-            vibrateEnabled = savedVibrateEnabled,
-            soundEnabled = savedSoundEnabled,
-            difficultyEnabled = savedDifficultyEnabled,
-            memoryLightsPlusEnabled = savedMemoryLightsPlusEnabled,
-            statistics = currentStatistics
+            currentSoundPack = settings.soundPack,
+            highScore4Button = settings.highScore4Button,
+            highScore6Button = settings.highScore6Button,
+            vibrateEnabled = settings.vibrateEnabled,
+            soundEnabled = settings.soundEnabled,
+            difficultyEnabled = settings.difficultyEnabled,
+            memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled
         )}
     }
 
@@ -442,49 +450,37 @@ class SimonGameViewModel(
      */
     fun resetHighScore() {
         Log.d(TAG, "Resetting high score for ${if (_uiState.value.memoryLightsPlusEnabled) "6-button" else "4-button"} mode and all statistics")
-        
-        // Reset all statistics in the StatisticsManager
+
+        // Reset all statistics in the StatisticsManager (statisticsFlow collector
+        // updates uiState.statistics asynchronously)
         statisticsManager.resetStatistics()
-        
-        // Get the reset statistics
-        val resetStatistics = statisticsManager.getStatistics()
-        
-        // Update UI state with reset high score and statistics for current mode
+
+        // Optimistically zero the per-mode high score so the UI reflects the reset
+        // without waiting for DataStore to round-trip.
         _uiState.update { currentState ->
             if (currentState.memoryLightsPlusEnabled) {
-                currentState.copy(
-                    highScore6Button = 0,
-                    statistics = resetStatistics
-                )
+                currentState.copy(highScore6Button = 0)
             } else {
-                currentState.copy(
-                    highScore4Button = 0,
-                    statistics = resetStatistics
-                )
+                currentState.copy(highScore4Button = 0)
             }
         }
-        
+
         // Save to preferences
         saveSettings()
     }
-    
+
     /**
-     * Get current game statistics
+     * Get current game statistics from the cached UI state snapshot.
      */
-    fun getStatistics(): GameStatistics {
-        return statisticsManager.getStatistics()
-    }
-    
+    fun getStatistics(): GameStatistics = _uiState.value.statistics
+
     /**
-     * Reset all game statistics
+     * Reset all game statistics. The statisticsFlow collector updates UI state
+     * once DataStore has cleared.
      */
     fun resetStatistics() {
         Log.d(TAG, "Resetting all game statistics")
         statisticsManager.resetStatistics()
-        
-        // Update UI state with reset statistics
-        val resetStatistics = statisticsManager.getStatistics()
-        _uiState.update { it.copy(statistics = resetStatistics) }
     }
 
     // Initialize game state for a new game without animation
@@ -695,10 +691,8 @@ class SimonGameViewModel(
             }
 
             // Check if this is the first button pressed in the current interaction
-            val isFirstButtonPressed = _uiState.value.activeButtonPresses.isEmpty()
-
-            // Update active button presses map using immutable operation
-            _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses + (button to true)) }
+            val isFirstButtonPressed = activePresses.isEmpty()
+            activePresses.add(button)
 
             // Only process game logic and play sound for the first button press
             if (isFirstButtonPressed) {
@@ -731,8 +725,8 @@ class SimonGameViewModel(
                 checkSequenceMatch(updatedPlayerSequence)
             }
         } else {
-            // Handle button release event using immutable operation
-            _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
+            // Handle button release event
+            activePresses.remove(button)
         }
     }
 
@@ -777,12 +771,6 @@ class SimonGameViewModel(
             // Move to next level
             advanceToNextLevel()
         }
-    }
-
-    // Handle button release events
-    fun onButtonRelease(button: SimonButton) {
-        // Remove button from active presses using immutable operation
-        _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
     }
 
     // Handle game over state - Simplified version that calls the main implementation
@@ -983,13 +971,10 @@ class SimonGameViewModel(
             startGameOverTextAnimation()
         }
 
-        // Record game result in statistics
+        // Record game result in statistics. The statisticsFlow collector updates
+        // uiState.statistics once DataStore has persisted the new values.
         statisticsManager.recordGameResult(currentLevel, _uiState.value.sequence.size)
-        
-        // Update UI state with refreshed statistics
-        val updatedStatistics = statisticsManager.getStatistics()
-        _uiState.update { it.copy(statistics = updatedStatistics) }
-        
+
         // Save settings if it's a new high score (always save when there's a change)
         if (isNewHighScore) {
             saveSettings()
