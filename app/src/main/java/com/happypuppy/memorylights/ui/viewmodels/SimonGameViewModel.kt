@@ -410,6 +410,43 @@ class SimonGameViewModel(
         }
     }
 
+    /**
+     * Replay the same sequence the player just lost on, without resetting
+     * level / sequence — gives them a "practice this run again" option that
+     * preserves the current `sequence` and `level`. If they beat it, the
+     * existing `advanceToNextLevel` path takes over and the run grows
+     * normally from there. No-op if there is no sequence yet (e.g. before
+     * the very first round).
+     */
+    fun replayLastSequence() {
+        val state = _uiState.value
+        if (state.sequence.isEmpty()) {
+            Log.d(TAG, "replayLastSequence called with empty sequence — ignoring")
+            return
+        }
+        Log.d(TAG, "Replaying last sequence (${state.sequence.size} buttons, level ${state.level})")
+
+        gameOverTextAnimationJob?.cancel()
+        gameOverTextAnimationJob = null
+        highScoreTextAnimationJob?.cancel()
+        highScoreTextAnimationJob = null
+        cancelTimeoutTimer()
+
+        _uiState.update {
+            it.copy(
+                gameState = GameState.ShowingSequence,
+                playerSequence = emptyList(),
+                currentlyLit = null,
+                allButtonsLit = false,
+                showHighScoreParticles = false,
+                showHighScoreText = false,
+                showGameOverText = false,
+                showYourTurnText = false
+            )
+        }
+        showSequence()
+    }
+
     // Start a new game - public method called by UI
     fun startNewGame() {
         Log.d(TAG, "Starting new game")

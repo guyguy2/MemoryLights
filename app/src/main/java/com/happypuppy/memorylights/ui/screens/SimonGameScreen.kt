@@ -17,6 +17,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ripple
@@ -111,6 +113,7 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 onButtonClick = { button, isPress -> viewModel.onButtonClick(button, isPress) },
                 onSettingsClick = { viewModel.showSettings() },
                 onStartNewGame = { viewModel.startNewGame() },
+                onReplayLastSequence = { viewModel.replayLastSequence() },
                 onToggleSound = { viewModel.toggleSound() },
                 onToggleVibration = { viewModel.toggleVibration() },
                 onClearParticleEffects = { viewModel.clearParticleEffects() }
@@ -126,6 +129,7 @@ fun SimonGameScreen(
     onButtonClick: (SimonButton, Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     onStartNewGame: () -> Unit,
+    onReplayLastSequence: () -> Unit = {},
     onToggleSound: () -> Unit,
     onToggleVibration: () -> Unit,
     onClearParticleEffects: (() -> Unit)? = null
@@ -889,6 +893,40 @@ fun SimonGameScreen(
                     modifier = Modifier.fillMaxSize(),
                     onComplete = { onClearParticleEffects?.invoke() }
                 )
+            }
+
+            // Replay-last-sequence affordance, visible only on GameOver. The
+            // disc itself starts a fresh run; this button lets the player
+            // retry the same sequence they just lost on (highest-leverage
+            // retention loop in pattern-memory games).
+            AnimatedVisibility(
+                visible = uiState.gameState == GameState.GameOver &&
+                        uiState.sequence.isNotEmpty(),
+                enter = fadeIn() + scaleIn(initialScale = 0.9f),
+                exit = fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    OutlinedButton(
+                        onClick = onReplayLastSequence,
+                        modifier = Modifier.padding(bottom = 24.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.White
+                        ),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Replay last sequence", fontSize = 13.sp)
+                    }
+                }
             }
         }
     }
