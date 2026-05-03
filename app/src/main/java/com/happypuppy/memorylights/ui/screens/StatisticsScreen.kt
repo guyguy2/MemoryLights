@@ -24,6 +24,7 @@ import com.happypuppy.memorylights.domain.model.GameStatistics
 @Composable
 fun StatisticsScreen(
     statistics: GameStatistics,
+    currentHighScore: Int,
     onResetStatistics: () -> Unit = {},
     onBackPressed: () -> Unit
 ) {
@@ -87,7 +88,7 @@ fun StatisticsScreen(
 
             StatisticCard(
                 title = "High Score",
-                value = statistics.highScore.toString(),
+                value = currentHighScore.toString(),
                 icon = Icons.Default.Star,
                 color = Color(0xFFFFC107)
             )

@@ -158,53 +158,33 @@ class SimonGameViewModel(
     private var highScoreTextAnimationJob: Job? = null
 
     /**
-     * Switch to settings screen
+     * Switch to settings screen.
+     * Captures the current game state so [exitSettings] can restore it on return.
      */
     fun showSettings() {
         Log.d(TAG, "Switching to settings screen")
 
-        // Store current state to restore when returning from settings
         previousGameState = _uiState.value.gameState
 
-        // Cancel any active timeout timer when going to settings
         cancelTimeoutTimer()
-
-        // Cancel any active sequence jobs
         activeSequenceJob?.cancel()
         activeSequenceJob = null
 
-
-        // Switch to settings screen
-        _uiState.update { it.copy(
-            gameState = GameState.Settings,
-            screenState = ScreenState.Settings
-        ) }
+        _uiState.update { it.copy(screenState = ScreenState.Settings) }
     }
-    
+
     /**
-     * Switch to statistics screen
+     * Switch to statistics screen. Reachable only from the settings screen,
+     * so the original `previousGameState` (saved by [showSettings]) is preserved.
      */
     fun showStatistics() {
         Log.d(TAG, "Switching to statistics screen")
-        
-        // Don't override previousGameState if we're already in Settings - 
-        // this preserves the original game state from when we first entered settings
-        if (_uiState.value.gameState != GameState.Settings) {
-            previousGameState = _uiState.value.gameState
-        }
-        
-        // Cancel any active timeout timer when going to statistics
+
         cancelTimeoutTimer()
-        
-        // Cancel any active sequence jobs
         activeSequenceJob?.cancel()
         activeSequenceJob = null
-        
-        // Switch to statistics screen
-        _uiState.update { it.copy(
-            gameState = GameState.Settings, // Keep game state as Settings for lifecycle
-            screenState = ScreenState.Statistics
-        ) }
+
+        _uiState.update { it.copy(screenState = ScreenState.Statistics) }
     }
 
     /**
@@ -212,11 +192,7 @@ class SimonGameViewModel(
      */
     fun exitStatistics() {
         Log.d(TAG, "Exiting statistics screen, returning to settings")
-        
-        _uiState.update { it.copy(
-            gameState = GameState.Settings,
-            screenState = ScreenState.Settings
-        ) }
+        _uiState.update { it.copy(screenState = ScreenState.Settings) }
     }
 
     /**
@@ -265,17 +241,13 @@ class SimonGameViewModel(
             }
             
             // If we were in a transitional state, just start a new game
-            is GameState.Settings,
             is GameState.WaitingToStart -> {
                 Log.d(TAG, "Starting new game after returning from settings")
-                // Update screen state first
                 _uiState.update { it.copy(screenState = ScreenState.Game) }
-                
-                // If there's no sequence yet, start a new game
+
                 if (_uiState.value.sequence.isEmpty()) {
                     startNewGame()
                 } else {
-                    // If there was a sequence, go to player repeating state
                     _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                     resetTimeoutTimer()
                 }
@@ -287,18 +259,16 @@ class SimonGameViewModel(
     }
 
     /**
-     * Change sound pack
+     * Change sound pack and play a short preview tone so the player can audition it.
+     * Called from the Settings screen on selection.
      */
     fun setSoundPack(soundPack: SoundPack) {
         Log.d(TAG, "Changing sound pack to: ${soundPack.name}")
 
-        // Update sound manager
         soundManager.setSoundPack(soundPack)
-
-        // Update UI state
         _uiState.update { it.copy(currentSoundPack = soundPack) }
+        soundManager.playSound(SimonButton.GREEN)
 
-        // Save to preferences
         saveSettings()
     }
 
@@ -1027,9 +997,6 @@ class SimonGameViewModel(
                 }
                 is GameState.GameOver, is GameState.WaitingToStart -> {
                     // No special handling needed
-                }
-                is GameState.Settings -> {
-                    // Stay in settings
                 }
             }
         }

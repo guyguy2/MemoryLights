@@ -37,7 +37,6 @@ class StatisticsManager(
 
     companion object {
         private val KEY_GAMES_PLAYED = intPreferencesKey("games_played")
-        private val KEY_HIGH_SCORE = intPreferencesKey("high_score")
         private val KEY_TOTAL_SCORE = intPreferencesKey("total_score")
         private val KEY_BEST_STREAK = intPreferencesKey("best_streak")
 
@@ -48,7 +47,6 @@ class StatisticsManager(
     val statisticsFlow: Flow<GameStatistics> = dataStore.data.map { prefs ->
         GameStatistics(
             gamesPlayed = prefs[KEY_GAMES_PLAYED] ?: 0,
-            highScore = prefs[KEY_HIGH_SCORE] ?: 0,
             totalScore = prefs[KEY_TOTAL_SCORE] ?: 0,
             bestStreak = prefs[KEY_BEST_STREAK] ?: 0
         )
@@ -58,12 +56,10 @@ class StatisticsManager(
         scope.launch {
             dataStore.edit { prefs ->
                 val gamesPlayed = prefs[KEY_GAMES_PLAYED] ?: 0
-                val highScore = prefs[KEY_HIGH_SCORE] ?: 0
                 val totalScore = prefs[KEY_TOTAL_SCORE] ?: 0
                 val bestStreak = prefs[KEY_BEST_STREAK] ?: 0
 
                 prefs[KEY_GAMES_PLAYED] = gamesPlayed + 1
-                prefs[KEY_HIGH_SCORE] = maxOf(highScore, score)
                 prefs[KEY_TOTAL_SCORE] = totalScore + score
                 prefs[KEY_BEST_STREAK] = maxOf(bestStreak, sequenceLength)
             }

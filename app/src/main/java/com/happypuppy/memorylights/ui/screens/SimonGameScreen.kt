@@ -76,6 +76,7 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
             // Show Statistics Screen
             StatisticsScreen(
                 statistics = uiState.statistics,
+                currentHighScore = uiState.currentHighScore,
                 onResetStatistics = { viewModel.resetStatistics() },
                 onBackPressed = { viewModel.exitStatistics() }
             )
@@ -136,6 +137,13 @@ fun SimonGameScreen(
                 view.announceForAccessibility("Game over. You reached level ${uiState.level}.")
             }
             else -> { /* No announcement for other states */ }
+        }
+    }
+
+    // Announce new high score celebration
+    LaunchedEffect(uiState.showHighScoreText) {
+        if (uiState.showHighScoreText) {
+            view.announceForAccessibility("New high score! Level ${uiState.level}.")
         }
     }
 

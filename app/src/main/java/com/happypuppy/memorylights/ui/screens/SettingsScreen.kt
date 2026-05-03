@@ -33,11 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
-import com.happypuppy.memorylights.data.manager.SimonSoundManager
-import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import androidx.core.net.toUri
 
 /**
@@ -57,8 +54,6 @@ fun SettingsScreen(
     onStatisticsClicked: () -> Unit = {},
     onBackPressed: () -> Unit
 ) {
-    // Inject SimonSoundManager from Koin
-    val soundManager = koinInject<SimonSoundManager>()
     val context = LocalContext.current
 
     // Dialog visibility states
@@ -74,11 +69,6 @@ fun SettingsScreen(
         derivedStateOf {
             soundPackListState.canScrollForward
         }
-    }
-
-    // Initialize with the current sound pack
-    LaunchedEffect(currentSoundPack) {
-        soundManager.setSoundPack(currentSoundPack)
     }
 
     Scaffold(
@@ -146,11 +136,7 @@ fun SettingsScreen(
                         SoundPackOption(
                             soundPack = soundPack,
                             isSelected = soundPack == currentSoundPack,
-                            onSelect = {
-                                soundManager.setSoundPack(soundPack)
-                                soundManager.playSound(SimonButton.GREEN)
-                                onSoundPackSelected(soundPack)
-                            }
+                            onSelect = { onSoundPackSelected(soundPack) }
                         )
                     }
 

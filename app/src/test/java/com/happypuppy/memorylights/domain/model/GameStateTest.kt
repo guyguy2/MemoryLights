@@ -14,7 +14,6 @@ class GameStateTest {
         assertFalse(state is GameState.ShowingSequence)
         assertFalse(state is GameState.PlayerRepeating)
         assertFalse(state is GameState.GameOver)
-        assertFalse(state is GameState.Settings)
     }
 
     @Test
@@ -25,7 +24,6 @@ class GameStateTest {
         assertTrue(state is GameState.ShowingSequence)
         assertFalse(state is GameState.PlayerRepeating)
         assertFalse(state is GameState.GameOver)
-        assertFalse(state is GameState.Settings)
     }
 
     @Test
@@ -36,7 +34,6 @@ class GameStateTest {
         assertFalse(state is GameState.ShowingSequence)
         assertTrue(state is GameState.PlayerRepeating)
         assertFalse(state is GameState.GameOver)
-        assertFalse(state is GameState.Settings)
     }
 
     @Test
@@ -47,18 +44,6 @@ class GameStateTest {
         assertFalse(state is GameState.ShowingSequence)
         assertFalse(state is GameState.PlayerRepeating)
         assertTrue(state is GameState.GameOver)
-        assertFalse(state is GameState.Settings)
-    }
-
-    @Test
-    fun `Settings is identified correctly`() {
-        val state: GameState = GameState.Settings
-
-        assertFalse(state is GameState.WaitingToStart)
-        assertFalse(state is GameState.ShowingSequence)
-        assertFalse(state is GameState.PlayerRepeating)
-        assertFalse(state is GameState.GameOver)
-        assertTrue(state is GameState.Settings)
     }
 
     @Test
@@ -67,8 +52,7 @@ class GameStateTest {
             GameState.WaitingToStart,
             GameState.ShowingSequence,
             GameState.PlayerRepeating,
-            GameState.GameOver,
-            GameState.Settings
+            GameState.GameOver
         )
 
         states.forEach { state ->
@@ -78,7 +62,6 @@ class GameStateTest {
                 GameState.ShowingSequence -> "showing"
                 GameState.PlayerRepeating -> "repeating"
                 GameState.GameOver -> "over"
-                GameState.Settings -> "settings"
             }
             assertTrue(name.isNotEmpty())
         }

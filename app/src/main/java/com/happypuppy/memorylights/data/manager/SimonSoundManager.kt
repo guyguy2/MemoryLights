@@ -12,6 +12,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import com.happypuppy.memorylights.BuildConfig
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.SimonButton
@@ -195,9 +196,11 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
     }
 
     /**
-     * List all raw resources to help debug resource loading issues
+     * Debug-only: list all raw resources to help diagnose resource loading issues.
+     * Reflection on R.raw is only acceptable in debug builds.
      */
     private fun listAllRawResources() {
+        if (!BuildConfig.DEBUG) return
         try {
             Log.d(TAG, "=== LISTING ALL RAW RESOURCES ===")
             val fields = R.raw::class.java.fields
@@ -364,9 +367,11 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
     }
 
     /**
-     * Try to debug why a resource wasn't found
+     * Debug-only: log diagnostic info when a resource lookup fails.
+     * Reflection on R.raw is only acceptable in debug builds.
      */
     private fun debugResourceNotFound(resourceName: String) {
+        if (!BuildConfig.DEBUG) return
         Log.e(TAG, "Debug - Attempting to find similar resources:")
 
         // Check for resources with similar names

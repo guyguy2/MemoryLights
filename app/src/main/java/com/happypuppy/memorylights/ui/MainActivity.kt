@@ -11,11 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.DefaultLifecycleObserver
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.model.GameState
+import com.happypuppy.memorylights.domain.model.ScreenState
 import com.happypuppy.memorylights.ui.screens.MemoryLightsGame
 import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onCreate called")
 
         // Register the ViewModel as a lifecycle observer to handle pause/resume
-        lifecycle.addObserver(viewModel as DefaultLifecycleObserver)
+        lifecycle.addObserver(viewModel)
 
         // Check for sound resources
         checkSoundResources()
@@ -48,17 +48,17 @@ class MainActivity : ComponentActivity() {
         val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
         Log.d(TAG, "Audio volume: $currentVolume/$maxVolume")
 
-        // Setup back press handling using OnBackPressedDispatcher
+        // Setup back press handling using OnBackPressedDispatcher.
+        // Statistics → Settings → Game → exit. Mirrors each screen's nav icon.
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Check if we're in the settings screen
-                if (viewModel.uiState.value.gameState is GameState.Settings) {
-                    // Go back to the game instead of exiting the app
-                    viewModel.exitSettings()
-                } else {
-                    // Normal back behavior for other screens
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                when (viewModel.uiState.value.screenState) {
+                    is ScreenState.Statistics -> viewModel.exitStatistics()
+                    is ScreenState.Settings -> viewModel.exitSettings()
+                    is ScreenState.Game -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
                 }
             }
         })
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
         Log.d(TAG, "onDestroy called")
 
         // Remove lifecycle observer
-        lifecycle.removeObserver(viewModel as DefaultLifecycleObserver)
+        lifecycle.removeObserver(viewModel)
     }
 
     private fun checkSoundResources() {

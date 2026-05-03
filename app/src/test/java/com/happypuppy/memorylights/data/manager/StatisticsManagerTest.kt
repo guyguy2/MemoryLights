@@ -53,28 +53,25 @@ class StatisticsManagerTest {
     }
 
     @Test
-    fun `recordGameResult increments counters and tracks high score`() =
+    fun `recordGameResult accumulates totals and tracks best streak`() =
         runTest(testScope.testScheduler) {
             manager.statisticsFlow.test {
                 awaitItem()
                 manager.recordGameResult(score = 5, sequenceLength = 7)
                 val a = awaitItem()
                 assertEquals(1, a.gamesPlayed)
-                assertEquals(5, a.highScore)
                 assertEquals(5, a.totalScore)
                 assertEquals(7, a.bestStreak)
 
                 manager.recordGameResult(score = 3, sequenceLength = 4)
                 val b = awaitItem()
                 assertEquals(2, b.gamesPlayed)
-                assertEquals(5, b.highScore) // not lowered
                 assertEquals(8, b.totalScore)
                 assertEquals(7, b.bestStreak) // not lowered
 
                 manager.recordGameResult(score = 9, sequenceLength = 10)
                 val c = awaitItem()
                 assertEquals(3, c.gamesPlayed)
-                assertEquals(9, c.highScore) // raised
                 assertEquals(17, c.totalScore)
                 assertEquals(10, c.bestStreak)
                 cancelAndIgnoreRemainingEvents()
@@ -86,7 +83,7 @@ class StatisticsManagerTest {
         manager.statisticsFlow.test {
             awaitItem()
             manager.recordGameResult(score = 8, sequenceLength = 9)
-            assertEquals(8, awaitItem().highScore)
+            assertEquals(8, awaitItem().totalScore)
 
             manager.resetStatistics()
             val cleared = awaitItem()
