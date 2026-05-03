@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,11 +60,14 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
     when (uiState.screenState) {
         is ScreenState.Settings -> {
             // Show Settings Screen
+            val previousState = uiState.gameState // captured before navigating into settings
             SettingsScreen(
                 currentSoundPack = uiState.currentSoundPack,
                 difficultyEnabled = uiState.difficultyEnabled,
                 memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
                 highScore = uiState.currentHighScore,
+                hasActiveGame = previousState is GameState.ShowingSequence ||
+                        previousState is GameState.PlayerRepeating,
                 onSoundPackSelected = { viewModel.setSoundPack(it) },
                 onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
                 onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
@@ -609,7 +613,28 @@ fun SimonGameScreen(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            if (!uiState.soundsLoaded && uiState.soundLoadError == null) {
+                            if (uiState.soundLoadError != null) {
+                                // Surface the load error so the player isn't left
+                                // staring at a silent indefinite spinner.
+                                Icon(
+                                    imageVector = Icons.Default.Warning,
+                                    contentDescription = "Sound load failed",
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Sound load failed",
+                                    color = Color(0xFFFFB300),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Game playable without audio",
+                                    color = Color.Gray,
+                                    fontSize = 9.sp
+                                )
+                            } else if (!uiState.soundsLoaded) {
                                 // Show loading indicator while sounds are loading
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(32.dp),
@@ -623,20 +648,27 @@ fun SimonGameScreen(
                                     fontSize = 10.sp
                                 )
                             } else if (uiState.gameState == GameState.GameOver) {
-                                // Play icon when game is over
+                                // Score summary so the game-over moment lingers
+                                // long enough for the player to register it.
+                                Text(
+                                    text = uiState.level.toString(),
+                                    color = Color.White,
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (uiState.currentHighScore > 0) {
+                                    Text(
+                                        text = "Best ${uiState.currentHighScore}",
+                                        color = Color(0xFFFFC107),
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),
                                     contentDescription = "Play Again",
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(36.dp)
-                                )
-
-                                // "Play Again" text below the icon
-                                Text(
-                                    text = "Play Again",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium
+                                    modifier = Modifier.size(20.dp)
                                 )
                             } else {
                                 // Animated level display with smooth transitions

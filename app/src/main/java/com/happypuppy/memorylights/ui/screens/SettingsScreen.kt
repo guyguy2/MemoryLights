@@ -47,6 +47,7 @@ fun SettingsScreen(
     difficultyEnabled: Boolean = false,
     memoryLightsPlusEnabled: Boolean = false,
     highScore: Int = 0,
+    hasActiveGame: Boolean = false,
     onSoundPackSelected: (SoundPack) -> Unit,
     onDifficultyToggled: (Boolean) -> Unit = {},
     onMemoryLightsPlusToggled: (Boolean) -> Unit = {},
@@ -59,6 +60,7 @@ fun SettingsScreen(
     // Dialog visibility states
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetHighScoreDialog by remember { mutableStateOf(false) }
+    var pendingMemoryLightsPlusToggle by remember { mutableStateOf<Boolean?>(null) }
 
     // LazyListState for the sound pack list
     val soundPackListState = rememberLazyListState()
@@ -259,8 +261,15 @@ fun SettingsScreen(
             }
             
             // Memory Lights+ setting card
+            val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
+                if (hasActiveGame) {
+                    pendingMemoryLightsPlusToggle = newValue
+                } else {
+                    onMemoryLightsPlusToggled(newValue)
+                }
+            }
             SettingsCard(
-                onClick = { onMemoryLightsPlusToggled(!memoryLightsPlusEnabled) }
+                onClick = { requestMemoryLightsPlusToggle(!memoryLightsPlusEnabled) }
             ) {
                 Row(
                     modifier = Modifier
@@ -293,7 +302,7 @@ fun SettingsScreen(
 
                     Switch(
                         checked = memoryLightsPlusEnabled,
-                        onCheckedChange = onMemoryLightsPlusToggled,
+                        onCheckedChange = requestMemoryLightsPlusToggle,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = MaterialTheme.colorScheme.primary,
                             checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
@@ -303,7 +312,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            
+
             // Statistics card
             SettingsCard(
                 onClick = onStatisticsClicked
@@ -571,6 +580,53 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(
                     onClick = { showResetHighScoreDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = Color(0xFF1A1A1A),
+            titleContentColor = Color.White,
+            textContentColor = Color.White
+        )
+    }
+
+    // Memory Lights+ mode-switch confirmation when toggled mid-game.
+    pendingMemoryLightsPlusToggle?.let { newValue ->
+        AlertDialog(
+            onDismissRequest = { pendingMemoryLightsPlusToggle = null },
+            title = {
+                Text(
+                    text = "End current game?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    text = "Switching modes will end your current run. Continue?",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onMemoryLightsPlusToggled(newValue)
+                        pendingMemoryLightsPlusToggle = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Switch")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingMemoryLightsPlusToggle = null },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
