@@ -37,7 +37,8 @@ data class SimonGameUiState(
     val showYourTurnText: Boolean = false, // Whether to show YOUR TURN text overlay
     val statistics: GameStatistics = GameStatistics(), // Current game statistics
     val soundsLoaded: Boolean = false, // Whether all game sounds have finished loading
-    val soundLoadError: String? = null // Error message if sound loading failed
+    val soundLoadError: String? = null, // Error message if sound loading failed
+    val timeoutResetTick: Int = 0 // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int

@@ -20,8 +20,10 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Keep Koin reflection-based DI module wiring
--keep class org.koin.** { *; }
+# Koin 4.x with `viewModelOf(::Class)` and lambda module DSL no longer needs
+# a wildcard keep on org.koin.** — module wiring is constructor-reference
+# based, not reflection-by-class-name. Keep only the project's DI module
+# objects (referenced by name from the Application).
 -keep class com.happypuppy.memorylights.di.** { *; }
 
 # Keep Activity classes so the system can instantiate them (also satisfies the

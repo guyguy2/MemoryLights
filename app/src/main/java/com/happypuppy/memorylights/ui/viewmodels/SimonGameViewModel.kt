@@ -764,6 +764,9 @@ class SimonGameViewModel(
         // Cancel any existing timer first
         cancelTimeoutTimer()
 
+        // Bump the tick so the UI knows to (re)start its countdown ring animation.
+        _uiState.update { it.copy(timeoutResetTick = it.timeoutResetTick + 1) }
+
         // Start a new timer
         timeoutJob = viewModelScope.launch {
             delay(GameConstants.PLAYER_TIMEOUT_MS)

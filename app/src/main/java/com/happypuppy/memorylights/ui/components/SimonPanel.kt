@@ -1,8 +1,11 @@
 package com.happypuppy.memorylights.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -105,21 +108,31 @@ fun SimonPanel(
     val topPaddingValue = pressAnimation * 3f
     val startPaddingValue = pressAnimation * 3f
 
-    // Color and gradient setup based on button state
-    val buttonColors = remember(userPressed, isLit, color, brightColor, highlightColor, shadowColor) {
-        when {
-            userPressed -> listOf(shadowColor, brightColor, brightColor)
-            isLit -> listOf(
-                brightColor,
-                brightColor,
-                brightColor.copy(
-                    red = brightColor.red * 0.95f,
-                    green = brightColor.green * 0.95f,
-                    blue = brightColor.blue * 0.95f
-                )
-            )
-            else -> listOf(highlightColor, color, shadowColor)
-        }
+    // Smoothly ramp between off and lit state instead of hard switching.
+    val litProgress by animateFloatAsState(
+        targetValue = if (isLit) 1f else 0f,
+        animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        label = "litProgress"
+    )
+    val brightDimColor = remember(brightColor) {
+        Color(
+            red = brightColor.red * 0.95f,
+            green = brightColor.green * 0.95f,
+            blue = brightColor.blue * 0.95f,
+            alpha = 1f
+        )
+    }
+    // Pressed state stays instant (felt as direct touch feedback). Lit state
+    // interpolates per-frame so the gradient list is rebuilt during the animation
+    // — short window, acceptable cost for a smooth flash.
+    val buttonColors = if (userPressed) {
+        listOf(shadowColor, brightColor, brightColor)
+    } else {
+        listOf(
+            lerp(highlightColor, brightColor, litProgress),
+            lerp(color, brightColor, litProgress),
+            lerp(shadowColor, brightDimColor, litProgress)
+        )
     }
     val buttonBrush = remember(buttonColors) {
         Brush.linearGradient(

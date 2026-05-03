@@ -1,6 +1,19 @@
 package com.happypuppy.memorylights.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -21,9 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -34,6 +51,7 @@ import androidx.compose.ui.zIndex
 import android.content.res.Configuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.ScreenState
@@ -433,13 +451,31 @@ fun SimonGameScreen(
                     }
                 }
 
-                // Center counter/button with FAB-style when in GameOver state
+                // Center counter/button. Tappable in idle states (GameOver,
+                // WaitingToStart) to start / restart a game; passive otherwise.
+                val isIdleTappable = uiState.gameState == GameState.GameOver ||
+                        uiState.gameState == GameState.WaitingToStart
+                // Subtle scale pulse when the disc is tappable but the player
+                // hasn't started yet — telegraphs the affordance.
+                val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
+                val ctaScale by pulseTransition.animateFloat(
+                    initialValue = 1.0f,
+                    targetValue = 1.06f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "ctaScalePulse"
+                )
                 Box(
                     modifier = Modifier
                         .size(110.dp)
+                        .graphicsLayer(
+                            scaleX = if (isIdleTappable) ctaScale else 1f,
+                            scaleY = if (isIdleTappable) ctaScale else 1f
+                        )
                         .then(
-                            if (uiState.gameState == GameState.GameOver) {
-                                // When in GameOver state, add elevation and shadow
+                            if (isIdleTappable) {
                                 Modifier
                                     .shadow(
                                         elevation = 6.dp,
@@ -454,19 +490,9 @@ fun SimonGameScreen(
                                         onClick = { onStartNewGame() }
                                     )
                             } else {
-                                // Normal state
                                 Modifier
                                     .background(Color.Black, RoundedCornerShape(60.dp))
                                     .zIndex(3f)
-                                    .clickable(
-                                        enabled = (uiState.gameState == GameState.GameOver),
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) {
-                                        if (uiState.gameState == GameState.GameOver) {
-                                            onStartNewGame()
-                                        }
-                                    }
                             }
                         ),
                     contentAlignment = Alignment.Center
@@ -671,6 +697,26 @@ fun SimonGameScreen(
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
+                            } else if (uiState.gameState == GameState.WaitingToStart) {
+                                // Tap-to-start affordance — play icon + label invite
+                                // the player to begin instead of staring at a "1".
+                                Text(
+                                    text = uiState.level.toString(),
+                                    color = Color.White,
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    painter = painterResource(R.drawable.play_arrow_24px),
+                                    contentDescription = "Tap to start",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "Tap to start",
+                                    color = Color.Gray,
+                                    fontSize = 9.sp
+                                )
                             } else {
                                 // Animated level display with smooth transitions
                                 AnimatedContent(
@@ -709,8 +755,55 @@ fun SimonGameScreen(
                 }
             }
             
+            // Inactivity countdown ring around the center disc — drains over
+            // PLAYER_TIMEOUT_MS during the player's turn and resets on each
+            // press. Color shifts from green → red as time runs out so the
+            // signal is readable peripherally.
+            if (uiState.gameState == GameState.PlayerRepeating) {
+                val timeoutFraction = remember { Animatable(1f) }
+                LaunchedEffect(uiState.timeoutResetTick) {
+                    timeoutFraction.snapTo(1f)
+                    timeoutFraction.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = GameConstants.PLAYER_TIMEOUT_MS.toInt(),
+                            easing = LinearEasing
+                        )
+                    )
+                }
+                val ringColor = lerp(
+                    Color(0xFFE53935), // red — almost out of time
+                    Color(0xFF4CAF50), // green — fresh
+                    timeoutFraction.value
+                )
+                Canvas(
+                    modifier = Modifier
+                        .size(124.dp)
+                        .zIndex(2f)
+                ) {
+                    val stroke = 4.dp.toPx()
+                    drawArc(
+                        color = ringColor,
+                        startAngle = -90f,
+                        sweepAngle = 360f * timeoutFraction.value,
+                        useCenter = false,
+                        topLeft = Offset(stroke / 2, stroke / 2),
+                        size = Size(
+                            width = size.width - stroke,
+                            height = size.height - stroke
+                        ),
+                        style = Stroke(width = stroke, cap = StrokeCap.Round)
+                    )
+                }
+            }
+
             // HIGH SCORE text overlay for new high score celebration
-            if (uiState.showHighScoreText) {
+            AnimatedVisibility(
+                visible = uiState.showHighScoreText,
+                enter = fadeIn() + scaleIn(initialScale = 0.7f),
+                exit = fadeOut() + scaleOut(targetScale = 0.7f),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -721,14 +814,19 @@ fun SimonGameScreen(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp) // Position on top buttons in 6-button mode
+                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
                             .shadow(4.dp)
                     )
                 }
             }
-            
+
             // GAME OVER text overlay when game ends without high score
-            if (uiState.showGameOverText) {
+            AnimatedVisibility(
+                visible = uiState.showGameOverText,
+                enter = fadeIn() + scaleIn(initialScale = 0.85f),
+                exit = fadeOut() + scaleOut(targetScale = 0.85f),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -739,14 +837,19 @@ fun SimonGameScreen(
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp) // Position on top buttons in 6-button mode
+                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
                             .shadow(4.dp)
                     )
                 }
             }
-            
+
             // YOUR TURN text overlay when it's player's turn to repeat the sequence
-            if (uiState.gameState == GameState.PlayerRepeating && uiState.showYourTurnText) {
+            AnimatedVisibility(
+                visible = uiState.gameState == GameState.PlayerRepeating && uiState.showYourTurnText,
+                enter = fadeIn() + scaleIn(initialScale = 0.9f),
+                exit = fadeOut(),
+                modifier = Modifier.fillMaxSize()
+            ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -757,7 +860,7 @@ fun SimonGameScreen(
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-140).dp) // Position on top buttons in 6-button mode  
+                            .offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-140).dp)
                             .shadow(4.dp)
                     )
                 }
