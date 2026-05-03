@@ -9,6 +9,7 @@ import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.data.manager.StatisticsManager
 import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
+import com.happypuppy.memorylights.domain.calculateSequenceTiming
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -410,39 +411,11 @@ class SimonGameViewModel(
         }
     }
     
-    /**
-     * Calculate timing for sequence display based on difficulty setting and level
-     * Base timing: 600ms button lit, 400ms pause between buttons
-     * If difficulty enabled: reduce by 20% on rounds 5, 9, 13, etc.
-     */
-    private fun calculateSequenceTiming(): Pair<Long, Long> {
-        val currentLevel = _uiState.value.level
-        val difficultyEnabled = _uiState.value.difficultyEnabled
-        
-        if (!difficultyEnabled) {
-            return Pair(GameConstants.BASE_LIT_DURATION_MS, GameConstants.BASE_PAUSE_DURATION_MS)
-        }
-
-        // Calculate speed increases - reduction on rounds 5, 9, 13, etc.
-        // This means rounds where (level - 1) % 4 == 0 and level >= 5
-        val speedIncreases = if (currentLevel >= 5 && (currentLevel - 1) % GameConstants.DIFFICULTY_INTERVAL == 0) {
-            (currentLevel - 1) / GameConstants.DIFFICULTY_INTERVAL
-        } else if (currentLevel > 5) {
-            (currentLevel - 1) / GameConstants.DIFFICULTY_INTERVAL
-        } else {
-            0
-        }
-
-        // Each speed increase reduces timing
-        val reductionFactor = 1.0 - (speedIncreases * GameConstants.DIFFICULTY_REDUCTION_PERCENT)
-
-        // Ensure minimum timing
-        val litDuration = maxOf(GameConstants.MIN_LIT_DURATION_MS, (GameConstants.BASE_LIT_DURATION_MS * reductionFactor).toLong())
-        val pauseDuration = maxOf(GameConstants.MIN_PAUSE_DURATION_MS, (GameConstants.BASE_PAUSE_DURATION_MS * reductionFactor).toLong())
-        
-        Log.d(TAG, "Level $currentLevel, Speed increases: $speedIncreases, Timing: ${litDuration}ms lit, ${pauseDuration}ms pause")
-        
-        return Pair(litDuration, pauseDuration)
+    private fun currentSequenceTiming(): Pair<Long, Long> {
+        val state = _uiState.value
+        val timing = calculateSequenceTiming(state.level, state.difficultyEnabled)
+        Log.d(TAG, "Level ${state.level}, timing: ${timing.first}ms lit, ${timing.second}ms pause")
+        return timing
     }
     
     /**
@@ -613,7 +586,7 @@ class SimonGameViewModel(
         }
 
         // Calculate dynamic timing based on difficulty setting and level
-        val (litDuration, pauseDuration) = calculateSequenceTiming()
+        val (litDuration, pauseDuration) = currentSequenceTiming()
 
         _uiState.update { it.copy(gameState = GameState.ShowingSequence) }
 

@@ -1,638 +1,304 @@
-# Memory Lights - Codebase Improvement Report
+# Memory Lights — Consolidated Improvement Roadmap
 
-This is the canonical audit doc. It supersedes the original December 2025 best-practices write-up; closed items from that pass are listed in `specs/progress.md`. The current ranked execution roadmap (with phases and decisions) lives at `~/.claude/plans/use-as-needed-polymorphic-sunrise.md`.
-
----
-
-## 1. Project Overview
-
-Memory Lights is a single-activity Android game that recreates the classic Simon Says
-color-sequence memory challenge. Players watch a growing sequence of colored button
-flashes and must repeat it correctly before a 10-second timeout. The app ships two
-modes: a classic 4-button layout and a harder 6-button "Memory Lights+" variant, with
-four real sound packs (Standard, Funny, Electronic, Retro) and three placeholder packs
-(Musical, Nature, Sci-Fi). The tech stack is Kotlin 2.1.10 + Jetpack Compose BOM
-2025.06.00 + Material 3 + Koin 4.0.3 + DataStore Preferences. All persistence is
-handled by DataStore (migrated from SharedPreferences). There is a single Gradle module
-(`:app`); no KMP, no Room, no network layer.
+Canonical audit + execution plan. Combines original 2025 best-practices audit, post-Session-5 file:line audit, and 2026-05-02 multi-agent UI/UX/code/feature scan. Closed items listed in the Done section below; status reflects current `main` HEAD.
 
 ---
 
-## 2. Architecture & Module Structure
+## Current State Snapshot (updated 2026-05-02 after Phase 1)
 
-### Observations
-
-The project uses a reasonable MVVM layering: `domain` (models, enums, constants),
-`data` (managers, repository), `di`, and `ui` (screens, components, theme, viewmodels).
-For an app of this scale that structure is fine.
-
-### Issues
-
-**Redundant dual-state machine.** Both `GameState` and `ScreenState` exist in
-`SimonGameUiState`, but `GameState.Settings` overlaps with `ScreenState.Settings`.
-`showSettings()` sets both `gameState = GameState.Settings` and
-`screenState = ScreenState.Settings`, while `showStatistics()` sets
-`gameState = GameState.Settings` and `screenState = ScreenState.Statistics`. This means
-`GameState.Settings` has no meaning on its own; it is an overloaded placeholder for
-"any non-game screen." The navigation `when` branch in `MemoryLightsGame` only checks
-`screenState`, making `GameState.Settings` dead for navigation. The back-press handler
-in `MainActivity` checks `gameState is GameState.Settings` which will accidentally
-trigger when viewing statistics too.
-
-- `app/src/main/java/.../domain/model/SimonGameState.kt` - `GameState.Settings` object
-- `app/src/main/java/.../ui/MainActivity.kt:55` - back-press check
-- `app/src/main/java/.../ui/viewmodels/SimonGameViewModel.kt:195-199` - `showStatistics` sets `GameState.Settings`
-
-**Suggestion:** Remove `GameState.Settings` entirely. Drive navigation solely from
-`screenState`. The ViewModel can keep a `previousScreenState: ScreenState` for the
-"return from settings" logic.
-
-**`StatisticsManager` is misnamed and misplaced.** Despite being called a "manager" and
-living in `data/manager/`, it is really a repository. It owns its own `CoroutineScope`,
-talks directly to DataStore, and exposes synchronous-style methods backed by
-`runBlocking`. It should be renamed `StatisticsRepository` and placed alongside
-`DataStoreSettingsRepository` in `data/repository/`.
-
-**`rootProject.name = "My Application"` in `settings.gradle.kts:22`.** This is the
-default placeholder name, never updated. It only affects IDE project display and some
-build artifact naming.
-
-**No convention plugins or build-logic module.** Acceptable for a single-module project.
-Adding one is not warranted until a second module is introduced.
+| Area | Status |
+|---|---|
+| Architecture | MVVM with Koin DI, single `:app` module. `SimonGameViewModel` ~1,100 lines (large but functional). Repository pattern done for settings, statistics still in `data/manager/` (rename pending — item #29). |
+| Persistence | DataStore migration complete. **Off-main-thread Flow-based reads in place** (`settingsFlow`, `statisticsFlow`). `recordGameResult` now read+write inside single `dataStore.edit` — no more race. |
+| Sound | 4 real packs (standard, funny, electronic, retro), 3 placeholders (musical, nature, sci-fi) all aliased to `standard`. Lazy loading + memory trim done. Audio focus done. |
+| Tests | 43 unit tests: 28 domain/state/constants + 7 SequenceTiming + 8 ViewModel (Phase 2 step 1 done). Repository/Turbine flow tests still pending (#12). |
+| A11y | Content descriptions, state descriptions, role, level/state announcements, 48dp touch targets — all done. "HIGH SCORE!" still not announced (item #15). |
+| Build | **R8 + resource shrinking ON** for release. APK shrunk 35.5 MB → 7.2 MB. Koin + Activity keep rules in `proguard-rules.pro`. `Instantiatable` lint false positive suppressed via `tools:ignore` on MainActivity. `rootProject.name = "My Application"` still pending (item #23). `versionCode 1` `versionName 1.0` still pending. |
+| Git | All Phase 0 + Phase 1 work pushed to `origin/main`. GitHub repo renamed `MyApplication2` → `MemoryLights`. |
+| Device | Pixel_8_API_34 emulator started + smoke-tested through Phase 1 — app launches, DataStore-persisted high score loads on startup. |
 
 ---
 
-## 3. Dependency Injection
+## Master Ranked Status List
 
-### Observations
+**Status legend:** ✅ done · ⚠️ partial · ❌ open · ⏭️ skipped (decision recorded) · 🆕 added by post-Session-5 audit · "(multi-agent)" tag = surfaced by 2026-05-02 parallel UI/UX/code/feature scan
 
-Koin 4.0.3 is used cleanly with `viewModelOf`, constructor injection, and a properly
-typed interface binding for `SettingsRepository`. Module startup in `SimonApp` is
-minimal and correct.
+### P0 — Blockers before Play Store release
 
-### Issues
+| # | Item | Status | Effort | Files |
+|---|---|---|---|---|
+| 1 | Enable R8 / `isMinifyEnabled = true` + Koin keep rules | ✅ Phase 1 | S | `app/build.gradle.kts:23`, `app/proguard-rules.pro`, `AndroidManifest.xml` (Instantiatable suppress) |
+| 2 | Replace `runBlocking { dataStore.data.first() }` on main thread with one-time suspend init or `Flow` collected in `viewModelScope` | ✅ Phase 1 | M | `data/repository/SettingsRepository.kt`, `data/manager/StatisticsManager.kt`, `viewmodels/SimonGameViewModel.kt` |
+| 3 | `activeButtonPresses` is duplicated: ViewModel state field is dead — only `localPressedButtons` in screen drives UI. Pick one source of truth. | ✅ Phase 1 | S | `domain/model/SimonGameUiState.kt`, `viewmodels/SimonGameViewModel.kt` (private `activePresses` set; dead `onButtonRelease` deleted) |
+| 4 | Commit Session 5 work in logical chunks; push to `origin/main` | ✅ Phase 0 | S | 5 commits + push |
+| 5 | Reconcile `specs/improvements.md` vs root `IMPROVEMENTS.md` — keep `specs/` as canonical, delete root copy | ✅ Phase 0 | S | merged + deleted |
 
-**`SettingsScreen` directly injects `SimonSoundManager` from Koin via
-`koinInject<SimonSoundManager>()` at `SettingsScreen.kt:61`.** This bypasses the
-ViewModel and creates a hidden coupling: the composable now depends on the DI container.
-The sound preview on sound-pack selection (`soundManager.playSound(SimonButton.GREEN)`)
-should be an event sent to the ViewModel, not a direct manager call from the UI. This
-also means the Settings composable cannot be previewed without a live Koin context.
+### P1 — High value, near-term
 
-```kotlin
-// BEFORE (SettingsScreen.kt:61, 151)
-val soundManager = koinInject<SimonSoundManager>()
-// ...
-onSelect = {
-    soundManager.setSoundPack(soundPack)
-    soundManager.playSound(SimonButton.GREEN)
-    onSoundPackSelected(soundPack)
-}
+| # | Item | Status | Effort | Files |
+|---|---|---|---|---|
+| 6 | Dual high-score storage: `SettingsRepository` (`high_score_4_button`/`high_score_6_button`) and `StatisticsManager` (`high_score`) updated separately, can diverge. Single owner. | ❌ 🆕 | M | `viewmodels/SimonGameViewModel.kt:453`, `data/manager/StatisticsManager.kt:56` |
+| 7 | Remove `GameState.Settings` (overlaps `ScreenState.Settings`); drive nav from `ScreenState` only. Fixes back-press bug that fires on Statistics screen. | ❌ 🆕 | S | `domain/model/SimonGameState.kt`, `ui/MainActivity.kt:55`, `viewmodels/SimonGameViewModel.kt:195` |
+| 8 | Remove `koinInject<SimonSoundManager>` in `SettingsScreen`; route preview through ViewModel | ❌ 🆕 | S | `ui/screens/SettingsScreen.kt:61,151` |
+| 9 | Replace unsafe `viewModel as DefaultLifecycleObserver` cast | ❌ 🆕 | S | `ui/MainActivity.kt:40` |
+| 10 | Guard all `Log.d` + reflection-based `listAllRawResources()` / `debugResourceNotFound()` with `BuildConfig.DEBUG` | ❌ 🆕 | S | `data/manager/SimonSoundManager.kt:200,369` |
+| 11 | Add `SimonGameViewModelTest` with `mockk` + `UnconfinedTestDispatcher` (deps already in catalog). Cover sequence-match, wrong-button → game over, timeout, high-score, lifecycle save/restore. | ✅ Phase 2 step 1 | L | `app/src/test/java/.../ui/viewmodels/SimonGameViewModelTest.kt` (8 tests), `app/src/test/java/.../domain/SequenceTimingTest.kt` (7 tests) |
+| 12 | Add `Turbine` to catalog; write flow tests for `DataStoreSettingsRepository` and `StatisticsManager` | ❌ | M | `gradle/libs.versions.toml`, new tests |
+| 13 | Mark MUSICAL/NATURE/SCI_FI as "Coming Soon" in UI (see Sound Track below — implementing them obsoletes this) | ❌ 🆕 | S | `ui/screens/SettingsScreen.kt`, `domain/enums/SoundPack.kt` |
+| 14 | Delete orphan `app/src/main/res/raw/guy/blue_tone.wav` (Android does not load nested raw resources) | ✅ Phase 0 | S | deleted |
+| 15 | Add HIGH SCORE accessibility announcement | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt` |
+| 38 | `calculateSequenceTiming` has a dead `if` branch — difficulty trigger evaluates differently at level 5 vs 6-8. Collapse to `(currentLevel - 1) / DIFFICULTY_INTERVAL`, gated on `currentLevel >= 5`. | ✅ Phase 2 step 1 (collapsed during extraction to pure helper `domain/SequenceTiming.kt`; numeric output unchanged, locked by `SequenceTimingTest`) | S | `domain/SequenceTiming.kt`, `viewmodels/SimonGameViewModel.kt` |
+| 39 | Render `soundLoadError` in UI — sound-load failure currently shows a permanent silent spinner with no explanation/retry. | ❌ 🆕 (multi-agent) | S | `ui/screens/SimonGameScreen.kt:604`, `domain/model/SimonGameUiState.kt:40` |
+| 40 | `setVibrationEnabled(true)` silently fires test buzz — surprises user, reads as bug. Either remove the side-effect or label it ("Test buzz"). | ❌ 🆕 (multi-agent) | S | `data/manager/SimonSoundManager.kt:533-542` |
+| 41 | Settings card double-tap risk: `SettingsCard.clickable` + inner `TextButton("Reset")` both fire on tap. Drop one click target. | ❌ 🆕 (multi-agent) | S | `ui/screens/SettingsScreen.kt:357-398, 607-618` |
+| 42 | Splash white flash — `themes.xml` inherits `Theme.Material.Light.NoActionBar`. Set `android:windowBackground = #000000` and use Splash Screen API. | ❌ 🆕 (multi-agent) | S | `app/src/main/res/values/themes.xml`, `ui/MainActivity.kt:33` |
+| 43 | `saveSettings()` writes all 7 DataStore keys per single setting toggle (~9 callsites + onCleared). Replace whole-state flush with per-setting writes; drop redundant `saveSettings()` in `onCleared`. | ❌ 🆕 (multi-agent) | M | `viewmodels/SimonGameViewModel.kt:132-149,301,317,334,351,364,403,469,980,1100` |
+| 44 | "Memory Lights+" toggle mid-game silently wipes current run. Add confirm dialog if `gameState != WaitingToStart && gameState != GameOver`. | ❌ 🆕 (multi-agent) | S | `viewmodels/SimonGameViewModel.kt:373` |
+| 45 | "Reset High Score" card title understates — actually wipes ALL statistics. Rename title to "Reset Score & Statistics" so the destructive scope is visible without opening the dialog. | ❌ 🆕 (multi-agent) | S | `ui/screens/SettingsScreen.kt:382-384` |
+| 46 | Game-over flow has no score summary before tap-to-restart — center disc tap immediately restarts, killing reward loop and removing share motivation (depends on F10 if added). | ❌ 🆕 (multi-agent) | S | `ui/screens/SimonGameScreen.kt:617-633` |
 
-// AFTER - add a single callback and handle it in ViewModel
-onSoundPackSelected = { pack ->
-    viewModel.setSoundPackAndPreview(pack) // ViewModel plays the preview sound internally
-}
+### P2 — Polish, post-launch
+
+| # | Item | Status | Effort | Files |
+|---|---|---|---|---|
+| 16 | Remove dead code: `onButtonRelease`, `updatePreference`, `getContext()`, `triggerParticleEffects` | ❌ 🆕 | S | multiple |
+| 17 | Extract `SimonButtonGrid` composable to shrink 750-line `SimonGameScreen` | ❌ 🆕 | M | `ui/screens/SimonGameScreen.kt` |
+| 18 | Replace `delay(16)` loop in `ParticleEffect` with `withFrameMillis` | ❌ 🆕 | S | `ui/components/ParticleEffect.kt:74` |
+| 19 | Replace `Handler(Looper.getMainLooper()).post` vibration dispatch | ❌ 🆕 | S | `data/manager/SimonSoundManager.kt:535,620` |
+| 20 | Move `LocalConfiguration` orientation read out of `SimonGameScreen` to avoid full-screen recomposition | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:238` |
+| 21 | Fix `ERROR_SOUND_VOLUME_BOOST = 1.2f` silently clamped to 1.0 | ❌ 🆕 | S | `domain/GameConstants.kt:43`, `data/manager/SimonSoundManager.kt:680` |
+| 22 | Tablet/foldable cap: `widthIn(max = 500.dp)` on game panel | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt` |
+| 23 | Rename `rootProject.name` → `MemoryLights` | ❌ 🆕 | S | `settings.gradle.kts:22` |
+| 24 | Cancel `CoroutineScope` in `StatisticsManager` and `DataStoreSettingsRepository` on app destruction | ❌ 🆕 | M | `data/manager/StatisticsManager.kt:41`, `data/repository/SettingsRepository.kt:74` |
+| 25 | Add `displayName` property to `SimonButton`; remove local `capitalize()` extension | ❌ 🆕 | S | `domain/enums/SimonButton.kt`, `ui/screens/SimonGameScreen.kt:45` |
+| 26 | Remove unused `lifecycle-process` dependency | ❌ 🆕 | S | `app/build.gradle.kts:48`, `libs.versions.toml:19` |
+| 27 | `catch (_: Exception)` → `catch (_: ActivityNotFoundException)` for Play Store intent | ❌ 🆕 | S | `ui/screens/SettingsScreen.kt:419` |
+| 28 | Disable dynamic color (`dynamicColor = false`) to preserve all-black aesthetic | ❌ 🆕 | S | `ui/theme/Theme.kt:40` |
+| 29 | Move `StatisticsManager` to `data/repository/` and rename `StatisticsRepository` | ❌ 🆕 | S | rename |
+| 30 | 4-button mode padding inconsistency (Green 2.dp vs others 4.dp) | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:366,382,398,414` |
+| 31 | Hardcoded `.offset(y = ...)` for text overlays — switch to `Alignment` | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:683` |
+| 32 | Progressive onboarding / first-run tutorial | ❌ | M | new |
+| 33 | Snackbar confirmation on settings change | ❌ | S | `ui/screens/SettingsScreen.kt` |
+| 34 | Reduce-motion option / respect `LocalReducedMotion` | ❌ | S | theme + screen |
+| 35 | Color-blind mode (icons/patterns on buttons) | ❌ | M | `ui/components/SimonPanel.kt` |
+| 36 | Keyboard / external controller support (TV / ChromeOS / gamepad) | ❌ | L | new |
+| 37 | High-score checksum / tamper resistance | ❌ | S | `data/manager/StatisticsManager.kt` |
+| 47 | `activePresses` mutable set lacks `@MainThread` discipline — touch + coroutines both touch it without lock. Annotate `@MainThread` or wrap in mutex. | ❌ 🆕 (multi-agent) | S | `viewmodels/SimonGameViewModel.kt:63,694-729` |
+| 48 | Externalize all UI strings to `strings.xml` — currently only `app_name` is externalized. Blocks i18n + string audit. | ❌ 🆕 (multi-agent) | M | `ui/screens/SimonGameScreen.kt`, `ui/screens/SettingsScreen.kt`, `ui/screens/StatisticsScreen.kt` |
+| 49 | Dedupe duplicated dark hex literals (`0xFF1D1D1D`, `0xFF1A1A1A`, `0xFF121212`, `0xFF303030`) across 3 screens — move to `Color.kt`. Prereq for #28 (dynamicColor) and F12 (theme toggle). | ❌ 🆕 (multi-agent) | S | `ui/screens/SimonGameScreen.kt:437`, `ui/screens/SettingsScreen.kt:138,548,595,613,628`, `ui/screens/StatisticsScreen.kt:122,213,232` |
+| 50 | `SimonButton.index` duplicates `ordinal` — drop the field, drop the test that asserts on it. | ❌ 🆕 (multi-agent) | S | `domain/enums/SimonButton.kt:8`, `domain/enums/SimonButtonTest.kt` |
+| 51 | ProGuard `-keep class org.koin.**` is too broad. Koin 4.x with `viewModelOf` doesn't need the wildcard — narrow to `KoinComponent` + reflection helpers actually used. Reclaim release APK size. | ❌ 🆕 (multi-agent) | S | `proguard-rules.pro` |
+| 52 | `handleButtonInteraction` lambda not `remember`ed — invalidates all 6 `SimonPanel`s every recomposition. Wrap in `remember(localPressedButtons, onButtonClick)`. | ❌ 🆕 (multi-agent) | S | `ui/screens/SimonGameScreen.kt:143` |
+| 53 | `Brush.linearGradient` allocated per recomposition in `SimonPanel`. Wrap in `remember(buttonColors)`. | ❌ 🆕 (multi-agent) | S | `ui/components/SimonPanel.kt:169` |
+| 54 | `isLit` flash is hard color switch — no smooth brightness ramp. Use `animateColorAsState` so the Simon flash matches the press spring polish. | ❌ 🆕 (multi-agent) | M | `ui/components/SimonPanel.kt:89-124` |
+| 55 | Overlay text (HIGH SCORE / GAME OVER / YOUR TURN) appears with no `AnimatedVisibility` — abrupt pop-in. Wrap each `if` block in fade/slide. | ❌ 🆕 (multi-agent) | S | `ui/screens/SimonGameScreen.kt:672-723` |
+| 56 | `WaitingToStart` shows static "1" with no tap-to-begin affordance — pulsing animation, play icon, or "Tap to start" label needed (mirrors GameOver's play affordance). | ❌ 🆕 (multi-agent) | M | `ui/screens/SimonGameScreen.kt:617-653` |
+| 57 | Statistics screen uses `Icons.DateRange` for 3 unrelated rows ("Games Played", "Average Score", "Total Score"). Pick distinct icons. | ❌ 🆕 (multi-agent) | S | `ui/screens/StatisticsScreen.kt:85,96,105` |
+| 58 | `Typography` scale defined in `Type.kt` but unused — every `Text` sets `fontSize` directly, losing semantic role + a11y type-scale. Migrate to `MaterialTheme.typography.*`. | ❌ 🆕 (multi-agent) | M | `ui/theme/Type.kt`, all 3 screens |
+| 59 | `SoundPackOption` double ripple: `Row.clickable` + `RadioButton.onClick` both fire ripples on same tap. Pass `interactionSource = remember { MutableInteractionSource() }` and `indication = null` to one of them. | ❌ 🆕 (multi-agent) | S | `ui/screens/SettingsScreen.kt:637-647` |
+| 60 | "Your Turn" cue vanishes after round 3, leaving only faint halo as turn indicator. Keep persistent affordance throughout the player's turn (subtle pulsing border, mode-tag, or sticky text). | ❌ 🆕 (multi-agent) | S | `viewmodels/SimonGameViewModel.kt:657`, `ui/screens/SimonGameScreen.kt:726` |
+| 61 | Timeout has no visible countdown — game ends "from nowhere" at 10s. Add a thin progress ring around the center disc that drains during the player's turn. | ❌ 🆕 (multi-agent) | M | `domain/GameConstants.kt:8`, `viewmodels/SimonGameViewModel.kt:854`, `ui/screens/SimonGameScreen.kt` |
+| 62 | Difficulty speed-up invisible to player. When difficulty reduces timing, flash a "Speed Up!" text or attach a level-tier subtitle ("Level 5 - Fast"). Pairs with item #38. | ❌ 🆕 (multi-agent) | S | `viewmodels/SimonGameViewModel.kt:418-445`, `ui/screens/SimonGameScreen.kt` |
+| 63 | Sound pack preview always plays GREEN regardless of pack tapped. Cycle through all colors, or play a random color, so player auditions full pack character. | ❌ 🆕 (multi-agent) | S | `ui/screens/SettingsScreen.kt:150-152` |
+| 64 | No sequence-progress "3 / 7" indicator during repeat — players lose count at high levels. Add `playerSequence.size / sequence.size` text below the center disc when `gameState == PlayerRepeating`. | ❌ 🆕 (multi-agent) | S | `domain/model/SimonGameUiState.kt:23-24`, `ui/screens/SimonGameScreen.kt` |
+
+### Done (verified — closing the loop on the original 2025 audit)
+
+✅ Mutable map → immutable map · TAG companion constants · `entries` over `values()` · unused import removed · `dynamicColor && true` fixed · GameConstants object created · content descriptions / state descriptions / role / 48dp touch targets · screen-reader announcements (level, your-turn, game-over) · sound loading state + indicator · `derivedStateOf` for `availableButtons` · lazy sound-pack loading · `ComponentCallbacks2` memory-trim · audio focus + listener · graceful fallback to GREEN tone · master volume control · `SettingsRepository` interface + impl · DataStore migration with auto-migrate-from-SharedPreferences · 28 unit tests for domain/state/constants.
+
+⏭️ Skipped (decision documented in `progress.md`): split `GamePlayState` / `SettingsState` (low recomposition benefit for this app size).
+
+---
+
+## Feature Backlog (multi-agent scan, 2026-05-02)
+
+Product features that are not strictly audit fixes — sequenced separately so engineering polish doesn't block product direction. Pick which to ship in v1.0 vs v1.1+ before Phase 4 (Play Store prep). Numbered F1-F17 to keep them visually distinct from audit items #1-#64.
+
+### Game variants
+
+| # | Feature | Effort | Notes |
+|---|---|---|---|
+| F1 | **Reverse Mode** — watch then repeat backwards | S | Toggle in Settings; one-line change in `checkSequenceMatch` to compare against reversed sequence. |
+| F2 | **Visual-Only (silent) Mode** — skip `soundManager.playSound` during sequence | S | Doubles as accessibility for hearing-impaired. |
+| F3 | **Audio-Only Mode** — hide button colors during sequence playback | M | Exposes weak placeholder packs — pair with Phase 3 sound pack work. |
+| F4 | **Speed Blitz Mode** — fixed-length sprint (e.g. 20 buttons) with leaderboard time | M | New `GameMode` enum + separate high-score slot + sprint timer UI. |
+| F5 | **Smoother difficulty curve** (logarithmic) | S | Overlaps with audit fix #38 (`calculateSequenceTiming`); do them together. |
+
+### Engagement / retention
+
+| # | Feature | Effort | Notes |
+|---|---|---|---|
+| F6 | **Daily Challenge** — deterministic seed `Random(date.toEpochDay())` | M | Persist "completed today" flag in DataStore. |
+| F7 | **Win-streak tracking** | S | Extends existing `bestStreak` slot in `StatisticsManager`; pick definition (beat prior session vs beat personal best). |
+| F8 | **Local achievements / badges** — milestone rewards | M | New DataStore key-set; no backend. |
+| F9 | **Replay last sequence after game-over** ★ | S | Sequence is already in `uiState.sequence`; show button on GameOver, calls existing `showSequence` path. Often the single highest-impact retention feature in the genre. |
+| F10 | **Share score card image** — Android share sheet | M | `Compose → Bitmap` (Picture or `View.drawToBitmap`). Pairs with audit fix #46 (game-over score summary). |
+| F11 | **Google Play Games Services leaderboard** | L | GPGS SDK + Console project + sign-in flow. **Post-launch v1.1.** |
+
+### Customization / quality-of-life
+
+| # | Feature | Effort | Notes |
+|---|---|---|---|
+| F12 | **Light / AMOLED theme toggle** | S | Depends on audit fixes #49 (dedupe color hex literals) and #58 (typography scale). |
+| F13 | **Per-button color picker** (colorblind a11y) | L | Replaces / complements audit item #35. Requires per-button override map in DataStore. |
+| F14 | **Explicit pause button** + new `GameState.Paused` | S | Players currently can only pause by backgrounding the app, which loses timeout state. |
+| F15 | **Practice mode** — wrong button doesn't end game | M | Bypasses `handleGameOver()`; replays sequence from failed step. |
+| F16 | **Adjustable timeout slider** (5 / 10 / 15 / 30 / ∞) | S | One DataStore key, one settings slider, one constant swap. Pairs with audit fix #61 (visible countdown). |
+
+### Monetization (decision required — discuss before code)
+
+| # | Feature | Effort | Notes |
+|---|---|---|---|
+| F17 | **Premium sound packs IAP bundle** | XL | Single "Unlock All" IAP for Musical/Nature/Sci-Fi packs once they ship. **Requires explicit ads-vs-IAP product decision before any billing code.** Not before Phase 3 sound assets exist. |
+
+★ = recommended high-impact / low-effort starting point.
+
+---
+
+## Sound Track — Implement the Three Missing Sound Packs
+
+Each pack needs **7 files** at 22 050 Hz mono WAV, ~150–400 ms each: `green`, `red`, `yellow`, `blue`, `purple`, `orange`, `error`. Total = **21 new files**. Drop into `app/src/main/res/raw/` with naming `{prefix}_{color}_tone.wav`.
+
+### Step 1 — Update `SoundPack.resourcePrefix`
+File: `app/src/main/java/.../domain/enums/SoundPack.kt:32-46`. Change MUSICAL → `"musical"`, NATURE → `"nature"`, SCI_FI → `"scifi"`. (Use `scifi` not `sci_fi` — Android raw resource names must be lowercase + underscores; `scifi` keeps it short and matches existing single-token prefixes.)
+
+### Step 2 — Pack design (musical theme of each pack)
+
+**Musical** — pitched instrument notes mapped to a pentatonic scale to stay consonant in any sequence:
+- Suggested mapping: green = C5 piano, red = E5 piano, yellow = G5 piano, blue = A5 piano, purple = D5 guitar pluck, orange = F#5 flute, error = dissonant minor 2nd cluster.
+
+**Nature** — short organic samples:
+- green = bird chirp, red = water drop, yellow = wind chime ding, blue = frog ribbit, purple = cricket, owl, or rustling leaves, orange = soft thunder rumble (short), error = hawk screech or branch snap.
+
+**Sci-Fi** — synth FX:
+- green = ascending bleep, red = descending bleep, yellow = modulated square wave, blue = filter sweep, purple = laser zap, orange = warp/whoosh, error = klaxon or alarm buzz.
+
+### Step 3 — Source vs. generate (decision matrix)
+
+| Approach | Pros | Cons | Best for |
+|---|---|---|---|
+| Royalty-free libraries (Freesound CC0, Pixabay, OpenGameArt, Kenney.nl) | Real recordings, professional quality | License audit per file (CC0 vs CC-BY vs other), inconsistent loudness, must trim | Nature pack |
+| Procedural synth via `sox` / `ffmpeg` (sine + envelope) | Fully controllable, zero license risk, scriptable | Sounds clinical | Musical pack (pure tones), Sci-Fi (with FM/filter) |
+| Browser tools: ChipTone, jsfxr, Bfxr | Instant, retro-style, exportable WAV | Sci-Fi only — not musical | Sci-Fi pack |
+| Python with `numpy` + `scipy.io.wavfile` | Total control over envelope, ADSR, harmonics | Requires Python deps | Musical pack (additive synthesis) |
+| AI generators: ElevenLabs SFX API, Suno (with care) | Fast iteration, varied output | Cost, license terms vary, quality inconsistent for short FX | Backup option |
+
+**Recommended path:**
+- **Musical:** generate with a 30-line Python `numpy` script (sine + 2 harmonics + exponential decay envelope) for clean, license-free pitched tones.
+- **Sci-Fi:** generate with `jsfxr` (ChipTone) presets — purpose-built for game FX. Export WAV. Fully license-free.
+- **Nature:** source from Freesound (filter to CC0). Trim to ≤400 ms with `sox` / `ffmpeg`. Keep license attributions in `app/src/main/assets/SOUND_LICENSES.md` even if CC0.
+
+### Step 4 — Pipeline (one-time script)
+
+Create `tools/sounds/` (gitignored intermediates, committed final WAVs):
+```
+tools/sounds/
+├── musical/generate.py          # Python additive synth → 7 WAVs
+├── scifi/                       # Drop jsfxr exports here
+├── nature/sources.txt           # Freesound IDs + license per file
+├── normalize.sh                 # sox normalize -1dB, trim silence
+└── install.sh                   # cp final/*.wav app/src/main/res/raw/
 ```
 
-**`SimonSoundManager` is injected as `single` but holds a `Context` reference** and
-registers `ComponentCallbacks2`. This is fine as long as `applicationContext` is always
-used (and it is), but the `getContext()` method at `SimonSoundManager.kt:193` returns
-`context.applicationContext`, which is only called from commented-out or non-existent
-callers and should be removed.
+Verification per file:
+- 22 050 Hz mono 16-bit PCM (`soxi` to confirm).
+- Duration ≤ 500 ms (game timing tolerates 600 ms lit + 400 ms pause; longer sounds would clip).
+- Peak normalized to −1 dBFS.
+- A/B against existing `standard_*` files for loudness parity.
+
+### Step 5 — Update UI affordances
+
+After packs ship: remove the "Coming Soon" badge work from item #13. Until they ship, item #13 stands.
+
+### Step 6 — Tests / verification
+
+- Add a `SimonSoundManagerTest` (instrumented) that asserts each `SoundPack.resourcePrefix` resolves to all 7 button + error resource IDs. This catches missing files at CI time.
+- Manual: install on device, switch each pack in Settings, play a round, listen for fallback warnings in `logcat | grep com.happypuppy.memorylights`.
 
 ---
 
-## 4. Presentation Layer (Compose + ViewModels)
+## Decisions (locked in)
 
-### Observations
+- **Canonical audit doc:** this file (`specs/improvements.md`). Root `IMPROVEMENTS.md` deleted in Phase 0.
+- **Sound production:** synth-first. Musical = Python `numpy` additive synth, Sci-Fi = `jsfxr`/ChipTone exports, Nature = Freesound CC0 (with license file).
+- **Next external milestone:** real sound packs ship **before** Play Store launch.
+- **Commit cadence:** ~4-5 logical commits per session (Session 5 split into 5 commits in Phase 0).
 
-`collectAsStateWithLifecycle` is used correctly. `SimonPanel` applies semantics
-(`contentDescription`, `stateDescription`, `Role.Button`). Immutable state is
-consistently used via `StateFlow` + `it.copy(...)`.
+## Execution Sequence
 
-### Issues
-
-**`SimonGameViewModel` implements `DefaultLifecycleObserver` and is cast to it in
-`MainActivity`.** This tightly couples the ViewModel to the Activity lifecycle via a
-`DefaultLifecycleObserver` cast rather than the standard `LifecycleEventObserver` or a
-`ProcessLifecycleOwner` approach. The cast `viewModel as DefaultLifecycleObserver` is
-unsafe: if the ViewModel ever stops implementing that interface, this will throw a
-`ClassCastException` at runtime.
-
-- `app/src/main/java/.../ui/MainActivity.kt:40`
-
-```kotlin
-// BEFORE
-lifecycle.addObserver(viewModel as DefaultLifecycleObserver)
-
-// AFTER - check before cast, or model the lifecycle concern differently
-lifecycle.addObserver(viewModel)  // safe because ViewModel implements the interface
-// ...or use ProcessLifecycleOwner to avoid any Activity dependency
-```
-
-**`SimonGameScreen` has local `localPressedButtons` state that duplicates
-`activeButtonPresses` in `SimonGameUiState`.** The component tracks pressed buttons
-both in ViewModel state (`activeButtonPresses`) and in a local `remember` map
-(`localPressedButtons`). Only the local copy drives the `SimonPanel.userPressed`
-parameter; the ViewModel copy is never read by the UI. This is dead ViewModel state.
-Either remove `activeButtonPresses` from `SimonGameUiState` (and keep local state for
-purely cosmetic press feedback) or remove the local state and use `uiState.activeButtonPresses`.
-
-- `app/src/main/java/.../ui/screens/SimonGameScreen.kt:110-113` (local state)
-- `app/src/main/java/.../domain/model/SimonGameUiState.kt:30` (`activeButtonPresses`)
-
-**`SimonGameScreen` is 750+ lines.** The 4-button vs 6-button grid layout (portrait and
-landscape) is copy-pasted four times with near-identical `SimonPanel` instantiation.
-Extract a `SimonButtonGrid` composable that accepts `List<List<SimonButton>>` rows and
-the event callbacks.
-
-**Hardcoded `.offset(y = ...)` in dp for text overlays is fragile.**
-
-```kotlin
-// SimonGameScreen.kt:683
-modifier = Modifier.offset(y = if (uiState.memoryLightsPlusEnabled) (-200).dp else (-80).dp)
-```
-
-This will break on different screen densities or when the layout changes. Use
-`Alignment` or measure the layout rather than raw dp offsets.
-
-**`MemoryLightsGame` passes the raw `SimonGameViewModel` to child composables.** Passing
-the ViewModel directly couples composables to the ViewModel type. Pass lambdas or a
-stable state object instead, which enables better testability and preview support.
-
-**Dynamic color is enabled by default (`dynamicColor = true`) in `Theme.kt:40`.** On
-Android 12+ the app's purple `MaterialTheme.colorScheme.primary` could be overridden by
-the user's wallpaper color, potentially breaking the dark game aesthetic. Consider
-disabling dynamic color for a game that has a deliberate all-black theme.
-
-- `app/src/main/java/.../ui/theme/Theme.kt:40`
-
-**4-button mode has inconsistent padding.** Green uses `padding(2.dp)`, while Red,
-Yellow and Blue use `padding(4.dp)`.
-
-- `app/src/main/java/.../ui/screens/SimonGameScreen.kt:366, 382, 398, 414`
+1. **Phase 0 — Stabilize** ✅ DONE (2026-05-02)
+   - Item #4: ✅ Session 5 work committed as 5 logical commits + pushed to origin/main:
+     - `1c33fe5` Consolidate improvement docs and clean up orphan resources
+     - `c60376d` Migrate persistence to DataStore with SettingsRepository
+     - `14f06e6` Refactor SimonSoundManager: audio focus, lazy loading, memory awareness
+     - `6a69f5a` Polish UI/state: a11y, immutable map, GameConstants, Compose hygiene
+     - `55d9ee3` Add domain unit tests and test dependencies
+   - Item #5: ✅ merged root `IMPROVEMENTS.md` into this file (root version is the canonical post-Session-5 audit, supersedes Dec 2025 version). Root copy deleted.
+   - Item #14: ✅ deleted `app/src/main/res/raw/guy/blue_tone.wav` and empty `guy/` subdir.
+   - Bonus: GitHub repo renamed `MyApplication2` → `MemoryLights`. Stripped leaked PAT (`ghp_QJH5...`) from `.git/config` — **manual TODO: revoke at https://github.com/settings/tokens**. Added `.claude/` to `.gitignore`.
+2. **Phase 1 — P0 audit fixes** ✅ DONE (2026-05-02, single commit `8b2bd94`)
+   - #1 R8 + Koin keep rules + Activity keep rules + Instantiatable lint suppress on MainActivity. APK 35.5 MB → 7.2 MB.
+   - #2 DataStore reads off main thread via `settingsFlow` + `statisticsFlow`. Added `AppSettings` data class. ViewModel collects flows in `viewModelScope` on init; statistics flow continuous; settings load via `.first()` then runs startup animation. `recordGameResult` now read+update inside single `dataStore.edit` (no race).
+   - #3 `activeButtonPresses` removed from `SimonGameUiState`; private `activePresses: MutableSet<SimonButton>` in ViewModel handles touch debounce. Dead `onButtonRelease` deleted.
+   - Smoke-tested on Pixel_8_API_34 emulator: app launches, persisted high score loads correctly via Flow.
+3. **Phase 2 — VM/repo tests then P1 fixes (2–3 days)** ⏭️ IN PROGRESS
+   - **Step 1:** ✅ done — `SimonGameViewModelTest` (8 tests: sequence advance, wrong button, timeout, new high score, no-regress high score, resetHighScore, onPause/onResume, mode switch) + `SequenceTimingTest` (7 tests: difficulty off / L1-4 / L5 / L6-8 / L9 / monotonic / clamp). `calculateSequenceTiming` extracted to pure `domain/SequenceTiming.kt`, collapsing the #38 dead branch. `testOptions.unitTests.isReturnDefaultValues = true` added so `Log.d` calls in unit tests no-op. 43 unit tests total, all green.
+   - Step 2: add `Turbine` to catalog; flow tests for `DataStoreSettingsRepository` and `StatisticsManager` (#12).
+   - Step 3: P1 refactors (existing audit) — #6, #7, #8, #9, #10, #15.
+   - Step 4: P1 multi-agent finds — fix #38 (dead `if` branch in difficulty), #39 (render `soundLoadError`), #40 (vibration test-buzz side-effect), #41 (settings card double-tap), #42 (splash white flash), #43 (saveSettings write storm), #44 (mid-game mode-switch confirm), #45 (reset card title clarity), #46 (game-over score summary).
+   - Step 5: #13 "Coming Soon" badge — throwaway, removed when sound packs ship in Phase 3. Skip if Phase 3 starts immediately after.
+4. **Phase 3 — Sound packs (2–3 days)** — Sound Track steps 1–6:
+   - Musical first (deterministic Python synth, fastest to iterate).
+   - Sci-Fi second (jsfxr exports + normalize via `sox`).
+   - Nature last (Freesound CC0 sourcing + license file + trim/normalize).
+   - Update `SoundPack.resourcePrefix` for all three; remove the "Coming Soon" badge added in Phase 2.
+   - Open Questions 1-3 (mapping, chiptune vs cinematic, sounds to favor/avoid) still need user input before starting.
+5. **Phase 4 — Play Store prep (1 day):** item #23 (rootProject.name), signed AAB, store listing, screenshots showing all 7 packs, privacy policy.
+6. **Phase 5 — P2 polish (ongoing post-launch):** items #16–#37 (existing audit) **plus #47–#64** (multi-agent finds: thread-safety annotation, strings.xml, color dedupe, dead `index` field, narrow ProGuard keep, lambda/brush `remember`, animated lit/overlay transitions, tap-to-start affordance, Statistics icons, Typography migration, ripple cleanup, persistent turn cue, timeout countdown, speed-up signal, varied preview, sequence-progress indicator).
+7. **Phase 6 — Feature backlog (product roadmap, post-launch):** Feature Backlog items F1–F17. Recommended starting set: F9 (replay last sequence) + F14 (pause button) + F16 (adjustable timeout) — all S-effort, high impact. F17 (IAP) requires explicit ads-vs-IAP product decision before any code.
 
 ---
 
-## 5. Data Layer
+## Critical Files
 
-### Observations
-
-`SettingsRepository` interface is clean and decoupled. DataStore migration from
-SharedPreferences is in place for both settings and statistics.
-
-### Issues
-
-**`runBlocking` on every read in `DataStoreSettingsRepository` and
-`StatisticsManager`.**
-
-Both `getPreferences()` implementations use `runBlocking { dataStore.data.first() }`:
-
-- `app/src/main/java/.../data/repository/SettingsRepository.kt:76`
-- `app/src/main/java/.../data/manager/StatisticsManager.kt:42`
-
-`runBlocking` on the main thread will block the UI thread until the disk read
-completes. In the `init {}` block of the ViewModel, `loadSettings()` calls six separate
-`runBlocking` reads. This can add noticeable jank on first launch. The correct pattern
-is to expose suspend functions or `Flow` and collect from a coroutine scope.
-
-```kotlin
-// BEFORE (SettingsRepository.kt)
-override fun getSoundPack(): SoundPack {
-    val name = getPreferences()[KEY_SOUND_PACK]  // blocks main thread
-    ...
-}
-
-// AFTER - expose Flow, let ViewModel collect once on init
-fun settingsFlow(): Flow<AppSettings> = dataStore.data.map { prefs ->
-    AppSettings(
-        soundPack = SoundPack.valueOf(prefs[KEY_SOUND_PACK] ?: SoundPack.STANDARD.name),
-        ...
-    )
-}
-```
-
-**High scores are stored twice** - once in `SettingsRepository` (as `high_score_4_button`
-/ `high_score_6_button`) and once independently inside `StatisticsManager` (as
-`high_score`). The two are updated separately and can diverge. `resetHighScore()` in the
-ViewModel calls `statisticsManager.resetStatistics()` but then manually zeroes the
-`highScore4Button`/`highScore6Button` fields in state and calls `saveSettings()`, while
-`StatisticsManager.highScore` is also cleared. On the other hand, `recordGameResult()`
-in `StatisticsManager` updates its own `KEY_HIGH_SCORE` which is separate from the
-SettingsRepository high scores. This duplication is a consistency bug.
-
-- `app/src/main/java/.../ui/viewmodels/SimonGameViewModel.kt:453-468` (resetHighScore)
-- `app/src/main/java/.../data/manager/StatisticsManager.kt:56-67` (recordGameResult)
-
-**`SettingsRepository.updatePreference()` is defined but never called.**
-`DataStoreSettingsRepository.kt:80-86` defines a `private fun updatePreference(block)`
-helper, but every `setX()` method uses `scope.launch { dataStore.edit { ... } }`
-directly. The helper is dead code.
-
-- `app/src/main/java/.../data/repository/SettingsRepository.kt:80-86`
-
-**Three `SoundPack` entries share `resourcePrefix = "standard"`** (MUSICAL, NATURE,
-SCI_FI at `SoundPack.kt:33-42`). The UI shows these as distinct selectable options and
-users have no way to know they play the same sounds. Either mark them as "Coming Soon"
-and disable selection, or add a badge in the UI making the fallback explicit.
+| Concern | File |
+|---|---|
+| Build / R8 / Play Store | `app/build.gradle.kts`, `app/proguard-rules.pro`, `settings.gradle.kts` |
+| DataStore main-thread fix | `app/src/main/java/.../data/repository/SettingsRepository.kt`, `app/src/main/java/.../data/manager/StatisticsManager.kt` |
+| State / nav cleanup | `app/src/main/java/.../domain/model/SimonGameUiState.kt`, `domain/model/SimonGameState.kt`, `ui/MainActivity.kt`, `ui/screens/SimonGameScreen.kt`, `viewmodels/SimonGameViewModel.kt` |
+| Sound packs | `app/src/main/java/.../domain/enums/SoundPack.kt`, `app/src/main/res/raw/`, new `tools/sounds/` |
+| ViewModel tests (new) | `app/src/test/java/.../ui/viewmodels/SimonGameViewModelTest.kt` |
+| Audit source of truth | this file (`specs/improvements.md`) |
 
 ---
 
-## 6. Concurrency & Coroutines
+## Verification
 
-### Issues
-
-**`runBlocking` on the main thread** (covered in section 5, highest priority).
-
-**`StatisticsManager` creates its own `CoroutineScope(Dispatchers.IO)` at line 41.**
-This scope is never cancelled. When the application process ends the scope is just
-abandoned. For a single-Activity app this is normally benign, but it is poor practice:
-the scope is not tied to any lifecycle and cannot be supervised. Use
-`ProcessLifecycleOwner.get().lifecycleScope` or inject a scope from the DI container.
-
-- `app/src/main/java/.../data/manager/StatisticsManager.kt:41`
-
-**`DataStoreSettingsRepository` has the same problem at line 74.**
-
-- `app/src/main/java/.../data/repository/SettingsRepository.kt:74`
-
-**`viewModelScope.launch` without structured context in `checkSequenceMatch`.** Two
-anonymous `viewModelScope.launch` coroutines are started inside `checkSequenceMatch()`
-(lines 748 and 761) to delay before calling `handleGameOver`. If the ViewModel is
-cleared between the delay and the call, `handleGameOver` will still run on the default
-dispatcher. Since `viewModelScope` is cancelled on `onCleared` this is actually safe,
-but starting fire-and-forget coroutines inside a logic function makes the control flow
-hard to reason about.
-
-**`ParticleEffect` uses a manual `while` loop + `delay(16)` for animation.**
-This bypasses Compose's animation system entirely. Use `Animatable` or
-`animateFloatAsState` with a `tween` spec instead, which integrates with the Compose
-rendering loop and can be cancelled properly.
-
-- `app/src/main/java/.../ui/components/ParticleEffect.kt:74-79`
-
-**`android.os.Handler(Looper.getMainLooper()).post { vibrate() }` in
-`SimonSoundManager.kt:535` and `620`.** Inside `SimonSoundManager`, `vibrate()` is
-dispatched via a legacy `Handler` to the main looper. The manager already knows it is
-called from coroutines on the main dispatcher (via the ViewModel). This extra dispatch
-is unnecessary and adds latency to haptic feedback.
+End-to-end smoke test after each phase:
+- `./gradlew test` — all unit tests pass (28 → grows).
+- `./gradlew lint` — no new warnings.
+- `./gradlew assembleRelease` — R8 produces a working APK once item #1 lands.
+- Start emulator: `android emulator list` → `android emulator start <name>` → `./gradlew installDebug` → play one round in 4-button + 6-button mode, switch each sound pack, force-stop and relaunch, confirm high score + settings persist.
+- After sound packs: `adb logcat | grep com.happypuppy.memorylights` and listen for "Sound not available" warnings — there should be none for the three new packs.
 
 ---
 
-## 7. Error Handling
-
-### Issues
-
-**No `Result` wrapper or typed error domain.** All error conditions in the data layer
-silently fall back to defaults or log a warning. For example, `getSoundPack()` catches
-`Exception` and returns `SoundPack.STANDARD` without surfacing the error to the
-ViewModel. `loadSoundPack()` catches `Exception` and logs it, but the ViewModel only
-knows whether sounds loaded via the boolean `soundsLoaded` / string `soundLoadError`.
-
-For a game this small, full typed-error propagation is YAGNI. The minimum fix is to
-avoid swallowing `Exception` without at least logging at error level. The current mix
-of `Log.e` and silent `try/catch` (e.g., `catch (_: Exception)` in `SettingsScreen.kt:419`)
-makes debugging harder.
-
-**`catch (_: Exception)` is used for the Play Store intent** at `SettingsScreen.kt:419`.
-Catching all exceptions for a simple `startActivity` is overly broad; it should only
-catch `ActivityNotFoundException`.
-
-```kotlin
-// BEFORE
-} catch (_: Exception) {
-
-// AFTER
-} catch (_: ActivityNotFoundException) {
-```
-
-**`ERROR_SOUND_VOLUME_BOOST = 1.2f` clamps to `MAX_VOLUME = 1.0f`** in
-`playSoundWithVolume()` because of `coerceIn(MIN_VOLUME, MAX_VOLUME)`. The constant is
-misleading - the boost has no effect. Remove it or raise `MAX_VOLUME` to `1.2f` if
-SoundPool supports values above 1.0 (it does, up to the stream volume).
-
-- `app/src/main/java/.../domain/GameConstants.kt:43` (`ERROR_SOUND_VOLUME_BOOST`)
-- `app/src/main/java/.../data/manager/SimonSoundManager.kt:680-681`
-
----
-
-## 8. Testing
-
-### Observations
-
-The existing unit tests are well-structured: they test domain models (`GameState`,
-`ScreenState`, `SimonGameUiState`, `SimonButton`, `GameConstants`) and cover the public
-API of those objects including edge cases. The use of backtick-style test names
-improves readability.
-
-### Issues
-
-**Zero ViewModel tests.** `SimonGameViewModel` is the core of the application and has
-no unit tests at all. The key scenarios to cover:
-
-- Correct sequence matching advances the level
-- Wrong button triggers game over
-- Timeout triggers game over
-- `onPause`/`onResume` lifecycle saves and restores state correctly
-- High score updates only when current level exceeds prior best
-- `resetHighScore` zeroes both high score fields and statistics
-
-`mockk` is already in the dependency catalog. A minimal test would look like:
-
-```kotlin
-class SimonGameViewModelTest {
-    private val soundManager: SimonSoundManager = mockk(relaxed = true)
-    private val statisticsManager: StatisticsManager = mockk(relaxed = true)
-    private val settingsRepository: SettingsRepository = mockk(relaxed = true)
-
-    private lateinit var viewModel: SimonGameViewModel
-
-    @Before
-    fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
-        every { settingsRepository.getSoundPack() } returns SoundPack.STANDARD
-        // ... stub remaining getters
-        viewModel = SimonGameViewModel(soundManager, statisticsManager, settingsRepository)
-    }
-
-    @Test
-    fun `pressing correct button sequence advances level`() = runTest { ... }
-}
-```
-
-**No `StatisticsManager` / `DataStoreSettingsRepository` tests.** The `runBlocking`
-reads and fire-and-forget writes are untested. These are the highest-risk area for
-future regressions.
-
-**`ExampleInstrumentedTest` is a generated placeholder** and tests nothing.
-
-- `app/src/androidTest/java/.../ExampleInstrumentedTest.kt`
-
-**Turbine is not a dependency.** If Flow-based tests are added for the repository layer,
-adding `app.cash.turbine:turbine` would simplify flow collection in tests.
-
-**No Compose UI tests.** At minimum, a smoke test that the game screen renders without
-crashing would be valuable.
-
----
-
-## 9. Build & Gradle
-
-### Observations
-
-Version catalog usage is correct. BOM for Compose is used properly. `compileSdk = 35`,
-`targetSdk = 35` is up to date. AGP 8.10.1 is current. Kotlin 2.1.10 is current.
-
-### Issues
-
-**`isMinifyEnabled = false` in the release build type** (`app/build.gradle.kts:24`).
-This ships the release APK unobfuscated and without dead-code stripping. For a Play
-Store release, enable R8:
-
-```kotlin
-// BEFORE
-isMinifyEnabled = false
-
-// AFTER
-isMinifyEnabled = true
-isShrinkResources = true
-```
-
-The default `proguard-android-optimize.txt` already handles most common rules. Add
-Koin-specific keep rules to `proguard-rules.pro`:
+## Resume Prompt (paste in next session)
 
 ```
--keep class org.koin.** { *; }
--keep class com.happypuppy.memorylights.di.** { *; }
+Resume the Memory Lights roadmap from specs/improvements.md.
+
+Decisions already locked: canonical doc = specs/improvements.md (root IMPROVEMENTS.md already deleted); sound production = synth-first (Python numpy for Musical, jsfxr for Sci-Fi, Freesound CC0 for Nature); milestone order = sound packs first, then Play Store launch.
+
+Status: Phase 0 + Phase 1 done and pushed to origin/main (HEAD = 8b2bd94). About to start Phase 2 step 1: write SimonGameViewModelTest using mockk + UnconfinedTestDispatcher. ViewModel constructor takes (SimonSoundManager, StatisticsManager, SettingsRepository); tests must stub settingsFlow/statisticsFlow with flowOf(AppSettings(...))/flowOf(GameStatistics(...)). Read the plan file, confirm git state matches, and start Phase 2 step 1. Stop after the test file is added + passing, then ask before continuing.
 ```
 
-**`versionCode = 1` and `versionName = "1.0"` are hardcoded** in
-`app/build.gradle.kts:15-16`. Before Play Store submission these should be managed or
-at least documented.
-
-**`rootProject.name = "My Application"`** in `settings.gradle.kts:22` should be
-`"MemoryLights"`.
-
-**`org.gradle.parallel=true` is commented out** in `gradle.properties:12`. For a
-single-module project this has no effect, but it is a stale comment that could confuse.
-
-**`lifecycle-process` dependency** (`app/build.gradle.kts:48`, `libs.versions.toml:19`)
-is included but `ProcessLifecycleOwner` is not used anywhere in the codebase. This is an
-unused dependency.
+Tweak the last line if you want to push further per session — e.g., "go through all of Phase 2 and stop", or "run all the way through Phase 2 then start Phase 3 step 1".
 
 ---
 
-## 10. Performance
+## Open Questions (still need user input before Phase 3)
 
-### Observations
-
-`collectAsStateWithLifecycle` is used correctly for lifecycle-safe collection.
-`derivedStateOf` is used in `SimonGameScreen` and `SettingsScreen` to avoid unnecessary
-recompositions. `SimonPanel` uses `remember(color)` to cache color calculations.
-`animateFloatAsState` is used with a named `label` parameter.
-
-### Issues
-
-**`SimonGameUiState.sequence` and `playerSequence` are `List<SimonButton>` stored
-inside the state.** Every button press creates a new list via `+`. For a typical game
-lasting 20-30 rounds this is negligible, but it is worth noting.
-
-**`SimonGameScreen` reads `LocalConfiguration.current`** (`SimonGameScreen.kt:238`).
-`LocalConfiguration` changes on every orientation change and causes the entire
-`SimonGameScreen` to recompose. Move orientation detection to `MainActivity` or higher
-and pass `isLandscape: Boolean` as a parameter, or use a `WindowSizeClass` from
-`androidx.compose.material3.adaptive` which is stable-typed.
-
-**`ParticleEffect` redraws all particles on every frame by mutating `animationProgress`
-state**, which causes the entire `Canvas` to redraw at 60 fps for 2 seconds. This is
-correct behavior for a particle system, but the `LaunchedEffect` drives frames via
-`delay(16)` instead of `withFrameMillis`, which can cause drift. Use `withFrameMillis`
-for accurate frame timing.
-
-```kotlin
-// BEFORE (ParticleEffect.kt:74)
-while (animationProgress < 1f) {
-    val elapsed = System.currentTimeMillis() - startTime
-    animationProgress = (elapsed / animationDuration).coerceAtMost(1f)
-    delay(16)
-}
-
-// AFTER
-while (animationProgress < 1f) {
-    withFrameMillis { frameTime ->
-        animationProgress = ((frameTime - startTime) / animationDuration).toFloat().coerceAtMost(1f)
-    }
-}
-```
-
-**`SimonSoundManager.listAllRawResources()` iterates all `R.raw` fields via reflection
-at startup** (`SimonSoundManager.kt:200-217`). This is pure debug logging that ships in
-release builds. Wrap it in `if (BuildConfig.DEBUG)`.
-
-**`SimonSoundManager.debugResourceNotFound()` also uses reflection** (`SimonSoundManager.kt:369-401`)
-and runs in release builds. Same fix: guard with `BuildConfig.DEBUG`.
-
----
-
-## 11. Security
-
-### Observations
-
-No network access, no API keys, no user-identifiable data beyond game statistics. The
-attack surface is minimal.
-
-### Issues
-
-**`android:allowBackup="true"` in `AndroidManifest.xml:11`.** This allows the user (and
-`adb backup`) to extract all DataStore files containing high scores and settings. For a
-game this is low-risk, but if the app ever adds any sensitive data, this flag must be
-considered. The `backup_rules.xml` and `data_extraction_rules.xml` are present and
-should be reviewed to exclude DataStore files from cloud backup if desired.
-
-**`android:configChanges="orientation|keyboardHidden|screenSize"` in the manifest.**
-Intercepting configuration changes manually prevents the system from re-creating the
-Activity. This is intentional here (the ViewModel handles lifecycle) but means
-that any layout resources that differ by configuration (e.g., landscape layout files)
-will not be automatically applied. There are no such resources currently, so this is
-acceptable.
-
-**No secrets are present in the codebase.** Play Store URL is hardcoded as a string
-literal in `SettingsScreen.kt:413`, which is fine.
-
----
-
-## 12. Accessibility & UX
-
-### Observations
-
-`SimonPanel` applies `contentDescription`, `stateDescription`, and `Role.Button`
-correctly. `view.announceForAccessibility()` is called for level changes and game state
-transitions. Minimum touch target `sizeIn(minWidth = 48.dp, minHeight = 48.dp)` is
-applied.
-
-### Issues
-
-**`IconButton` elements in `SimonGameScreen`'s `TopAppBar` use `contentDescription`
-that describe current state, not the action.** For example, the mute button says "Mute"
-when sound is on (action) and "Unmute" when sound is off (action). This is actually
-correct. However, the vibration button says "Disable Vibration" or "Enable Vibration"
-which is also an action description - this is good. No changes needed here.
-
-**Game-over overlay text ("GAME OVER", "HIGH SCORE!") has no accessibility
-announcement.** `LaunchedEffect(uiState.gameState)` announces "Game over" via
-`announceForAccessibility`, but "HIGH SCORE!" is never announced. Add it when
-`uiState.showHighScoreText` becomes true.
-
-**Text overlays use hardcoded `Color.Yellow`** for both "HIGH SCORE!" and "GAME OVER"
-(`SimonGameScreen.kt:677, 699`). On light backgrounds or when dynamic color is active,
-yellow text on a partially transparent overlay may have insufficient contrast. Since the
-game background is always black, this is currently fine but is worth noting.
-
-**No large-screen or foldable adaptation.** The game uses `fillMaxWidth(0.9f)` and
-`fillMaxHeight(0.95f)` which will produce enormous buttons on a 12-inch tablet. Consider
-capping the game panel with a `widthIn(max = 500.dp)` constraint.
-
-**`SoundPack` options MUSICAL, NATURE, and SCI_FI appear fully selectable** in the UI
-even though they play Standard sounds. A user selecting "Nature" will not understand why
-they hear the same tones as Standard. Consider adding a "Coming Soon" badge or
-disabling selection with a tooltip.
-
----
-
-## 13. Code Quality
-
-### Positive Callouts
-
-- Sealed classes for `GameState` and `ScreenState` are correct Kotlin idiom.
-- `GameConstants` object centralizes all magic numbers.
-- DataStore migration from SharedPreferences is handled correctly.
-- `SimonSoundManager` has solid memory-trim handling via `ComponentCallbacks2`.
-- Koin setup is idiomatic for v4.x (`viewModelOf`, `single<Interface> { Impl() }`).
-
-### Issues
-
-**`private fun String.capitalize()` extension at `SimonGameScreen.kt:45-50` reimplements
-`String.replaceFirstChar { it.uppercase() }`.** Kotlin stdlib deprecated `capitalize()`
-in 1.5 and this local extension is a workaround, but it is used in at least 4 places
-inside `SimonGameScreen` and once in `SimonSoundManager` (implicitly via enum names).
-Better: add a `val displayName: String` property to `SimonButton` similar to
-`SoundPack.displayName`.
-
-**`onButtonRelease` at `SimonGameViewModel.kt:783` is an exact duplicate of the `else`
-branch in `onButtonClick` at line 734.**
-
-```kotlin
-// onButtonClick (line 733-736) - release branch
-} else {
-    _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
-}
-
-// onButtonRelease (line 783-785)
-fun onButtonRelease(button: SimonButton) {
-    _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
-}
-```
-
-`onButtonRelease` appears to not be called from the UI at all (searching the codebase
-shows no call site). This is dead code.
-
-**`handleGameOver()` (no-arg) at `SimonGameViewModel.kt:789` is a one-liner that
-delegates to `handleGameOver(String)`.** The no-arg overload adds no value. Call
-`handleGameOver("Wrong button pressed")` directly.
-
-**Pervasive `Log.d` calls in production code**, including full sequences and timing
-details. In a release build this writes to logcat, wastes I/O, and leaks game state.
-Guard all `Log.d` calls with `if (BuildConfig.DEBUG)` or use a logging abstraction.
-`Log.e` for real errors should remain unconditional.
-
-**`SimonSoundManager.getContext()` at line 193 is unused** (no call sites found in the
-project). Remove it.
-
-**`triggerParticleEffects()` in `SimonGameViewModel.kt:541` is labeled "for testing"**
-but is a public method on the production ViewModel. Move it to a test-only subclass or
-remove it.
-
-**`previousGameState` field is declared at line 144 but also conceptually conflicts with
-`gameStateBeforeBackground` at line 52** - these serve similar but distinct purposes.
-The naming could be clearer: `gameStateBeforeSettings` vs `gameStateBeforeBackground`.
-
-**`res/raw/guy/blue_tone.wav`** - there is an orphaned subdirectory `res/raw/guy/`
-containing a single `blue_tone.wav` file. Android's resource system does not load files
-from subdirectories of `res/raw/`. This file is unreachable and should be deleted or
-moved.
-
----
-
-## 14. Quick Wins vs. Larger Refactors
-
-| # | Item | Effort | Priority | File(s) |
-|---|------|--------|----------|---------|
-| 1 | Enable R8/minification in release build | S | P0 | `app/build.gradle.kts:24` |
-| 2 | Replace `runBlocking` reads with `Flow`/`suspend` in DataStore layer | M | P0 | `SettingsRepository.kt:76`, `StatisticsManager.kt:42` |
-| 3 | Fix `activeButtonPresses` duplication - remove from `SimonGameUiState` or remove local state in composable | S | P0 | `SimonGameUiState.kt:30`, `SimonGameScreen.kt:110` |
-| 4 | Fix double high-score storage (`SettingsRepository` + `StatisticsManager`) | M | P1 | `StatisticsManager.kt:56`, `SimonGameViewModel.kt:453` |
-| 5 | Remove `GameState.Settings` and drive navigation from `ScreenState` only | S | P1 | `SimonGameState.kt`, `MainActivity.kt:55`, `SimonGameViewModel.kt:195` |
-| 6 | Remove `koinInject` from `SettingsScreen`; route sound preview through ViewModel | S | P1 | `SettingsScreen.kt:61, 151` |
-| 7 | Guard debug logging (`listAllRawResources`, `debugResourceNotFound`, all `Log.d`) with `BuildConfig.DEBUG` | S | P1 | `SimonSoundManager.kt:200, 369` |
-| 8 | Add `SimonGameViewModel` unit tests using `mockk` + `UnconfinedTestDispatcher` | L | P1 | new test file |
-| 9 | Fix unsafe `viewModel as DefaultLifecycleObserver` cast in `MainActivity` | S | P1 | `MainActivity.kt:40` |
-| 10 | Mark MUSICAL/NATURE/SCI_FI sound packs as "Coming Soon" in the UI | S | P1 | `SettingsScreen.kt`, `SoundPack.kt` |
-| 11 | Delete orphaned `res/raw/guy/blue_tone.wav` | S | P1 | `app/src/main/res/raw/guy/blue_tone.wav` |
-| 12 | Remove dead code: `onButtonRelease`, `updatePreference`, `getContext()`, `triggerParticleEffects` | S | P2 | multiple files |
-| 13 | Extract `SimonButtonGrid` composable to reduce `SimonGameScreen` size | M | P2 | `SimonGameScreen.kt` |
-| 14 | Replace manual `delay(16)` loop in `ParticleEffect` with `withFrameMillis` | S | P2 | `ParticleEffect.kt:74` |
-| 15 | Replace `Handler(Looper.getMainLooper()).post` vibration dispatch with coroutine | S | P2 | `SimonSoundManager.kt:535, 620` |
-| 16 | Move `LocalConfiguration` orientation detection to avoid full screen recomposition | S | P2 | `SimonGameScreen.kt:238` |
-| 17 | Fix `ERROR_SOUND_VOLUME_BOOST` being silently clamped to 1.0 | S | P2 | `GameConstants.kt:43`, `SimonSoundManager.kt:680` |
-| 18 | Add `widthIn(max = 500.dp)` constraint for tablet/large-screen layouts | S | P2 | `SimonGameScreen.kt` |
-| 19 | Fix `rootProject.name` from "My Application" to "MemoryLights" | S | P2 | `settings.gradle.kts:22` |
-| 20 | Cancel `CoroutineScope` in `StatisticsManager` and `DataStoreSettingsRepository` on app destruction | M | P2 | `StatisticsManager.kt:41`, `SettingsRepository.kt:74` |
-| 21 | Add `displayName` property to `SimonButton` and remove local `capitalize()` extension | S | P2 | `SimonButton.kt`, `SimonGameScreen.kt:45` |
-| 22 | Announce "HIGH SCORE!" via `announceForAccessibility` | S | P2 | `SimonGameScreen.kt` |
-| 23 | Remove unused `lifecycle-process` dependency | S | P2 | `app/build.gradle.kts:48`, `libs.versions.toml:19` |
-| 24 | Replace `catch (_: Exception)` with `catch (_: ActivityNotFoundException)` | S | P2 | `SettingsScreen.kt:419` |
-| 25 | Disable dynamic color (`dynamicColor = false`) to preserve game aesthetic | S | P2 | `Theme.kt:40` |
-
-**Effort key:** S = under 30 min, M = half day, L = one to two days.
-**Priority key:** P0 = fix before Play Store release, P1 = high value / near-term, P2 = good to have.
+1. **Musical pack mapping** — confirm pentatonic-style mapping (C5 / E5 / G5 / A5 / D5 / F#5 + dissonant error) or prefer a different scale / instrument? Current proposal stays consonant in any random sequence.
+2. **Sci-Fi pack** — preference for chiptune/8-bit feel (jsfxr default) vs more cinematic synth (would need different tooling)?
+3. **Nature pack** — any specific sounds to favor or avoid (e.g., no animal calls, only ambient)? Matters for Freesound search.
