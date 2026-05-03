@@ -131,7 +131,8 @@ class SimonGameViewModel(
             vibrateEnabled = settings.vibrateEnabled,
             soundEnabled = settings.soundEnabled,
             difficultyEnabled = settings.difficultyEnabled,
-            memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled
+            memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled,
+            playerTimeoutSeconds = settings.playerTimeoutSeconds
         )}
     }
 
@@ -296,6 +297,20 @@ class SimonGameViewModel(
         soundManager.setVibrationEnabled(newVibrateEnabled)
         _uiState.update { it.copy(vibrateEnabled = newVibrateEnabled) }
         settingsRepository.setVibrateEnabled(newVibrateEnabled)
+    }
+
+    /**
+     * Set the inactivity timeout (5/10/15/30 sec). If the player is currently
+     * repeating a sequence, the running timer is restarted at the new duration
+     * so the change feels immediate (and the ring re-drains).
+     */
+    fun setPlayerTimeoutSeconds(seconds: Int) {
+        Log.d(TAG, "Setting player timeout: $seconds sec")
+        _uiState.update { it.copy(playerTimeoutSeconds = seconds) }
+        settingsRepository.setPlayerTimeoutSeconds(seconds)
+        if (_uiState.value.gameState == GameState.PlayerRepeating) {
+            resetTimeoutTimer()
+        }
     }
 
     /**
@@ -823,7 +838,8 @@ class SimonGameViewModel(
 
     // Start a timer that will end the game if the player doesn't act within the timeout period
     private fun startTimeoutTimer() {
-        Log.d(TAG, "Starting player inactivity timeout timer (${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds)")
+        val timeoutMs = _uiState.value.playerTimeoutMs
+        Log.d(TAG, "Starting player inactivity timeout timer (${timeoutMs / 1000} seconds)")
 
         // Don't start timer if app is in background
         if (!isAppInForeground) {
@@ -839,7 +855,7 @@ class SimonGameViewModel(
 
         // Start a new timer
         timeoutJob = viewModelScope.launch {
-            delay(GameConstants.PLAYER_TIMEOUT_MS)
+            delay(timeoutMs)
 
             // Check if app is still in foreground
             if (!isAppInForeground) {
@@ -848,7 +864,7 @@ class SimonGameViewModel(
             }
 
             // If this code executes, the timeout has occurred
-            Log.d(TAG, "Player timeout! No button pressed for ${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds")
+            Log.d(TAG, "Player timeout! No button pressed for ${timeoutMs / 1000} seconds")
 
             // Ensure we're still in PlayerRepeating state (could have changed during the delay)
             if (_uiState.value.gameState == GameState.PlayerRepeating) {
@@ -857,7 +873,7 @@ class SimonGameViewModel(
                 viewModelScope.launch {
                     delay(GameConstants.BUTTON_SOUND_DURATION_MS)
                     // Handle game over due to timeout
-                    handleGameOver("Timeout - no button pressed for ${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds")
+                    handleGameOver("Timeout - no button pressed for ${timeoutMs / 1000} seconds")
                 }
             }
         }

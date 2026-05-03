@@ -90,9 +90,11 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 highScore = uiState.currentHighScore,
                 hasActiveGame = previousState is GameState.ShowingSequence ||
                         previousState is GameState.PlayerRepeating,
+                playerTimeoutSeconds = uiState.playerTimeoutSeconds,
                 onSoundPackSelected = { viewModel.setSoundPack(it) },
                 onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
                 onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
+                onPlayerTimeoutChanged = { viewModel.setPlayerTimeoutSeconds(it) },
                 onResetHighScore = { viewModel.resetHighScore() },
                 onStatisticsClicked = { viewModel.showStatistics() },
                 onBackPressed = { viewModel.exitSettings() }
@@ -783,17 +785,19 @@ fun SimonGameScreen(
             }
             
             // Inactivity countdown ring around the center disc — drains over
-            // PLAYER_TIMEOUT_MS during the player's turn and resets on each
-            // press. Color shifts from green → red as time runs out so the
-            // signal is readable peripherally.
+            // uiState.playerTimeoutMs during the player's turn and resets on
+            // each press. Color shifts from green → red as time runs out so
+            // the signal is readable peripherally. Re-keying on
+            // playerTimeoutMs lets a mid-turn slider change re-launch the
+            // animation at the new duration.
             if (uiState.gameState == GameState.PlayerRepeating) {
                 val timeoutFraction = remember { Animatable(1f) }
-                LaunchedEffect(uiState.timeoutResetTick) {
+                LaunchedEffect(uiState.timeoutResetTick, uiState.playerTimeoutMs) {
                     timeoutFraction.snapTo(1f)
                     timeoutFraction.animateTo(
                         targetValue = 0f,
                         animationSpec = tween(
-                            durationMillis = GameConstants.PLAYER_TIMEOUT_MS.toInt(),
+                            durationMillis = uiState.playerTimeoutMs.toInt(),
                             easing = LinearEasing
                         )
                     )

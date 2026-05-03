@@ -39,9 +39,13 @@ data class SimonGameUiState(
     val statistics: GameStatistics = GameStatistics(), // Current game statistics
     val soundsLoaded: Boolean = false, // Whether all game sounds have finished loading
     val soundLoadError: String? = null, // Error message if sound loading failed
-    val timeoutResetTick: Int = 0 // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
+    val timeoutResetTick: Int = 0, // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
+    val playerTimeoutSeconds: Int = 10 // Configurable inactivity timeout (5/10/15/30 sec). Drives both the timer and ring drain duration
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int
         get() = if (memoryLightsPlusEnabled) highScore6Button else highScore4Button
+
+    val playerTimeoutMs: Long
+        get() = playerTimeoutSeconds * 1000L
 }

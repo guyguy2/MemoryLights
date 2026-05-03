@@ -54,9 +54,11 @@ fun SettingsScreen(
     memoryLightsPlusEnabled: Boolean = false,
     highScore: Int = 0,
     hasActiveGame: Boolean = false,
+    playerTimeoutSeconds: Int = 10,
     onSoundPackSelected: (SoundPack) -> Unit,
     onDifficultyToggled: (Boolean) -> Unit = {},
     onMemoryLightsPlusToggled: (Boolean) -> Unit = {},
+    onPlayerTimeoutChanged: (Int) -> Unit = {},
     onResetHighScore: () -> Unit = {},
     onStatisticsClicked: () -> Unit = {},
     onBackPressed: () -> Unit
@@ -286,6 +288,70 @@ fun SettingsScreen(
                 }
             }
             
+            // Timeout duration card — segmented control of inactivity timeouts.
+            // Pairs with the countdown ring (#61): the ring drains over the
+            // selected duration, so this slider lets fast/slow players tune the
+            // pace without touching code.
+            SettingsCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.schedule_24px),
+                            contentDescription = "Player timeout",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Player Timeout",
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+
+                            Text(
+                                text = "How long you have to press the next button",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(5, 10, 15, 30).forEach { seconds ->
+                            FilterChip(
+                                selected = playerTimeoutSeconds == seconds,
+                                onClick = {
+                                    if (playerTimeoutSeconds != seconds) {
+                                        onPlayerTimeoutChanged(seconds)
+                                        toast("Timeout: ${seconds}s")
+                                    }
+                                },
+                                label = { Text("${seconds}s") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = SurfaceContainer,
+                                    labelColor = Color.Gray,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Memory Lights+ setting card
             val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
                 if (hasActiveGame) {

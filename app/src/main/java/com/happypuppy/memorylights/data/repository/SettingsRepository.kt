@@ -27,7 +27,8 @@ data class AppSettings(
     val vibrateEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
     val difficultyEnabled: Boolean = false,
-    val memoryLightsPlusEnabled: Boolean = false
+    val memoryLightsPlusEnabled: Boolean = false,
+    val playerTimeoutSeconds: Int = 10
 )
 
 /**
@@ -46,6 +47,7 @@ interface SettingsRepository {
     fun setSoundEnabled(enabled: Boolean)
     fun setDifficultyEnabled(enabled: Boolean)
     fun setMemoryLightsPlusEnabled(enabled: Boolean)
+    fun setPlayerTimeoutSeconds(seconds: Int)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -76,6 +78,7 @@ class DataStoreSettingsRepository(
         private val KEY_SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         private val KEY_DIFFICULTY_ENABLED = booleanPreferencesKey("difficulty_enabled")
         private val KEY_MEMORY_LIGHTS_PLUS_ENABLED = booleanPreferencesKey("memory_lights_plus_enabled")
+        private val KEY_PLAYER_TIMEOUT_SECONDS = intPreferencesKey("player_timeout_seconds")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -89,7 +92,8 @@ class DataStoreSettingsRepository(
             vibrateEnabled = prefs[KEY_VIBRATE_ENABLED] ?: true,
             soundEnabled = prefs[KEY_SOUND_ENABLED] ?: true,
             difficultyEnabled = prefs[KEY_DIFFICULTY_ENABLED] ?: false,
-            memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false
+            memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false,
+            playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10
         )
     }
 
@@ -110,6 +114,7 @@ class DataStoreSettingsRepository(
     override fun setSoundEnabled(enabled: Boolean) = write { it[KEY_SOUND_ENABLED] = enabled }
     override fun setDifficultyEnabled(enabled: Boolean) = write { it[KEY_DIFFICULTY_ENABLED] = enabled }
     override fun setMemoryLightsPlusEnabled(enabled: Boolean) = write { it[KEY_MEMORY_LIGHTS_PLUS_ENABLED] = enabled }
+    override fun setPlayerTimeoutSeconds(seconds: Int) = write { it[KEY_PLAYER_TIMEOUT_SECONDS] = seconds }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

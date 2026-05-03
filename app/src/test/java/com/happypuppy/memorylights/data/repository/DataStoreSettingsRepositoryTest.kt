@@ -114,4 +114,14 @@ class DataStoreSettingsRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `setPlayerTimeoutSeconds persists`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(10, awaitItem().playerTimeoutSeconds)
+            repo.setPlayerTimeoutSeconds(30)
+            assertEquals(30, awaitItem().playerTimeoutSeconds)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
