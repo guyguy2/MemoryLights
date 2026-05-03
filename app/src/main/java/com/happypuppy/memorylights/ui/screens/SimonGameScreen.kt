@@ -63,15 +63,6 @@ import com.happypuppy.memorylights.ui.components.SimonPanel
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 
-// Extension function to capitalize first letter
-private fun String.capitalize(): String {
-    return if (this.isNotEmpty()) {
-        this.substring(0, 1).uppercase() + this.substring(1)
-    } else {
-        this
-    }
-}
-
 @Composable
 fun MemoryLightsGame(viewModel: SimonGameViewModel) {
     // Collect UI state from ViewModel
@@ -254,12 +245,16 @@ fun SimonGameScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Simon Says Game UI - Using more vertical space
+            // Simon Says Game UI - Using more vertical space. The width cap
+            // keeps the panels from stretching uncomfortably wide on tablets
+            // and large foldables (the disc + arc geometry was tuned for
+            // phone proportions).
             Box(
                 modifier = Modifier
                     .fillMaxHeight(0.95f)
                     .fillMaxWidth(0.9f)
-                    .padding(top = 8.dp), // Reduced top padding
+                    .widthIn(max = 500.dp)
+                    .padding(top = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Background
@@ -286,7 +281,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.name.lowercase().capitalize(),
+                                        colorName = button.displayName,
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -305,7 +300,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.BLUE, SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.name.lowercase().capitalize(),
+                                        colorName = button.displayName,
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -330,7 +325,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.name.lowercase().capitalize(),
+                                        colorName = button.displayName,
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -349,7 +344,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.YELLOW, SimonButton.BLUE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.name.lowercase().capitalize(),
+                                        colorName = button.displayName,
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -368,7 +363,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.name.lowercase().capitalize(),
+                                        colorName = button.displayName,
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -631,7 +626,7 @@ fun SimonGameScreen(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = uiState.currentSoundPack.name.lowercase().capitalize(),
+                                    text = uiState.currentSoundPack.displayName,
                                     color = Color.Gray,
                                     fontSize = 10.sp
                                 )

@@ -1,6 +1,7 @@
 // Updated SettingsScreen.kt file
 package com.happypuppy.memorylights.ui.screens
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -416,8 +417,9 @@ fun SettingsScreen(
                     }
                     try {
                         context.startActivity(intent)
-                    } catch (_: Exception) {
-                        // Fallback to web browser if Play Store not available
+                    } catch (_: ActivityNotFoundException) {
+                        // Fallback to web browser when the Play Store app isn't installed
+                        // (e.g. side-loaded build, GMS-less device).
                         val fallbackIntent = Intent(Intent.ACTION_VIEW,
                             "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri())
                         context.startActivity(fallbackIntent)

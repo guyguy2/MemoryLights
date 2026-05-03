@@ -1,17 +1,13 @@
 package com.happypuppy.memorylights.ui.components
 
-import android.util.Log
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -66,15 +62,14 @@ fun ParticleEffect(
                 )
             }
             
-            // Reset and animate progress manually
+            // Drive the progress off the Compose frame clock so we tick once
+            // per actual frame instead of a fixed 16 ms timer.
             animationProgress = 0f
             val animationDuration = 2000f
-            val startTime = System.currentTimeMillis()
-            
+            val startMillis = withFrameMillis { it }
             while (animationProgress < 1f) {
-                val elapsed = System.currentTimeMillis() - startTime
-                animationProgress = (elapsed / animationDuration).coerceAtMost(1f)
-                delay(16) // ~60fps
+                val nowMillis = withFrameMillis { it }
+                animationProgress = ((nowMillis - startMillis) / animationDuration).coerceAtMost(1f)
             }
             
             particles = emptyList()

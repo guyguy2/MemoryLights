@@ -13,6 +13,9 @@ enum class SimonButton(val color: Color, val brightColor: Color) {
     PURPLE(Color(0xFF9C27B0), Color(0xFFBA68C8)),
     ORANGE(Color(0xFFFF9800), Color(0xFFFFB74D));
 
+    /** Title-cased name for display + accessibility ("GREEN" → "Green"). */
+    val displayName: String = name.lowercase().replaceFirstChar { it.uppercase() }
+
     companion object {
         fun getAvailableButtons(memoryLightsPlusEnabled: Boolean): List<SimonButton> {
             return if (memoryLightsPlusEnabled) {

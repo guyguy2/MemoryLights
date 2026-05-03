@@ -39,6 +39,5 @@ object GameConstants {
     const val DEFAULT_MASTER_VOLUME = 1.0f
     const val MIN_VOLUME = 0.0f
     const val MAX_VOLUME = 1.0f
-    const val ERROR_SOUND_VOLUME_BOOST = 1.2f
     const val VIBRATION_DURATION_MS = 100L
 }

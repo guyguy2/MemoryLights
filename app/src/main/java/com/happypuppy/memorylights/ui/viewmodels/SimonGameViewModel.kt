@@ -469,12 +469,6 @@ class SimonGameViewModel(
     }
     
     
-    // Trigger particle effects for testing
-    fun triggerParticleEffects() {
-        Log.d(TAG, "Triggering particle effects for testing")
-        _uiState.update { it.copy(showHighScoreParticles = true) }
-    }
-
     // Play a startup animation by lighting up each button in sequence
     private fun playStartupAnimation(onComplete: () -> Unit) {
         Log.d(TAG, "Playing startup animation")

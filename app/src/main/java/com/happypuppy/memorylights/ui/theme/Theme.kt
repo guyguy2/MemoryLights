@@ -36,8 +36,10 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Off by default — Memory Lights uses an all-black aesthetic, and dynamic
+    // wallpaper-tinted Material You colours visibly contaminate the disc /
+    // top app bar on Android 12+. Flip on if F12 (theme toggle) ships.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

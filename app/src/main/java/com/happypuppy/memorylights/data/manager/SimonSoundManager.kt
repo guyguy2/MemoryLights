@@ -188,14 +188,6 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
     }
 
     /**
-     * Get the context
-     * Used by ViewModel to access application context
-     */
-    fun getContext(): Context {
-        return context.applicationContext
-    }
-
-    /**
      * Debug-only: list all raw resources to help diagnose resource loading issues.
      * Reflection on R.raw is only acceptable in debug builds.
      */
@@ -771,8 +763,10 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
             return
         }
 
-        // Play error sound with slightly higher volume
-        playSoundWithVolume(errorSoundId, GameConstants.ERROR_SOUND_VOLUME_BOOST)
+        // SoundPool clamps stream volume to 1.0; play at MAX_VOLUME instead of
+        // a misleading >1.0 "boost". If we ever need the error sound louder
+        // than other tones, lower the master gain on regular plays.
+        playSoundWithVolume(errorSoundId, GameConstants.MAX_VOLUME)
     }
 
     /**

@@ -61,19 +61,19 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 
 | # | Item | Status | Effort | Files |
 |---|---|---|---|---|
-| 16 | Remove dead code: `onButtonRelease`, `updatePreference`, `getContext()`, `triggerParticleEffects` | ❌ 🆕 | S | multiple |
+| 16 | Remove dead code: `onButtonRelease`, `updatePreference`, `getContext()`, `triggerParticleEffects` | ✅ Phase 5 step 3 (`getContext()` and `triggerParticleEffects()` deleted; `onButtonRelease` already removed in Phase 1; `updatePreference` not present) | S | multiple |
 | 17 | Extract `SimonButtonGrid` composable to shrink 750-line `SimonGameScreen` | ❌ 🆕 | M | `ui/screens/SimonGameScreen.kt` |
-| 18 | Replace `delay(16)` loop in `ParticleEffect` with `withFrameMillis` | ❌ 🆕 | S | `ui/components/ParticleEffect.kt:74` |
+| 18 | Replace `delay(16)` loop in `ParticleEffect` with `withFrameMillis` | ✅ Phase 5 step 3 (frame-clock driven; ticks per actual frame instead of 16-ms timer; cleaned up unused `Log`/`DrawScope`/`dp` imports) | S | `ui/components/ParticleEffect.kt` |
 | 19 | Replace `Handler(Looper.getMainLooper()).post` vibration dispatch | ❌ 🆕 | S | `data/manager/SimonSoundManager.kt:535,620` |
 | 20 | Move `LocalConfiguration` orientation read out of `SimonGameScreen` to avoid full-screen recomposition | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:238` |
-| 21 | Fix `ERROR_SOUND_VOLUME_BOOST = 1.2f` silently clamped to 1.0 | ❌ 🆕 | S | `domain/GameConstants.kt:43`, `data/manager/SimonSoundManager.kt:680` |
-| 22 | Tablet/foldable cap: `widthIn(max = 500.dp)` on game panel | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt` |
-| 23 | Rename `rootProject.name` → `MemoryLights` | ❌ 🆕 | S | `settings.gradle.kts:22` |
+| 21 | Fix `ERROR_SOUND_VOLUME_BOOST = 1.2f` silently clamped to 1.0 | ✅ Phase 5 step 3 (constant deleted; error sound now uses `MAX_VOLUME` with comment explaining SoundPool's 1.0 ceiling) | S | `domain/GameConstants.kt`, `data/manager/SimonSoundManager.kt` |
+| 22 | Tablet/foldable cap: `widthIn(max = 500.dp)` on game panel | ✅ Phase 5 step 3 | S | `ui/screens/SimonGameScreen.kt` |
+| 23 | Rename `rootProject.name` → `MemoryLights` | ✅ Phase 5 step 3 | S | `settings.gradle.kts` |
 | 24 | Cancel `CoroutineScope` in `StatisticsManager` and `DataStoreSettingsRepository` on app destruction | ❌ 🆕 | M | `data/manager/StatisticsManager.kt:41`, `data/repository/SettingsRepository.kt:74` |
-| 25 | Add `displayName` property to `SimonButton`; remove local `capitalize()` extension | ❌ 🆕 | S | `domain/enums/SimonButton.kt`, `ui/screens/SimonGameScreen.kt:45` |
-| 26 | Remove unused `lifecycle-process` dependency | ❌ 🆕 | S | `app/build.gradle.kts:48`, `libs.versions.toml:19` |
-| 27 | `catch (_: Exception)` → `catch (_: ActivityNotFoundException)` for Play Store intent | ❌ 🆕 | S | `ui/screens/SettingsScreen.kt:419` |
-| 28 | Disable dynamic color (`dynamicColor = false`) to preserve all-black aesthetic | ❌ 🆕 | S | `ui/theme/Theme.kt:40` |
+| 25 | Add `displayName` property to `SimonButton`; remove local `capitalize()` extension | ✅ Phase 5 step 3 (`SimonButton.displayName`; `String.capitalize()` deleted; `currentSoundPack.displayName` reused — UI now shows "Sci-Fi" instead of "Sci_fi") | S | `domain/enums/SimonButton.kt`, `ui/screens/SimonGameScreen.kt` |
+| 26 | Remove unused `lifecycle-process` dependency | ✅ Phase 5 step 3 | S | `app/build.gradle.kts`, `libs.versions.toml` |
+| 27 | `catch (_: Exception)` → `catch (_: ActivityNotFoundException)` for Play Store intent | ✅ Phase 5 step 3 | S | `ui/screens/SettingsScreen.kt` |
+| 28 | Disable dynamic color (`dynamicColor = false`) to preserve all-black aesthetic | ✅ Phase 5 step 3 (default flipped + comment explains why; flip on if F12 theme toggle ships) | S | `ui/theme/Theme.kt` |
 | 29 | Move `StatisticsManager` to `data/repository/` and rename `StatisticsRepository` | ❌ 🆕 | S | rename |
 | 30 | 4-button mode padding inconsistency (Green 2.dp vs others 4.dp) | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:366,382,398,414` |
 | 31 | Hardcoded `.offset(y = ...)` for text overlays — switch to `Alignment` | ❌ 🆕 | S | `ui/screens/SimonGameScreen.kt:683` |
@@ -264,6 +264,7 @@ After packs ship: remove the "Coming Soon" badge work from item #13. Until they 
 7. **Phase 5 step 1 — P2 code-only cluster (2026-05-03):** ✅ #47 (`@MainThread` on `onButtonClick`), #49 (5 semantic dark surface tokens in `theme/Color.kt`), #50 (drop `SimonButton.index`), #52 (`remember`ed `handleButtonInteraction`), #53 (`remember`ed `buttonColors` + `buttonBrush` in `SimonPanel`). 50 unit tests green, lint clean.
 8. **Phase 5 step 2 — P2 UX cluster (2026-05-03):** ✅ #51 (narrow ProGuard, release APK 7.84 → 7.48 MB), #54 (smooth `litProgress` lerp on flash), #55 (`AnimatedVisibility` on HIGH SCORE/GAME OVER/YOUR TURN overlays), #56 (WaitingToStart play-arrow + "Tap to start" affordance + scale pulse), #61 (timeout countdown ring around center disc, color shifts red→green by remaining fraction). Verified on Pixel_8_API_34 emulator + release APK signed with debug keystore launched cleanly with narrow Koin keep.
 9. **Phase 6 step 1 — F9 Replay last sequence (2026-05-03):** ✅ `replayLastSequence` keeps existing sequence + level, drives the existing `showSequence` path. `OutlinedButton` shows at GameOver bottom-center; hidden in all other states via `AnimatedVisibility`. Highest-leverage retention loop for pattern-memory games — players can immediately retry the run they just lost on without losing their level progress.
+10. **Phase 5 step 3 — code-only cleanup batch (2026-05-03):** ✅ #16 (delete `getContext()` + `triggerParticleEffects()`), #18 (`withFrameMillis` in `ParticleEffect`), #21 (drop misleading `ERROR_SOUND_VOLUME_BOOST`; error tone uses `MAX_VOLUME`), #22 (`widthIn(max = 500.dp)` tablet cap), #23 (`rootProject.name` → `MemoryLights`), #25 (`SimonButton.displayName` + delete local `String.capitalize()`; sound pack indicator now shows "Sci-Fi" properly), #26 (drop unused `lifecycle-process`), #27 (narrow `catch (_: ActivityNotFoundException)` for Play Store intent), #28 (`dynamicColor = false` default).
 8. **Phase 6 — Feature backlog (product roadmap, post-launch):** Feature Backlog items F1–F17. Recommended starting set: F9 (replay last sequence) + F14 (pause button) + F16 (adjustable timeout) — all S-effort, high impact. F17 (IAP) requires explicit ads-vs-IAP product decision before any code.
 
 ---
