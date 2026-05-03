@@ -82,7 +82,6 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 | 34 | Reduce-motion option / respect `LocalReducedMotion` | ❌ | S | theme + screen |
 | 35 | Color-blind mode (icons/patterns on buttons) | ❌ | M | `ui/components/SimonPanel.kt` |
 | 36 | Keyboard / external controller support (TV / ChromeOS / gamepad) | ⏭️ Deferred (2026-05-03) — out of scope for v1.0; revisit if TV / ChromeOS becomes target platform | L | new |
-| 37 | High-score checksum / tamper resistance | ❌ | S | `data/manager/StatisticsManager.kt` |
 | 47 | `activePresses` mutable set lacks `@MainThread` discipline — touch + coroutines both touch it without lock. Annotate `@MainThread` or wrap in mutex. | ✅ Phase 5 step 1 (`onButtonClick` annotated `@MainThread`; comment on `activePresses` documents single-mutator contract) | S | `viewmodels/SimonGameViewModel.kt` |
 | 48 | Externalize all UI strings to `strings.xml` — currently only `app_name` is externalized. Blocks i18n + string audit. | ❌ 🆕 (multi-agent) | M | `ui/screens/SimonGameScreen.kt`, `ui/screens/SettingsScreen.kt`, `ui/screens/StatisticsScreen.kt` |
 | 49 | Dedupe duplicated dark hex literals (`0xFF1D1D1D`, `0xFF1A1A1A`, `0xFF121212`, `0xFF303030`) across 3 screens — move to `Color.kt`. Prereq for #28 (dynamicColor) and F12 (theme toggle). | ✅ Phase 5 step 1 (5 semantic tokens: `CardBackground`, `DialogBackground`, `SurfaceContainer`, `SurfaceSelected`, `SurfaceContainerFade` in `theme/Color.kt`; all 3 screens import them) | S | `ui/theme/Color.kt`, `ui/screens/*.kt` |
