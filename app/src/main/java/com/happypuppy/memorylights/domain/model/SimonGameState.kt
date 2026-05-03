@@ -11,5 +11,12 @@ sealed class GameState {
     object WaitingToStart : GameState()
     object ShowingSequence : GameState()
     object PlayerRepeating : GameState()
+    /**
+     * Player explicitly paused mid-turn (F14). Distinct from app backgrounding,
+     * which keeps gameState as PlayerRepeating but freezes the timer via the
+     * isAppInForeground flag. From Paused, only [SimonGameViewModel.resumeGame]
+     * (or starting a new game) returns to PlayerRepeating.
+     */
+    object Paused : GameState()
     object GameOver : GameState()
 }

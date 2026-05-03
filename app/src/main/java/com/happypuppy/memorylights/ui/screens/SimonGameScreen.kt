@@ -47,6 +47,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,7 +91,8 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
                 highScore = uiState.currentHighScore,
                 hasActiveGame = previousState is GameState.ShowingSequence ||
-                        previousState is GameState.PlayerRepeating,
+                        previousState is GameState.PlayerRepeating ||
+                        previousState is GameState.Paused,
                 playerTimeoutSeconds = uiState.playerTimeoutSeconds,
                 onSoundPackSelected = { viewModel.setSoundPack(it) },
                 onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
@@ -119,6 +122,8 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 onReplayLastSequence = { viewModel.replayLastSequence() },
                 onToggleSound = { viewModel.toggleSound() },
                 onToggleVibration = { viewModel.toggleVibration() },
+                onPauseGame = { viewModel.pauseGame() },
+                onResumeGame = { viewModel.resumeGame() },
                 onClearParticleEffects = { viewModel.clearParticleEffects() }
             )
         }
@@ -135,6 +140,8 @@ fun SimonGameScreen(
     onReplayLastSequence: () -> Unit = {},
     onToggleSound: () -> Unit,
     onToggleVibration: () -> Unit,
+    onPauseGame: () -> Unit = {},
+    onResumeGame: () -> Unit = {},
     onClearParticleEffects: (() -> Unit)? = null
 ) {
     // Single source of truth for which buttons are physically pressed (for UI feedback only)
@@ -165,6 +172,9 @@ fun SimonGameScreen(
             }
             GameState.GameOver -> {
                 view.announceForAccessibility("Game over. You reached level ${uiState.level}.")
+            }
+            GameState.Paused -> {
+                view.announceForAccessibility("Game paused.")
             }
             else -> { /* No announcement for other states */ }
         }
@@ -215,9 +225,9 @@ fun SimonGameScreen(
                     IconButton(onClick = onToggleVibration) {
                         Icon(
                             painter = painterResource(
-                                id = if (uiState.vibrateEnabled) 
-                                    R.drawable.vibration_24px 
-                                else 
+                                id = if (uiState.vibrateEnabled)
+                                    R.drawable.vibration_24px
+                                else
                                     R.drawable.vibration_off_24px
                             ),
                             contentDescription = if (uiState.vibrateEnabled) "Disable Vibration" else "Enable Vibration",
@@ -225,7 +235,21 @@ fun SimonGameScreen(
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                    
+
+                    // Pause button — only meaningful while the player is repeating.
+                    // Hidden in every other state so the action bar doesn't lie
+                    // about what's available.
+                    if (uiState.gameState == GameState.PlayerRepeating) {
+                        IconButton(onClick = onPauseGame) {
+                            Icon(
+                                painter = painterResource(R.drawable.pause_24px),
+                                contentDescription = "Pause",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+
                     // Settings button
                     IconButton(onClick = onSettingsClick) {
                         Icon(
@@ -998,6 +1022,57 @@ fun SimonGameScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Replay last sequence", fontSize = 13.sp)
+                    }
+                }
+            }
+
+            // Paused overlay (F14). Tap anywhere on the dim backdrop to resume.
+            // Z-ordered above all game content so the player can't accidentally
+            // hit a colored panel while paused.
+            AnimatedVisibility(
+                visible = uiState.gameState == GameState.Paused,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(10f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onResumeGame
+                        )
+                        .semantics {
+                            contentDescription = "Game paused. Tap to resume."
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.play_arrow_24px),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(96.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "PAUSED",
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Tap to resume",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }

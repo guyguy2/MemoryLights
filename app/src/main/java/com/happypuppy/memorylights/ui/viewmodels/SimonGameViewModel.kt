@@ -241,6 +241,15 @@ class SimonGameViewModel(
                     resetTimeoutTimer()
                 }
             }
+
+            // If we were paused when settings opened, stay paused on return.
+            is GameState.Paused -> {
+                Log.d(TAG, "Restoring Paused state after returning from settings")
+                _uiState.update { it.copy(
+                    gameState = GameState.Paused,
+                    screenState = ScreenState.Game
+                )}
+            }
         }
 
         // Reset the previous state
@@ -297,6 +306,49 @@ class SimonGameViewModel(
         soundManager.setVibrationEnabled(newVibrateEnabled)
         _uiState.update { it.copy(vibrateEnabled = newVibrateEnabled) }
         settingsRepository.setVibrateEnabled(newVibrateEnabled)
+    }
+
+    /**
+     * Pause the player's turn. No-op unless the game is in [GameState.PlayerRepeating].
+     *
+     * Cancels the inactivity timer; the countdown ring disappears (it only renders
+     * during PlayerRepeating). On resume, the timer restarts with the full configured
+     * duration — pause is not "freeze remaining time," it's "give me a break." This
+     * is generous, but pause is a rare event and the simpler model is easier to
+     * reason about. See F14 in specs/improvements.md.
+     */
+    fun pauseGame() {
+        if (_uiState.value.gameState != GameState.PlayerRepeating) {
+            Log.d(TAG, "pauseGame called outside PlayerRepeating (state=${_uiState.value.gameState}) — ignoring")
+            return
+        }
+        Log.d(TAG, "Pausing game")
+        cancelTimeoutTimer()
+        _uiState.update { it.copy(
+            gameState = GameState.Paused,
+            currentlyLit = null,
+            showYourTurnText = false,
+            showSpeedUpText = false
+        )}
+    }
+
+    /**
+     * Resume from [GameState.Paused] back to [GameState.PlayerRepeating]. Restarts
+     * the inactivity timer fresh (full duration); the ring re-renders and re-drains
+     * via the existing `timeoutResetTick` bump in [startTimeoutTimer].
+     */
+    fun resumeGame() {
+        if (_uiState.value.gameState != GameState.Paused) {
+            Log.d(TAG, "resumeGame called when not Paused (state=${_uiState.value.gameState}) — ignoring")
+            return
+        }
+        if (!isAppInForeground) {
+            Log.d(TAG, "resumeGame called while app in background — ignoring")
+            return
+        }
+        Log.d(TAG, "Resuming game")
+        _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
+        startTimeoutTimer()
     }
 
     /**
@@ -1045,8 +1097,9 @@ class SimonGameViewModel(
                     _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                     resetTimeoutTimer()
                 }
-                is GameState.GameOver, is GameState.WaitingToStart -> {
-                    // No special handling needed
+                is GameState.GameOver, is GameState.WaitingToStart, is GameState.Paused -> {
+                    // No special handling needed — Paused stays Paused until the
+                    // player taps resume.
                 }
             }
         }

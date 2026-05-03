@@ -52,6 +52,7 @@ class GameStateTest {
             GameState.WaitingToStart,
             GameState.ShowingSequence,
             GameState.PlayerRepeating,
+            GameState.Paused,
             GameState.GameOver
         )
 
@@ -61,6 +62,7 @@ class GameStateTest {
                 GameState.WaitingToStart -> "waiting"
                 GameState.ShowingSequence -> "showing"
                 GameState.PlayerRepeating -> "repeating"
+                GameState.Paused -> "paused"
                 GameState.GameOver -> "over"
             }
             assertTrue(name.isNotEmpty())
