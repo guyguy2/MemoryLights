@@ -118,7 +118,6 @@ Product features that are not strictly audit fixes — sequenced separately so e
 | # | Feature | Effort | Notes |
 |---|---|---|---|
 | F1 | **Reverse Mode** — watch then repeat backwards | S | Toggle in Settings; one-line change in `checkSequenceMatch` to compare against reversed sequence. |
-| F2 | **Visual-Only (silent) Mode** — skip `soundManager.playSound` during sequence | S | Doubles as accessibility for hearing-impaired. |
 | F3 | **Audio-Only Mode** — hide button colors during sequence playback | M | Exposes weak placeholder packs — pair with Phase 3 sound pack work. |
 | F4 | **Speed Blitz Mode** — fixed-length sprint (e.g. 20 buttons) with leaderboard time | M | New `GameMode` enum + separate high-score slot + sprint timer UI. |
 | F5 | **Smoother difficulty curve** (logarithmic) | S | Overlaps with audit fix #38 (`calculateSequenceTiming`); do them together. |
