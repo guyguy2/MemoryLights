@@ -15,7 +15,6 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.model.GameState
-import com.happypuppy.memorylights.domain.model.ScreenState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -149,48 +148,50 @@ class SimonGameViewModel(
     private var speedUpTextJob: Job? = null
 
     /**
-     * Switch to settings screen.
-     * Captures the current game state so [exitSettings] can restore it on return.
+     * Called by the UI right before navigating to the Settings route.
+     * Captures the current game state so [onReturnToGame] can restore it,
+     * cancels in-flight animations, and pauses the inactivity timer.
+     * Navigation itself is owned by the UI's `NavController`.
      */
     fun showSettings() {
-        Log.d(TAG, "Switching to settings screen")
+        Log.d(TAG, "Game pausing for settings navigation")
 
         previousGameState = _uiState.value.gameState
 
         cancelTimeoutTimer()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
-
-        _uiState.update { it.copy(screenState = ScreenState.Settings) }
     }
 
     /**
-     * Switch to statistics screen. Reachable only from the settings screen,
-     * so the original `previousGameState` (saved by [showSettings]) is preserved.
+     * Called by the UI right before navigating to the Statistics route.
+     * Always reached from Settings, so the original [previousGameState]
+     * captured by [showSettings] is preserved.
      */
     fun showStatistics() {
-        Log.d(TAG, "Switching to statistics screen")
+        Log.d(TAG, "Game pausing for statistics navigation")
 
         cancelTimeoutTimer()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
-
-        _uiState.update { it.copy(screenState = ScreenState.Statistics) }
     }
 
     /**
-     * Return from statistics to settings
+     * Called by the UI when navigating back from Statistics to Settings.
+     * No-op today — kept as an extension point so the back-navigation
+     * call site stays symmetric with [showStatistics].
      */
     fun exitStatistics() {
-        Log.d(TAG, "Exiting statistics screen, returning to settings")
-        _uiState.update { it.copy(screenState = ScreenState.Settings) }
+        Log.d(TAG, "Returning from statistics to settings")
     }
 
     /**
-     * Return from settings to game
+     * Called by the UI when navigation lands back on the Game route after
+     * a Settings (or Settings → Statistics) detour. Restores the game
+     * phase that was active before the player opened Settings.
      */
-    fun exitSettings() {
-        Log.d(TAG, "Exiting settings screen")
+    fun onReturnToGame() {
+        Log.d(TAG, "Resuming game after navigation back")
 
         // Only resume if app is in foreground
         if (!isAppInForeground) {
@@ -202,39 +203,26 @@ class SimonGameViewModel(
             // If we were showing sequence when settings was opened, restart sequence display
             is GameState.ShowingSequence -> {
                 Log.d(TAG, "Resuming from ShowingSequence state - restarting sequence")
-                // First update state
-                _uiState.update { it.copy(
-                    gameState = GameState.WaitingToStart,
-                    screenState = ScreenState.Game
-                ) }
-                // Then restart sequence display
+                _uiState.update { it.copy(gameState = GameState.WaitingToStart) }
                 showSequence()
             }
 
             // If player was repeating a sequence, let them continue
             is GameState.PlayerRepeating -> {
                 Log.d(TAG, "Resuming from PlayerRepeating state")
-                _uiState.update { it.copy(
-                    gameState = GameState.PlayerRepeating,
-                    screenState = ScreenState.Game
-                ) }
-                // Reset the timeout timer when returning to the game
+                _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                 resetTimeoutTimer()
             }
 
             // If we were in game over state, restore it
             is GameState.GameOver -> {
                 Log.d(TAG, "Restoring GameOver state after returning from settings")
-                _uiState.update { it.copy(
-                    gameState = GameState.GameOver,
-                    screenState = ScreenState.Game
-                ) }
+                _uiState.update { it.copy(gameState = GameState.GameOver) }
             }
-            
+
             // If we were in a transitional state, just start a new game
             is GameState.WaitingToStart -> {
                 Log.d(TAG, "Starting new game after returning from settings")
-                _uiState.update { it.copy(screenState = ScreenState.Game) }
 
                 if (_uiState.value.sequence.isEmpty()) {
                     startNewGame()
@@ -247,10 +235,7 @@ class SimonGameViewModel(
             // If we were paused when settings opened, stay paused on return.
             is GameState.Paused -> {
                 Log.d(TAG, "Restoring Paused state after returning from settings")
-                _uiState.update { it.copy(
-                    gameState = GameState.Paused,
-                    screenState = ScreenState.Game
-                )}
+                _uiState.update { it.copy(gameState = GameState.Paused) }
             }
         }
 

@@ -4,20 +4,15 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 
 /**
- * Represents the state of the UI screens
- */
-sealed class ScreenState {
-    object Game : ScreenState()
-    object Settings : ScreenState()
-    object Statistics : ScreenState()
-}
-
-/**
- * Data class to represent game UI state
+ * Data class to represent game UI state.
+ *
+ * Note: navigation between Game / Settings / Statistics is owned by the UI's
+ * `NavController`, not this state — see `ui/navigation/Routes.kt`. The
+ * ViewModel still tracks `gameState` (game-loop phase) but no longer carries a
+ * screen-routing field.
  */
 data class SimonGameUiState(
     val gameState: GameState = GameState.WaitingToStart,
-    val screenState: ScreenState = ScreenState.Game,
     val level: Int = 1,
     val roundCount: Int = 0, // Track completed rounds for progressive UI features
     val sequence: List<SimonButton> = emptyList(),

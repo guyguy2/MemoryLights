@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +14,6 @@ import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.model.GameState
-import com.happypuppy.memorylights.domain.model.ScreenState
 import com.happypuppy.memorylights.ui.screens.MemoryLightsGame
 import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
@@ -48,20 +46,12 @@ class MainActivity : ComponentActivity() {
         val maxVolume = audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
         Log.d(TAG, "Audio volume: $currentVolume/$maxVolume")
 
-        // Setup back press handling using OnBackPressedDispatcher.
-        // Statistics → Settings → Game → exit. Mirrors each screen's nav icon.
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                when (viewModel.uiState.value.screenState) {
-                    is ScreenState.Statistics -> viewModel.exitStatistics()
-                    is ScreenState.Settings -> viewModel.exitSettings()
-                    is ScreenState.Game -> {
-                        isEnabled = false
-                        onBackPressedDispatcher.onBackPressed()
-                    }
-                }
-            }
-        })
+        // System back button is handled by NavHost via the Activity's
+        // OnBackPressedDispatcher: Statistics → Settings → Game pops the
+        // back-stack automatically, and a back press on the Game route
+        // falls through to default activity-finish behavior. The
+        // ViewModel's onReturnToGame is fired by a LaunchedEffect on the
+        // current destination inside MemoryLightsGame.
 
         setContent {
             MyApplicationTheme {

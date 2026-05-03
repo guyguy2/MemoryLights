@@ -55,14 +55,21 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import android.content.res.Configuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
-import com.happypuppy.memorylights.domain.model.ScreenState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.SimonPanel
+import com.happypuppy.memorylights.ui.navigation.GameRoute
+import com.happypuppy.memorylights.ui.navigation.SettingsRoute
+import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 
@@ -77,22 +84,55 @@ private val OverlayBias4ButtonTurn = BiasAlignment(0f, -0.13f)
 
 @Composable
 fun MemoryLightsGame(viewModel: SimonGameViewModel) {
-    // Collect UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val navController = rememberNavController()
 
-    // Display appropriate screen based on screen state
-    when (uiState.screenState) {
-        is ScreenState.Settings -> {
-            // Show Settings Screen
-            val previousState = uiState.gameState // captured before navigating into settings
+    // Whenever the back-stack lands back on the Game route, restore the
+    // game phase that was active before the player navigated away. The
+    // ViewModel captures `previousGameState` at the moment of [showSettings]
+    // so this side effect is safe to fire whenever GameRoute reappears
+    // (initial composition, return from Settings, return from Statistics).
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = currentBackStackEntry?.destination
+    LaunchedEffect(currentDestination) {
+        if (currentDestination?.hasRoute<GameRoute>() == true) {
+            viewModel.onReturnToGame()
+        }
+    }
+
+    // Snapshot the active game phase at the moment the user opens Settings
+    // — needed by the mid-game-mode-switch confirmation dialog. Updated on
+    // each navigation entry into Settings via the LaunchedEffect below.
+    var gameStateAtSettingsEntry by remember { mutableStateOf(uiState.gameState) }
+
+    NavHost(navController = navController, startDestination = GameRoute) {
+        composable<GameRoute> {
+            SimonGameScreen(
+                uiState = uiState,
+                onButtonClick = { button, isPress -> viewModel.onButtonClick(button, isPress) },
+                onSettingsClick = {
+                    gameStateAtSettingsEntry = uiState.gameState
+                    viewModel.showSettings()
+                    navController.navigate(SettingsRoute)
+                },
+                onStartNewGame = { viewModel.startNewGame() },
+                onReplayLastSequence = { viewModel.replayLastSequence() },
+                onToggleSound = { viewModel.toggleSound() },
+                onToggleVibration = { viewModel.toggleVibration() },
+                onPauseGame = { viewModel.pauseGame() },
+                onResumeGame = { viewModel.resumeGame() },
+                onClearParticleEffects = { viewModel.clearParticleEffects() }
+            )
+        }
+        composable<SettingsRoute> {
             SettingsScreen(
                 currentSoundPack = uiState.currentSoundPack,
                 difficultyEnabled = uiState.difficultyEnabled,
                 memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
                 highScore = uiState.currentHighScore,
-                hasActiveGame = previousState is GameState.ShowingSequence ||
-                        previousState is GameState.PlayerRepeating ||
-                        previousState is GameState.Paused,
+                hasActiveGame = gameStateAtSettingsEntry is GameState.ShowingSequence ||
+                        gameStateAtSettingsEntry is GameState.PlayerRepeating ||
+                        gameStateAtSettingsEntry is GameState.Paused,
                 playerTimeoutSeconds = uiState.playerTimeoutSeconds,
                 practiceModeEnabled = uiState.practiceModeEnabled,
                 reverseModeEnabled = uiState.reverseModeEnabled,
@@ -103,32 +143,22 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
                 onReverseModeToggled = { viewModel.setReverseModeEnabled(it) },
                 onResetHighScore = { viewModel.resetHighScore() },
-                onStatisticsClicked = { viewModel.showStatistics() },
-                onBackPressed = { viewModel.exitSettings() }
+                onStatisticsClicked = {
+                    viewModel.showStatistics()
+                    navController.navigate(StatisticsRoute)
+                },
+                onBackPressed = { navController.popBackStack() }
             )
         }
-        is ScreenState.Statistics -> {
-            // Show Statistics Screen
+        composable<StatisticsRoute> {
             StatisticsScreen(
                 statistics = uiState.statistics,
                 currentHighScore = uiState.currentHighScore,
                 onResetStatistics = { viewModel.resetStatistics() },
-                onBackPressed = { viewModel.exitStatistics() }
-            )
-        }
-        else -> {
-            // Show Main Game Screen with updated callback signature
-            SimonGameScreen(
-                uiState = uiState,
-                onButtonClick = { button, isPress -> viewModel.onButtonClick(button, isPress) },
-                onSettingsClick = { viewModel.showSettings() },
-                onStartNewGame = { viewModel.startNewGame() },
-                onReplayLastSequence = { viewModel.replayLastSequence() },
-                onToggleSound = { viewModel.toggleSound() },
-                onToggleVibration = { viewModel.toggleVibration() },
-                onPauseGame = { viewModel.pauseGame() },
-                onResumeGame = { viewModel.resumeGame() },
-                onClearParticleEffects = { viewModel.clearParticleEffects() }
+                onBackPressed = {
+                    viewModel.exitStatistics()
+                    navController.popBackStack()
+                }
             )
         }
     }

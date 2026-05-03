@@ -16,7 +16,6 @@ class SimonGameUiStateTest {
         val state = SimonGameUiState()
 
         assertEquals(GameState.WaitingToStart, state.gameState)
-        assertEquals(ScreenState.Game, state.screenState)
         assertEquals(1, state.level)
         assertEquals(0, state.roundCount)
         assertTrue(state.sequence.isEmpty())
