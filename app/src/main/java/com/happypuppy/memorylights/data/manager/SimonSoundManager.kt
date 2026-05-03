@@ -528,23 +528,12 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
     }
 
     /**
-     * Set whether vibration is enabled
+     * Set whether vibration is enabled. Pure setter — no side effects so
+     * toggling the preference does not surprise the user with a buzz.
      */
     fun setVibrationEnabled(enabled: Boolean) {
         Log.d(TAG, "Setting vibration enabled: $enabled")
         vibrateEnabled = enabled
-
-        // Test vibration immediately if enabling (only if not paused)
-        if (enabled && !isPaused) {
-            try {
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    Log.d(TAG, "Testing vibration after enabling")
-                    vibrate()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to test vibration", e)
-            }
-        }
     }
 
     /**

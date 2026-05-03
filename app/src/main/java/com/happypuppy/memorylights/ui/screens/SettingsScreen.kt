@@ -339,10 +339,10 @@ fun SettingsScreen(
                 }
             }
             
-            // Reset High Score card
-            SettingsCard(
-                onClick = { showResetHighScoreDialog = true }
-            ) {
+            // Reset Score & Statistics card. Only the inner Reset button triggers
+            // the destructive dialog so users can scroll/scan the card without
+            // accidentally firing it.
+            SettingsCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -351,7 +351,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.counter_0_24px),
-                        contentDescription = "Reset High Score",
+                        contentDescription = "Reset Score and Statistics",
                         tint = Color(0xFFFF9800), // Orange color
                         modifier = Modifier.size(24.dp)
                     )
@@ -360,18 +360,18 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Reset High Score",
+                            text = "Reset Score & Statistics",
                             color = Color.White,
                             fontSize = 16.sp
                         )
 
                         Text(
-                            text = "Resets high score and all statistics",
+                            text = "Clears high score, games played, and all statistics",
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
                     }
-                    
+
                     TextButton(
                         onClick = { showResetHighScoreDialog = true },
                         colors = ButtonDefaults.textButtonColors(
@@ -587,13 +587,13 @@ fun SettingsScreen(
 
 @Composable
 fun SettingsCard(
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF1D1D1D)

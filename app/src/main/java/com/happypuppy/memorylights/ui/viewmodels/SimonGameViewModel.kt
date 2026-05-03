@@ -127,27 +127,6 @@ class SimonGameViewModel(
         )}
     }
 
-    /**
-     * Save settings to repository
-     */
-    private fun saveSettings() {
-        val state = _uiState.value
-        settingsRepository.setSoundPack(state.currentSoundPack)
-        settingsRepository.setHighScore4Button(state.highScore4Button)
-        settingsRepository.setHighScore6Button(state.highScore6Button)
-        settingsRepository.setVibrateEnabled(state.vibrateEnabled)
-        settingsRepository.setSoundEnabled(state.soundEnabled)
-        settingsRepository.setDifficultyEnabled(state.difficultyEnabled)
-        settingsRepository.setMemoryLightsPlusEnabled(state.memoryLightsPlusEnabled)
-
-        Log.d(TAG, "Saved settings - Sound Pack: ${state.currentSoundPack.name}, " +
-                "High Score 4-button: ${state.highScore4Button}, " +
-                "High Score 6-button: ${state.highScore6Button}, " +
-                "Vibrate: ${state.vibrateEnabled}, " +
-                "Sound: ${state.soundEnabled}, " +
-                "Difficulty: ${state.difficultyEnabled}, " +
-                "Memory Lights+: ${state.memoryLightsPlusEnabled}")
-    }
 
     // Track previous game state before entering settings
     private var previousGameState: GameState = GameState.WaitingToStart
@@ -269,7 +248,7 @@ class SimonGameViewModel(
         _uiState.update { it.copy(currentSoundPack = soundPack) }
         soundManager.playSound(SimonButton.GREEN)
 
-        saveSettings()
+        settingsRepository.setSoundPack(soundPack)
     }
 
     /**
@@ -277,62 +256,40 @@ class SimonGameViewModel(
      */
     fun setVibrationEnabled(enabled: Boolean) {
         Log.d(TAG, "Setting vibration enabled: $enabled")
-
-        // Update sound manager
         soundManager.setVibrationEnabled(enabled)
-
-        // Update UI state
         _uiState.update { it.copy(vibrateEnabled = enabled) }
-
-        // Save to preferences
-        saveSettings()
+        settingsRepository.setVibrateEnabled(enabled)
     }
-    
+
     /**
      * Toggle sound enabled/disabled (mute/unmute)
      */
     fun toggleSound() {
         val newSoundEnabled = !_uiState.value.soundEnabled
         Log.d(TAG, "Toggling sound enabled: $newSoundEnabled")
-        
-        // Update sound manager (note the inverse relationship - soundEnabled=true means not muted)
         soundManager.setSoundMuted(!newSoundEnabled)
-        
-        // Update UI state
         _uiState.update { it.copy(soundEnabled = newSoundEnabled) }
-        
-        // Save to preferences
-        saveSettings()
+        settingsRepository.setSoundEnabled(newSoundEnabled)
     }
-    
+
     /**
      * Toggle vibration enabled/disabled
      */
     fun toggleVibration() {
         val newVibrateEnabled = !_uiState.value.vibrateEnabled
         Log.d(TAG, "Toggling vibration enabled: $newVibrateEnabled")
-        
-        // Update sound manager
         soundManager.setVibrationEnabled(newVibrateEnabled)
-        
-        // Update UI state
         _uiState.update { it.copy(vibrateEnabled = newVibrateEnabled) }
-        
-        // Save to preferences
-        saveSettings()
+        settingsRepository.setVibrateEnabled(newVibrateEnabled)
     }
-    
+
     /**
      * Toggle difficulty setting
      */
     fun setDifficultyEnabled(enabled: Boolean) {
         Log.d(TAG, "Setting difficulty enabled: $enabled")
-        
-        // Update UI state
         _uiState.update { it.copy(difficultyEnabled = enabled) }
-        
-        // Save to preferences
-        saveSettings()
+        settingsRepository.setDifficultyEnabled(enabled)
     }
     
     /**
@@ -370,9 +327,8 @@ class SimonGameViewModel(
                 showGameOverText = false
             )}
             
-            // Save to preferences
-            saveSettings()
-            
+            settingsRepository.setMemoryLightsPlusEnabled(enabled)
+
             // Start a new game with the new mode if app is in foreground
             if (isAppInForeground) {
                 generateNextSequence()
@@ -400,16 +356,13 @@ class SimonGameViewModel(
 
         // Optimistically zero the per-mode high score so the UI reflects the reset
         // without waiting for DataStore to round-trip.
-        _uiState.update { currentState ->
-            if (currentState.memoryLightsPlusEnabled) {
-                currentState.copy(highScore6Button = 0)
-            } else {
-                currentState.copy(highScore4Button = 0)
-            }
+        if (_uiState.value.memoryLightsPlusEnabled) {
+            _uiState.update { it.copy(highScore6Button = 0) }
+            settingsRepository.setHighScore6Button(0)
+        } else {
+            _uiState.update { it.copy(highScore4Button = 0) }
+            settingsRepository.setHighScore4Button(0)
         }
-
-        // Save to preferences
-        saveSettings()
     }
 
     /**
@@ -918,9 +871,13 @@ class SimonGameViewModel(
         // uiState.statistics once DataStore has persisted the new values.
         statisticsManager.recordGameResult(currentLevel, _uiState.value.sequence.size)
 
-        // Save settings if it's a new high score (always save when there's a change)
+        // Persist the new high score for the active mode (per-key write).
         if (isNewHighScore) {
-            saveSettings()
+            if (_uiState.value.memoryLightsPlusEnabled) {
+                settingsRepository.setHighScore6Button(newHighScore)
+            } else {
+                settingsRepository.setHighScore4Button(newHighScore)
+            }
         }
     }
     
@@ -1037,7 +994,6 @@ class SimonGameViewModel(
     override fun onCleared() {
         Log.d(TAG, "ViewModel cleared, releasing sound resources")
         super.onCleared()
-        saveSettings()
         cancelTimeoutTimer() // Make sure to cancel any timers
 
         // Cancel any active animations or sequences
