@@ -1,0 +1,138 @@
+package com.happypuppy.memorylights.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.ui.theme.SurfaceContainer
+import kotlinx.coroutines.launch
+
+/**
+ * Gameplay settings sub-screen (F18). Hosts pacing-related controls that
+ * tune *how* a run feels but don't change its rules. Currently only
+ * Player Timeout. Designed to absorb F3 audio-only / F4 blitz / F6 daily
+ * / F8 achievement toggles as those land without bloating the top-level
+ * Settings list.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GameplayScreen(
+    playerTimeoutSeconds: Int,
+    onPlayerTimeoutChanged: (Int) -> Unit,
+    onBackPressed: () -> Unit
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    fun toast(message: String) {
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Gameplay") },
+                navigationIcon = {
+                    IconButton(onClick = onBackPressed) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Black,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Black
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            SettingsCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.schedule_24px),
+                            contentDescription = "Player timeout",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Player Timeout",
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+
+                            Text(
+                                text = "How long you have to press the next button",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(5, 10, 15, 30).forEach { seconds ->
+                            FilterChip(
+                                selected = playerTimeoutSeconds == seconds,
+                                onClick = {
+                                    if (playerTimeoutSeconds != seconds) {
+                                        onPlayerTimeoutChanged(seconds)
+                                        toast("Timeout: ${seconds}s")
+                                    }
+                                },
+                                label = { Text("${seconds}s") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = SurfaceContainer,
+                                    labelColor = Color.Gray,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = Color.White
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}

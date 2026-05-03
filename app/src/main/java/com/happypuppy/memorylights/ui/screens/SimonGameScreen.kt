@@ -67,8 +67,11 @@ import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.SimonPanel
+import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
+import com.happypuppy.memorylights.ui.navigation.GameplayRoute
 import com.happypuppy.memorylights.ui.navigation.SettingsRoute
+import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
@@ -127,26 +130,44 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
         composable<SettingsRoute> {
             SettingsScreen(
                 currentSoundPack = uiState.currentSoundPack,
-                difficultyEnabled = uiState.difficultyEnabled,
-                memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
-                highScore = uiState.currentHighScore,
-                hasActiveGame = gameStateAtSettingsEntry is GameState.ShowingSequence ||
-                        gameStateAtSettingsEntry is GameState.PlayerRepeating ||
-                        gameStateAtSettingsEntry is GameState.Paused,
-                playerTimeoutSeconds = uiState.playerTimeoutSeconds,
-                practiceModeEnabled = uiState.practiceModeEnabled,
-                reverseModeEnabled = uiState.reverseModeEnabled,
-                onSoundPackSelected = { viewModel.setSoundPack(it) },
-                onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
-                onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
-                onPlayerTimeoutChanged = { viewModel.setPlayerTimeoutSeconds(it) },
-                onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
-                onReverseModeToggled = { viewModel.setReverseModeEnabled(it) },
+                onGameModesClick = { navController.navigate(GameModesRoute) },
+                onGameplayClick = { navController.navigate(GameplayRoute) },
+                onSoundAndHapticsClick = { navController.navigate(SoundAndHapticsRoute) },
                 onResetHighScore = { viewModel.resetHighScore() },
                 onStatisticsClicked = {
                     viewModel.showStatistics()
                     navController.navigate(StatisticsRoute)
                 },
+                onBackPressed = { navController.popBackStack() }
+            )
+        }
+        composable<GameModesRoute> {
+            GameModesScreen(
+                difficultyEnabled = uiState.difficultyEnabled,
+                reverseModeEnabled = uiState.reverseModeEnabled,
+                practiceModeEnabled = uiState.practiceModeEnabled,
+                memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                hasActiveGame = gameStateAtSettingsEntry is GameState.ShowingSequence ||
+                        gameStateAtSettingsEntry is GameState.PlayerRepeating ||
+                        gameStateAtSettingsEntry is GameState.Paused,
+                onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
+                onReverseModeToggled = { viewModel.setReverseModeEnabled(it) },
+                onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
+                onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
+                onBackPressed = { navController.popBackStack() }
+            )
+        }
+        composable<GameplayRoute> {
+            GameplayScreen(
+                playerTimeoutSeconds = uiState.playerTimeoutSeconds,
+                onPlayerTimeoutChanged = { viewModel.setPlayerTimeoutSeconds(it) },
+                onBackPressed = { navController.popBackStack() }
+            )
+        }
+        composable<SoundAndHapticsRoute> {
+            SoundAndHapticsScreen(
+                currentSoundPack = uiState.currentSoundPack,
+                onSoundPackSelected = { viewModel.setSoundPack(it) },
                 onBackPressed = { navController.popBackStack() }
             )
         }

@@ -18,3 +18,12 @@ object SettingsRoute
 
 @Serializable
 object StatisticsRoute
+
+@Serializable
+object GameModesRoute
+
+@Serializable
+object GameplayRoute
+
+@Serializable
+object SoundAndHapticsRoute

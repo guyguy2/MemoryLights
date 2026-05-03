@@ -1,101 +1,58 @@
-// Updated SettingsScreen.kt file
 package com.happypuppy.memorylights.ui.screens
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.theme.DialogBackground
-import com.happypuppy.memorylights.ui.theme.SurfaceContainer
-import com.happypuppy.memorylights.ui.theme.SurfaceContainerFade
 import com.happypuppy.memorylights.ui.theme.SurfaceSelected
-import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
 /**
- * Settings screen for the Memory Lights game
+ * Top-level Settings screen — a navigation hub since F18. Three chevron
+ * rows lead to focused sub-screens (Game Modes / Gameplay / Sound &
+ * Haptics); the global utilities (Statistics, Reset, Rate, About) live
+ * directly here so they remain one tap away.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     currentSoundPack: SoundPack,
-    difficultyEnabled: Boolean = false,
-    memoryLightsPlusEnabled: Boolean = false,
-    highScore: Int = 0,
-    hasActiveGame: Boolean = false,
-    playerTimeoutSeconds: Int = 10,
-    practiceModeEnabled: Boolean = false,
-    reverseModeEnabled: Boolean = false,
-    onSoundPackSelected: (SoundPack) -> Unit,
-    onDifficultyToggled: (Boolean) -> Unit = {},
-    onMemoryLightsPlusToggled: (Boolean) -> Unit = {},
-    onPlayerTimeoutChanged: (Int) -> Unit = {},
-    onPracticeModeToggled: (Boolean) -> Unit = {},
-    onReverseModeToggled: (Boolean) -> Unit = {},
-    onResetHighScore: () -> Unit = {},
-    onStatisticsClicked: () -> Unit = {},
+    onGameModesClick: () -> Unit,
+    onGameplayClick: () -> Unit,
+    onSoundAndHapticsClick: () -> Unit,
+    onStatisticsClicked: () -> Unit,
+    onResetHighScore: () -> Unit,
     onBackPressed: () -> Unit
 ) {
     val context = LocalContext.current
 
-    // Dialog visibility states
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetHighScoreDialog by remember { mutableStateOf(false) }
-    var pendingMemoryLightsPlusToggle by remember { mutableStateOf<Boolean?>(null) }
-
-    // LazyListState for the sound pack list
-    val soundPackListState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
-
-    // Snackbar host for transient settings-change confirmations (#33)
-    val snackbarHostState = remember { SnackbarHostState() }
-    fun toast(message: String) {
-        coroutineScope.launch {
-            snackbarHostState.currentSnackbarData?.dismiss()
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short
-            )
-        }
-    }
-
-    // Check if the list can scroll down
-    val canScrollDown by remember {
-        derivedStateOf {
-            soundPackListState.canScrollForward
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -116,439 +73,55 @@ fun SettingsScreen(
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Black
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // SOUND PACKS SECTION
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 16.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.music_note_24px),
-                    contentDescription = "Sound Packs",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = "Sound Packs",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            NavCard(
+                title = "Game Modes",
+                summary = "Difficulty, Reverse, Practice, Memory Lights+",
+                iconPainterResId = R.drawable.speed_24px,
+                iconTint = Color.White,
+                onClick = onGameModesClick
+            )
 
-            // Sound pack selection with scroll indicators
-            Box(
+            NavCard(
+                title = "Gameplay",
+                summary = "Player timeout",
+                iconPainterResId = R.drawable.schedule_24px,
+                iconTint = Color.White,
+                onClick = onGameplayClick
+            )
+
+            NavCard(
+                title = "Sound & Haptics",
+                summary = "Current pack: ${currentSoundPack.displayName}",
+                iconPainterResId = R.drawable.music_note_24px,
+                iconTint = Color.White,
+                onClick = onSoundAndHapticsClick
+            )
+
+            HorizontalDivider(
                 modifier = Modifier
-                    .height(280.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceContainer)
-            ) {
-                // Main list of sound packs
-                LazyColumn(
-                    state = soundPackListState,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(SoundPack.entries.toList()) { soundPack ->
-                        SoundPackOption(
-                            soundPack = soundPack,
-                            isSelected = soundPack == currentSoundPack,
-                            onSelect = {
-                                onSoundPackSelected(soundPack)
-                                toast("Sound pack: ${soundPack.displayName}")
-                            }
-                        )
-                    }
+                    .padding(vertical = 12.dp),
+                thickness = 1.dp,
+                color = SurfaceSelected
+            )
 
-                    // Add empty item to ensure last item isn't hidden behind the scroll indicator
-                    item { Spacer(modifier = Modifier.height(40.dp)) }
-                }
-
-                // Scroll indicator at the bottom
-                if (canScrollDown) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        SurfaceContainerFade
-                                    )
-                                )
-                            )
-                            .clickable {
-                                coroutineScope.launch {
-                                    // Scroll down when clicked
-                                    soundPackListState.animateScrollBy(100f)
-                                }
-                            }
-                            .padding(vertical = 8.dp)
-                            .align(Alignment.BottomCenter),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "More options",
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "More sound options",
-                                color = Color.Gray,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-
-                // Fade overlay at the top when scrolled
-                val showTopFade by remember {
-                    derivedStateOf {
-                        soundPackListState.firstVisibleItemIndex > 0 ||
-                                soundPackListState.firstVisibleItemScrollOffset > 0
-                    }
-                }
-
-                if (showTopFade) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        SurfaceContainerFade,
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .align(Alignment.TopCenter)
-                    )
-                }
-            }
-
-            
-            // Difficulty setting card
-            val toggleDifficulty: (Boolean) -> Unit = { value ->
-                onDifficultyToggled(value)
-                toast("Difficulty: ${if (value) "On" else "Off"}")
-            }
-            SettingsCard(
-                onClick = { toggleDifficulty(!difficultyEnabled) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.speed_24px),
-                        contentDescription = "Difficulty",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Difficulty",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = "Increase speed as levels progress",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Switch(
-                        checked = difficultyEnabled,
-                        onCheckedChange = toggleDifficulty,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-            }
-            
-            // Reverse Mode card (F1). Toggle: player watches the sequence
-            // forward but must press buttons in reverse order. Inverts the
-            // recall puzzle without changing display or scoring rules.
-            val toggleReverse: (Boolean) -> Unit = { value ->
-                onReverseModeToggled(value)
-                toast("Reverse Mode: ${if (value) "On" else "Off"}")
-            }
-            SettingsCard(
-                onClick = { toggleReverse(!reverseModeEnabled) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.speed_24px),
-                        contentDescription = "Reverse Mode",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Reverse Mode",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = "Watch the sequence forward, then repeat it in reverse",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Switch(
-                        checked = reverseModeEnabled,
-                        onCheckedChange = toggleReverse,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-            }
-
-            // Practice Mode card (F15). Toggle: wrong buttons replay the
-            // sequence instead of ending the run. High scores do not advance
-            // while enabled — by design, practice runs are never recorded.
-            val togglePractice: (Boolean) -> Unit = { value ->
-                onPracticeModeToggled(value)
-                toast("Practice Mode: ${if (value) "On" else "Off"}")
-            }
-            SettingsCard(
-                onClick = { togglePractice(!practiceModeEnabled) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.reset_score_24px),
-                        contentDescription = "Practice Mode",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Practice Mode",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = "Wrong buttons replay the sequence instead of ending the run. High scores are not recorded while enabled.",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Switch(
-                        checked = practiceModeEnabled,
-                        onCheckedChange = togglePractice,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-            }
-
-            // Timeout duration card — segmented control of inactivity timeouts.
-            // Pairs with the countdown ring (#61): the ring drains over the
-            // selected duration, so this slider lets fast/slow players tune the
-            // pace without touching code.
-            SettingsCard {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(R.drawable.schedule_24px),
-                            contentDescription = "Player timeout",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Player Timeout",
-                                color = Color.White,
-                                fontSize = 16.sp
-                            )
-
-                            Text(
-                                text = "How long you have to press the next button",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(5, 10, 15, 30).forEach { seconds ->
-                            FilterChip(
-                                selected = playerTimeoutSeconds == seconds,
-                                onClick = {
-                                    if (playerTimeoutSeconds != seconds) {
-                                        onPlayerTimeoutChanged(seconds)
-                                        toast("Timeout: ${seconds}s")
-                                    }
-                                },
-                                label = { Text("${seconds}s") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = SurfaceContainer,
-                                    labelColor = Color.Gray,
-                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedLabelColor = Color.White
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Memory Lights+ setting card
-            val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
-                if (hasActiveGame) {
-                    pendingMemoryLightsPlusToggle = newValue
-                } else {
-                    onMemoryLightsPlusToggled(newValue)
-                    toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
-                }
-            }
-            SettingsCard(
-                onClick = { requestMemoryLightsPlusToggle(!memoryLightsPlusEnabled) }
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.play_arrow_24px),
-                        contentDescription = "Memory Lights+",
-                        tint = Color(0xFF4CAF50), // Green color for premium feature
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Memory Lights+",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = "6 buttons",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Switch(
-                        checked = memoryLightsPlusEnabled,
-                        onCheckedChange = requestMemoryLightsPlusToggle,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-            }
-
-            // Statistics card
-            SettingsCard(
+            NavCard(
+                title = "Statistics",
+                summary = "View your game progress and stats",
+                iconImageVector = Icons.Default.DateRange,
+                iconTint = Color(0xFF4CAF50),
                 onClick = onStatisticsClicked
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "Statistics",
-                        tint = Color(0xFF4CAF50), // Green color
-                        modifier = Modifier.size(24.dp)
-                    )
+            )
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Statistics",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-
-                        Text(
-                            text = "View your game progress and stats",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-            
             // Reset Score & Statistics card. Only the inner Reset button triggers
             // the destructive dialog so users can scroll/scan the card without
             // accidentally firing it.
@@ -562,7 +135,7 @@ fun SettingsScreen(
                     Icon(
                         painter = painterResource(R.drawable.counter_0_24px),
                         contentDescription = "Reset Score and Statistics",
-                        tint = Color(0xFFFF9800), // Orange color
+                        tint = Color(0xFFFF9800),
                         modifier = Modifier.size(24.dp)
                     )
 
@@ -593,21 +166,18 @@ fun SettingsScreen(
                 }
             }
 
-            // RATE APP SECTION
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 12.dp),
                 thickness = 1.dp,
                 color = SurfaceSelected
             )
 
-            // Rate app card
             SettingsCard(
-                onClick = { 
+                onClick = {
                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                        data =
-                            "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
+                        data = "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
                         setPackage("com.android.vending")
                     }
                     try {
@@ -615,8 +185,10 @@ fun SettingsScreen(
                     } catch (_: ActivityNotFoundException) {
                         // Fallback to web browser when the Play Store app isn't installed
                         // (e.g. side-loaded build, GMS-less device).
-                        val fallbackIntent = Intent(Intent.ACTION_VIEW,
-                            "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri())
+                        val fallbackIntent = Intent(
+                            Intent.ACTION_VIEW,
+                            "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
+                        )
                         context.startActivity(fallbackIntent)
                     }
                 }
@@ -630,7 +202,7 @@ fun SettingsScreen(
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Rate App",
-                        tint = Color(0xFFFFC107), // Amber/gold color
+                        tint = Color(0xFFFFC107),
                         modifier = Modifier.size(24.dp)
                     )
 
@@ -652,10 +224,7 @@ fun SettingsScreen(
                 }
             }
 
-            // About card
-            SettingsCard(
-                onClick = { showAboutDialog = true }
-            ) {
+            SettingsCard(onClick = { showAboutDialog = true }) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -687,12 +256,10 @@ fun SettingsScreen(
                 }
             }
 
-            // Bottom spacing to ensure everything is visible
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
-    // About dialog
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
@@ -747,8 +314,7 @@ fun SettingsScreen(
             textContentColor = Color.White
         )
     }
-    
-    // Reset High Score confirmation dialog
+
     if (showResetHighScoreDialog) {
         AlertDialog(
             onDismissRequest = { showResetHighScoreDialog = false },
@@ -768,7 +334,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(
-                    onClick = { 
+                    onClick = {
                         onResetHighScore()
                         showResetHighScoreDialog = false
                     },
@@ -794,53 +360,58 @@ fun SettingsScreen(
             textContentColor = Color.White
         )
     }
+}
 
-    // Memory Lights+ mode-switch confirmation when toggled mid-game.
-    pendingMemoryLightsPlusToggle?.let { newValue ->
-        AlertDialog(
-            onDismissRequest = { pendingMemoryLightsPlusToggle = null },
-            title = {
-                Text(
-                    text = "End current game?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+/**
+ * A row that navigates to a sub-screen. Either an `ImageVector` or a
+ * drawable resource id is required for the leading icon — exactly one
+ * should be non-null.
+ */
+@Composable
+private fun NavCard(
+    title: String,
+    summary: String,
+    iconTint: Color,
+    onClick: () -> Unit,
+    iconImageVector: ImageVector? = null,
+    iconPainterResId: Int? = null
+) {
+    SettingsCard(onClick = onClick) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when {
+                iconImageVector != null -> Icon(
+                    imageVector = iconImageVector,
+                    contentDescription = title,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
                 )
-            },
-            text = {
-                Text(
-                    text = "Switching modes will end your current run. Continue?",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
+                iconPainterResId != null -> Icon(
+                    painter = painterResource(iconPainterResId),
+                    contentDescription = title,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp)
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onMemoryLightsPlusToggled(newValue)
-                        toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
-                        pendingMemoryLightsPlusToggle = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Switch")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingMemoryLightsPlusToggle = null },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = DialogBackground,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
-        )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, color = Color.White, fontSize = 16.sp)
+                Text(text = summary, color = Color.Gray, fontSize = 14.sp)
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color.Gray,
+                modifier = Modifier.size(24.dp)
+            )
+        }
     }
 }
 
