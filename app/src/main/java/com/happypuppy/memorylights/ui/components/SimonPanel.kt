@@ -1,6 +1,5 @@
 package com.happypuppy.memorylights.ui.components
 
-import android.R.attr.onClick
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,13 +19,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-
-import android.util.Log
 
 @Composable
 fun SimonPanel(
     color: Color,
+    colorName: String,
     isLit: Boolean = false,
     userPressed: Boolean = false,
     modifier: Modifier = Modifier,
@@ -123,9 +127,22 @@ fun SimonPanel(
     val offsetX = startPaddingValue
     val offsetY = topPaddingValue
 
+    // Accessibility state description
+    val stateDesc = when {
+        userPressed -> "pressed"
+        isLit -> "illuminated"
+        else -> "off"
+    }
+
     Box(
         modifier = modifier
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Minimum touch target size per Material Design
             .clip(RoundedCornerShape(16.dp))
+            .semantics {
+                contentDescription = "$colorName button"
+                stateDescription = stateDesc
+                role = Role.Button
+            }
     ) {
         // Bottom layer - darker border/shadow
         Box(

@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,6 +108,36 @@ fun SimonGameScreen(
 ) {
     // Single source of truth for which buttons are physically pressed (for UI feedback only)
     var localPressedButtons by remember { mutableStateOf(mapOf<SimonButton, Boolean>()) }
+
+    // Screen reader announcements for accessibility
+    val view = LocalView.current
+
+    // Derived state for available buttons - only recomputes when memoryLightsPlusEnabled changes
+    val availableButtons by remember(uiState.memoryLightsPlusEnabled) {
+        derivedStateOf { SimonButton.getAvailableButtons(uiState.memoryLightsPlusEnabled) }
+    }
+
+    // Announce level changes (skip initial level 1 on game start)
+    var previousLevel by remember { mutableIntStateOf(0) }
+    LaunchedEffect(uiState.level) {
+        if (previousLevel > 0 && uiState.level > previousLevel) {
+            view.announceForAccessibility("Level ${uiState.level}")
+        }
+        previousLevel = uiState.level
+    }
+
+    // Announce game state changes
+    LaunchedEffect(uiState.gameState) {
+        when (uiState.gameState) {
+            GameState.PlayerRepeating -> {
+                view.announceForAccessibility("Your turn. Repeat the sequence.")
+            }
+            GameState.GameOver -> {
+                view.announceForAccessibility("Game over. You reached level ${uiState.level}.")
+            }
+            else -> { /* No announcement for other states */ }
+        }
+    }
 
     // Function to handle both press and release events
     val handleButtonInteraction = { button: SimonButton, isPress: Boolean ->
@@ -204,7 +235,6 @@ fun SimonGameScreen(
                 )
 
                 // Simon Says colored panels - Dynamic layout based on mode and orientation
-                val availableButtons = SimonButton.getAvailableButtons(uiState.memoryLightsPlusEnabled)
                 val configuration = LocalConfiguration.current
                 val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                 
@@ -221,6 +251,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
+                                        colorName = button.name.lowercase().capitalize(),
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -233,12 +264,13 @@ fun SimonGameScreen(
                                     )
                                 }
                             }
-                            
+
                             // Bottom row: Blue, Purple, Orange
                             Row(modifier = Modifier.weight(1f)) {
                                 listOf(SimonButton.BLUE, SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
+                                        colorName = button.name.lowercase().capitalize(),
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -263,6 +295,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
+                                        colorName = button.name.lowercase().capitalize(),
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -275,12 +308,13 @@ fun SimonGameScreen(
                                     )
                                 }
                             }
-                            
+
                             // Middle row: Yellow, Blue
                             Row(modifier = Modifier.weight(1f)) {
                                 listOf(SimonButton.YELLOW, SimonButton.BLUE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
+                                        colorName = button.name.lowercase().capitalize(),
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -293,12 +327,13 @@ fun SimonGameScreen(
                                     )
                                 }
                             }
-                            
+
                             // Bottom row: Purple, Orange
                             Row(modifier = Modifier.weight(1f)) {
                                 listOf(SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
+                                        colorName = button.name.lowercase().capitalize(),
                                         isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -323,6 +358,7 @@ fun SimonGameScreen(
                             // Green panel (top-left)
                             SimonPanel(
                                 color = SimonButton.GREEN.color,
+                                colorName = "Green",
                                 isLit = uiState.currentlyLit == SimonButton.GREEN || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.GREEN] == true,
                                 modifier = Modifier
@@ -337,6 +373,7 @@ fun SimonGameScreen(
                             // Red panel (top-right)
                             SimonPanel(
                                 color = SimonButton.RED.color,
+                                colorName = "Red",
                                 isLit = uiState.currentlyLit == SimonButton.RED || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.RED] == true,
                                 modifier = Modifier
@@ -353,6 +390,7 @@ fun SimonGameScreen(
                             // Yellow panel (bottom-left)
                             SimonPanel(
                                 color = SimonButton.YELLOW.color,
+                                colorName = "Yellow",
                                 isLit = uiState.currentlyLit == SimonButton.YELLOW || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.YELLOW] == true,
                                 modifier = Modifier
@@ -367,6 +405,7 @@ fun SimonGameScreen(
                             // Blue panel (bottom-right)
                             SimonPanel(
                                 color = SimonButton.BLUE.color,
+                                colorName = "Blue",
                                 isLit = uiState.currentlyLit == SimonButton.BLUE || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.BLUE] == true,
                                 modifier = Modifier
@@ -422,7 +461,6 @@ fun SimonGameScreen(
                     // Colored arcs - Dynamic based on mode
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val strokeWidth = 8.dp.toPx()
-                        val availableButtons = SimonButton.getAvailableButtons(uiState.memoryLightsPlusEnabled)
                         val sweepAngle = 360f / availableButtons.size
                         
                         if (uiState.memoryLightsPlusEnabled) {
@@ -557,13 +595,26 @@ fun SimonGameScreen(
                             }
                         }
 
-                        // Center content (level number or play button)
+                        // Center content (level number, play button, or loading indicator)
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            if (uiState.gameState == GameState.GameOver) {
+                            if (!uiState.soundsLoaded && uiState.soundLoadError == null) {
+                                // Show loading indicator while sounds are loading
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = Color.White,
+                                    strokeWidth = 3.dp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Loading...",
+                                    color = Color.Gray,
+                                    fontSize = 10.sp
+                                )
+                            } else if (uiState.gameState == GameState.GameOver) {
                                 // Play icon when game is over
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),

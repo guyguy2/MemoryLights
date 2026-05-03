@@ -23,7 +23,9 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val TAG = "MainActivity"
+    companion object {
+        private const val TAG = "MainActivity"
+    }
 
     // Use Koin to inject ViewModel
     private val viewModel: SimonGameViewModel by viewModel()

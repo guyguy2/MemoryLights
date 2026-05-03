@@ -16,7 +16,7 @@ enum class SimonButton(val color: Color, val brightColor: Color, val index: Int)
     companion object {
         fun getAvailableButtons(memoryLightsPlusEnabled: Boolean): List<SimonButton> {
             return if (memoryLightsPlusEnabled) {
-                values().toList()
+                entries
             } else {
                 listOf(GREEN, RED, YELLOW, BLUE)
             }

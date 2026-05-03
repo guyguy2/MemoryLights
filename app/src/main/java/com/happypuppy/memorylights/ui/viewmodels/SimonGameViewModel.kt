@@ -1,14 +1,14 @@
 package com.happypuppy.memorylights.ui.viewmodels
 
-import android.content.Context
 import android.util.Log
-import androidx.core.content.edit
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.data.manager.StatisticsManager
+import com.happypuppy.memorylights.data.repository.SettingsRepository
+import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -22,29 +22,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.koin.android.ext.koin.androidContext
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 
 /**
  * ViewModel for the Memory Lights game logic with lifecycle awareness
  */
 class SimonGameViewModel(
-    // Inject SimonSoundManager through constructor
     private val soundManager: SimonSoundManager,
-    private val statisticsManager: StatisticsManager
+    private val statisticsManager: StatisticsManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel(), DefaultLifecycleObserver {
 
-    // Get the application context from Koin
-    private val appContext = soundManager.getContext()
-
-    private val TAG = "SimonGameViewModel"
+    companion object {
+        private const val TAG = "SimonGameViewModel"
+    }
 
     // Flag to track if startup animation has been played in this session
     private var hasPlayedStartupAnimation = false
-
-    // Timeout duration for player's turn (10 seconds)
-    private val playerTimeoutDuration = 10000L // 10 seconds in milliseconds
 
     // Job to track the timeout timer
     private var timeoutJob: Job? = null
@@ -58,11 +51,6 @@ class SimonGameViewModel(
     // Track the game state before going to background
     private var gameStateBeforeBackground: GameState = GameState.WaitingToStart
 
-    // SharedPreferences for storing settings
-    private val preferences = appContext.getSharedPreferences(
-        "simon_game_prefs", Context.MODE_PRIVATE
-    )
-
     // Private and public state flows
     private val _uiState = MutableStateFlow(SimonGameUiState())
     val uiState: StateFlow<SimonGameUiState> = _uiState.asStateFlow()
@@ -73,6 +61,23 @@ class SimonGameViewModel(
         // Load settings from preferences
         loadSettings()
 
+        // Set up sound loading callback
+        soundManager.setOnSoundsLoadedListener { success, error ->
+            Log.d(TAG, "Sounds loaded callback: success=$success, error=$error")
+            _uiState.update { it.copy(
+                soundsLoaded = success,
+                soundLoadError = error
+            )}
+        }
+
+        // Check if sounds are already loaded (in case callback was missed)
+        if (soundManager.areSoundsLoaded()) {
+            _uiState.update { it.copy(
+                soundsLoaded = true,
+                soundLoadError = soundManager.getLoadError()
+            )}
+        }
+
         // Play startup animation once when app starts, then start the game
         playStartupAnimation {
             hasPlayedStartupAnimation = true
@@ -81,37 +86,21 @@ class SimonGameViewModel(
     }
 
     /**
-     * Load saved settings from SharedPreferences
+     * Load saved settings from repository
      */
     private fun loadSettings() {
-        val savedSoundPackName = preferences.getString("sound_pack", SoundPack.STANDARD.name)
-        val savedSoundPack = try {
-            SoundPack.valueOf(savedSoundPackName ?: SoundPack.STANDARD.name)
-        } catch (e: Exception) {
-            SoundPack.STANDARD
-        }
-
-        val savedHighScore4Button = preferences.getInt("high_score_4_button", 0)
-        val savedHighScore6Button = preferences.getInt("high_score_6_button", 0)
-
-        // Load vibration setting (default to true)
-        val savedVibrateEnabled = preferences.getBoolean("vibrate_enabled", true)
-        
-        // Load sound enabled setting (default to true)
-        val savedSoundEnabled = preferences.getBoolean("sound_enabled", true)
-        
-        // Load difficulty setting (default to false)
-        val savedDifficultyEnabled = preferences.getBoolean("difficulty_enabled", false)
-        
-        // Load Memory Lights+ setting (default to false)
-        val savedMemoryLightsPlusEnabled = preferences.getBoolean("memory_lights_plus_enabled", false)
-        
-        // Load current statistics
+        val savedSoundPack = settingsRepository.getSoundPack()
+        val savedHighScore4Button = settingsRepository.getHighScore4Button()
+        val savedHighScore6Button = settingsRepository.getHighScore6Button()
+        val savedVibrateEnabled = settingsRepository.isVibrateEnabled()
+        val savedSoundEnabled = settingsRepository.isSoundEnabled()
+        val savedDifficultyEnabled = settingsRepository.isDifficultyEnabled()
+        val savedMemoryLightsPlusEnabled = settingsRepository.isMemoryLightsPlusEnabled()
         val currentStatistics = statisticsManager.getStatistics()
 
         Log.d(TAG, "Loaded settings - Sound Pack: $savedSoundPack, High Score 4-button: $savedHighScore4Button, High Score 6-button: $savedHighScore6Button, Vibrate: $savedVibrateEnabled, Sound Enabled: $savedSoundEnabled, Difficulty: $savedDifficultyEnabled, Memory Lights+: $savedMemoryLightsPlusEnabled")
 
-        // Update sound manager with saved sound pack, vibration setting, and sound enabled state
+        // Update sound manager with saved settings
         soundManager.setSoundPack(savedSoundPack)
         soundManager.setVibrationEnabled(savedVibrateEnabled)
         soundManager.setSoundMuted(!savedSoundEnabled)
@@ -130,26 +119,25 @@ class SimonGameViewModel(
     }
 
     /**
-     * Save settings to SharedPreferences
+     * Save settings to repository
      */
     private fun saveSettings() {
-        preferences.edit {
-            putString("sound_pack", _uiState.value.currentSoundPack.name)
-                .putInt("high_score_4_button", _uiState.value.highScore4Button)
-                .putInt("high_score_6_button", _uiState.value.highScore6Button)
-                .putBoolean("vibrate_enabled", _uiState.value.vibrateEnabled)
-                .putBoolean("sound_enabled", _uiState.value.soundEnabled)
-                .putBoolean("difficulty_enabled", _uiState.value.difficultyEnabled)
-                .putBoolean("memory_lights_plus_enabled", _uiState.value.memoryLightsPlusEnabled)
-        }
+        val state = _uiState.value
+        settingsRepository.setSoundPack(state.currentSoundPack)
+        settingsRepository.setHighScore4Button(state.highScore4Button)
+        settingsRepository.setHighScore6Button(state.highScore6Button)
+        settingsRepository.setVibrateEnabled(state.vibrateEnabled)
+        settingsRepository.setSoundEnabled(state.soundEnabled)
+        settingsRepository.setDifficultyEnabled(state.difficultyEnabled)
+        settingsRepository.setMemoryLightsPlusEnabled(state.memoryLightsPlusEnabled)
 
-        Log.d(TAG, "Saved settings - Sound Pack: ${_uiState.value.currentSoundPack.name}, " +
-                "High Score 4-button: ${_uiState.value.highScore4Button}, " +
-                "High Score 6-button: ${_uiState.value.highScore6Button}, " +
-                "Vibrate: ${_uiState.value.vibrateEnabled}, " +
-                "Sound: ${_uiState.value.soundEnabled}, " +
-                "Difficulty: ${_uiState.value.difficultyEnabled}, " +
-                "Memory Lights+: ${_uiState.value.memoryLightsPlusEnabled}")
+        Log.d(TAG, "Saved settings - Sound Pack: ${state.currentSoundPack.name}, " +
+                "High Score 4-button: ${state.highScore4Button}, " +
+                "High Score 6-button: ${state.highScore6Button}, " +
+                "Vibrate: ${state.vibrateEnabled}, " +
+                "Sound: ${state.soundEnabled}, " +
+                "Difficulty: ${state.difficultyEnabled}, " +
+                "Memory Lights+: ${state.memoryLightsPlusEnabled}")
     }
 
     // Track previous game state before entering settings
@@ -423,30 +411,26 @@ class SimonGameViewModel(
         val currentLevel = _uiState.value.level
         val difficultyEnabled = _uiState.value.difficultyEnabled
         
-        // Base timing values
-        val baseLitDuration = 600L
-        val basePauseDuration = 400L
-        
         if (!difficultyEnabled) {
-            return Pair(baseLitDuration, basePauseDuration)
+            return Pair(GameConstants.BASE_LIT_DURATION_MS, GameConstants.BASE_PAUSE_DURATION_MS)
         }
-        
-        // Calculate speed increases - 20% reduction on rounds 5, 9, 13, etc.
+
+        // Calculate speed increases - reduction on rounds 5, 9, 13, etc.
         // This means rounds where (level - 1) % 4 == 0 and level >= 5
-        val speedIncreases = if (currentLevel >= 5 && (currentLevel - 1) % 4 == 0) {
-            (currentLevel - 1) / 4
+        val speedIncreases = if (currentLevel >= 5 && (currentLevel - 1) % GameConstants.DIFFICULTY_INTERVAL == 0) {
+            (currentLevel - 1) / GameConstants.DIFFICULTY_INTERVAL
         } else if (currentLevel > 5) {
-            (currentLevel - 1) / 4
+            (currentLevel - 1) / GameConstants.DIFFICULTY_INTERVAL
         } else {
             0
         }
-        
-        // Each speed increase reduces timing by 20%
-        val reductionFactor = 1.0 - (speedIncreases * 0.2)
-        
-        // Ensure minimum timing (don't go below 200ms for lit, 150ms for pause)
-        val litDuration = maxOf(200L, (baseLitDuration * reductionFactor).toLong())
-        val pauseDuration = maxOf(150L, (basePauseDuration * reductionFactor).toLong())
+
+        // Each speed increase reduces timing
+        val reductionFactor = 1.0 - (speedIncreases * GameConstants.DIFFICULTY_REDUCTION_PERCENT)
+
+        // Ensure minimum timing
+        val litDuration = maxOf(GameConstants.MIN_LIT_DURATION_MS, (GameConstants.BASE_LIT_DURATION_MS * reductionFactor).toLong())
+        val pauseDuration = maxOf(GameConstants.MIN_PAUSE_DURATION_MS, (GameConstants.BASE_PAUSE_DURATION_MS * reductionFactor).toLong())
         
         Log.d(TAG, "Level $currentLevel, Speed increases: $speedIncreases, Timing: ${litDuration}ms lit, ${pauseDuration}ms pause")
         
@@ -578,7 +562,7 @@ class SimonGameViewModel(
 
         // Start and track new animation
         activeSequenceJob = viewModelScope.launch {
-            delay(500)
+            delay(GameConstants.STARTUP_INITIAL_DELAY_MS)
             // Flash each button in order
             buttonsInOrder.forEach { button ->
                 // Check if app is still in foreground before each step
@@ -592,13 +576,13 @@ class SimonGameViewModel(
                 Log.d(TAG, "Startup animation: lighting up $button")
                 _uiState.update { it.copy(currentlyLit = button) }
                 soundManager.playSound(button)
-                delay(300)
+                delay(GameConstants.STARTUP_BUTTON_LIGHT_MS)
                 _uiState.update { it.copy(currentlyLit = null) }
-                delay(150)
+                delay(GameConstants.STARTUP_PAUSE_MS)
             }
 
             // Slight pause before starting the game
-            delay(500)
+            delay(GameConstants.STARTUP_INITIAL_DELAY_MS)
 
             // Call the completion handler
             onComplete()
@@ -642,7 +626,7 @@ class SimonGameViewModel(
 
         // Start a new sequence job and save the reference
         activeSequenceJob = viewModelScope.launch {
-            delay(500) // Brief pause before showing sequence
+            delay(GameConstants.SEQUENCE_START_DELAY_MS) // Brief pause before showing sequence
 
             // Light up each button in the sequence and play sound
             _uiState.value.sequence.forEachIndexed { index, button ->
@@ -713,10 +697,8 @@ class SimonGameViewModel(
             // Check if this is the first button pressed in the current interaction
             val isFirstButtonPressed = _uiState.value.activeButtonPresses.isEmpty()
 
-            // Update active button presses map
-            val activeButtons = _uiState.value.activeButtonPresses.toMutableMap()
-            activeButtons[button] = true
-            _uiState.update { it.copy(activeButtonPresses = activeButtons) }
+            // Update active button presses map using immutable operation
+            _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses + (button to true)) }
 
             // Only process game logic and play sound for the first button press
             if (isFirstButtonPressed) {
@@ -738,7 +720,7 @@ class SimonGameViewModel(
 
                 // Schedule turning off the light after a delay
                 viewModelScope.launch {
-                    delay(300) // Match sound duration
+                    delay(GameConstants.BUTTON_SOUND_DURATION_MS) // Match sound duration
                     // Only clear if this button is still the current one lit
                     if (_uiState.value.currentlyLit == button) {
                         _uiState.update { it.copy(currentlyLit = null) }
@@ -749,10 +731,8 @@ class SimonGameViewModel(
                 checkSequenceMatch(updatedPlayerSequence)
             }
         } else {
-            // Handle button release event
-            val activeButtons = _uiState.value.activeButtonPresses.toMutableMap()
-            activeButtons.remove(button)
-            _uiState.update { it.copy(activeButtonPresses = activeButtons) }
+            // Handle button release event using immutable operation
+            _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
         }
     }
 
@@ -766,7 +746,7 @@ class SimonGameViewModel(
             // Player has clicked beyond the expected sequence length
             // This is a game over condition - the player made an error by entering too many buttons
             viewModelScope.launch {
-                delay(300)
+                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
                 handleGameOver("Game over - player entered too many buttons")
             }
             return
@@ -778,7 +758,7 @@ class SimonGameViewModel(
 
             // Brief delay before game over to allow button sound to play
             viewModelScope.launch {
-                delay(300)
+                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
                 // Wrong button - game over
                 handleGameOver()
             }
@@ -801,11 +781,8 @@ class SimonGameViewModel(
 
     // Handle button release events
     fun onButtonRelease(button: SimonButton) {
-        // Remove button from active presses
-        val activeButtons = _uiState.value.activeButtonPresses.toMutableMap()
-        activeButtons.remove(button)
-
-        _uiState.update { it.copy(activeButtonPresses = activeButtons) }
+        // Remove button from active presses using immutable operation
+        _uiState.update { it.copy(activeButtonPresses = it.activeButtonPresses - button) }
     }
 
     // Handle game over state - Simplified version that calls the main implementation
@@ -842,11 +819,11 @@ class SimonGameViewModel(
 
                 // Turn all buttons on
                 _uiState.update { it.copy(allButtonsLit = true) }
-                delay(300)
+                delay(GameConstants.GAME_OVER_FLASH_DURATION_MS)
 
                 // Turn all buttons off
                 _uiState.update { it.copy(allButtonsLit = false) }
-                delay(300)
+                delay(GameConstants.GAME_OVER_FLASH_DURATION_MS)
             }
 
             // Clear the job reference when done
@@ -872,7 +849,7 @@ class SimonGameViewModel(
 
         // Brief delay before showing new sequence
         activeSequenceJob = viewModelScope.launch {
-            delay(1000)
+            delay(GameConstants.LEVEL_ADVANCE_DELAY_MS)
 
             // Check if app is still in foreground
             if (isAppInForeground) {
@@ -888,7 +865,7 @@ class SimonGameViewModel(
 
     // Start a timer that will end the game if the player doesn't act within the timeout period
     private fun startTimeoutTimer() {
-        Log.d(TAG, "Starting player inactivity timeout timer (${playerTimeoutDuration/1000} seconds)")
+        Log.d(TAG, "Starting player inactivity timeout timer (${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds)")
 
         // Don't start timer if app is in background
         if (!isAppInForeground) {
@@ -901,7 +878,7 @@ class SimonGameViewModel(
 
         // Start a new timer
         timeoutJob = viewModelScope.launch {
-            delay(playerTimeoutDuration)
+            delay(GameConstants.PLAYER_TIMEOUT_MS)
 
             // Check if app is still in foreground
             if (!isAppInForeground) {
@@ -910,16 +887,16 @@ class SimonGameViewModel(
             }
 
             // If this code executes, the timeout has occurred
-            Log.d(TAG, "Player timeout! No button pressed for ${playerTimeoutDuration/1000} seconds")
+            Log.d(TAG, "Player timeout! No button pressed for ${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds")
 
             // Ensure we're still in PlayerRepeating state (could have changed during the delay)
             if (_uiState.value.gameState == GameState.PlayerRepeating) {
-                // Play timout sound and end game
+                // Play timeout sound and end game
                 soundManager.playErrorSound()
                 viewModelScope.launch {
-                    delay(300)
+                    delay(GameConstants.BUTTON_SOUND_DURATION_MS)
                     // Handle game over due to timeout
-                    handleGameOver("Timeout - no button pressed for ${playerTimeoutDuration/1000} seconds")
+                    handleGameOver("Timeout - no button pressed for ${GameConstants.PLAYER_TIMEOUT_MS/1000} seconds")
                 }
             }
         }
@@ -970,7 +947,7 @@ class SimonGameViewModel(
         // Update game state after the flashing animation
         viewModelScope.launch {
             // Wait for flash animation to complete (in flashAllButtons)
-            delay(2000)
+            delay(GameConstants.GAME_OVER_ANIMATION_WAIT_MS)
 
             updateGameOverState(currentLevel, newHighScore, isNewHighScore)
         }
@@ -1027,16 +1004,16 @@ class SimonGameViewModel(
         highScoreTextAnimationJob?.cancel()
         
         highScoreTextAnimationJob = viewModelScope.launch {
-            // Flash the text for 3 seconds
-            repeat(6) { // 6 flashes over 3 seconds
-                delay(250) // Flash on for 250ms
+            // Flash the text
+            repeat(GameConstants.HIGH_SCORE_FLASH_COUNT) {
+                delay(GameConstants.HIGH_SCORE_FLASH_INTERVAL_MS)
                 _uiState.update { it.copy(showHighScoreText = false) }
-                delay(250) // Flash off for 250ms  
+                delay(GameConstants.HIGH_SCORE_FLASH_INTERVAL_MS)
                 _uiState.update { it.copy(showHighScoreText = true) }
             }
-            
-            // Keep text visible for another 2 seconds
-            delay(2000)
+
+            // Keep text visible
+            delay(GameConstants.HIGH_SCORE_DISPLAY_MS)
             
             // Hide the text
             _uiState.update { it.copy(showHighScoreText = false) }
@@ -1054,8 +1031,8 @@ class SimonGameViewModel(
         gameOverTextAnimationJob?.cancel()
         
         gameOverTextAnimationJob = viewModelScope.launch {
-            // Keep text visible for 5 seconds without flashing
-            delay(5000)
+            // Keep text visible without flashing
+            delay(GameConstants.GAME_OVER_TEXT_DISPLAY_MS)
             
             // Hide the text
             _uiState.update { it.copy(showGameOverText = false) }
