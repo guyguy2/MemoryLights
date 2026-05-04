@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import app.cash.turbine.test
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -131,6 +132,42 @@ class DataStoreSettingsRepositoryTest {
             assertEquals(false, awaitItem().practiceModeEnabled)
             repo.setPracticeModeEnabled(true)
             assertEquals(true, awaitItem().practiceModeEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setAudioOnlyModeEnabled persists`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(false, awaitItem().audioOnlyModeEnabled)
+            repo.setAudioOnlyModeEnabled(true)
+            assertEquals(true, awaitItem().audioOnlyModeEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setGameMode persists Speed Blitz selection`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(GameMode.CLASSIC, awaitItem().gameMode)
+            repo.setGameMode(GameMode.SPEED_BLITZ)
+            assertEquals(GameMode.SPEED_BLITZ, awaitItem().gameMode)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `best blitz times persist independently per button-count`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            val initial = awaitItem()
+            assertEquals(0L, initial.bestBlitzTime4ButtonMs)
+            assertEquals(0L, initial.bestBlitzTime6ButtonMs)
+            repo.setBestBlitzTime4ButtonMs(180_000L)
+            assertEquals(180_000L, awaitItem().bestBlitzTime4ButtonMs)
+            repo.setBestBlitzTime6ButtonMs(240_000L)
+            val state = awaitItem()
+            assertEquals(180_000L, state.bestBlitzTime4ButtonMs)
+            assertEquals(240_000L, state.bestBlitzTime6ButtonMs)
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -8,8 +8,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +32,11 @@ data class AppSettings(
     val memoryLightsPlusEnabled: Boolean = false,
     val playerTimeoutSeconds: Int = 10,
     val practiceModeEnabled: Boolean = false,
-    val reverseModeEnabled: Boolean = false
+    val reverseModeEnabled: Boolean = false,
+    val audioOnlyModeEnabled: Boolean = false,
+    val gameMode: GameMode = GameMode.CLASSIC,
+    val bestBlitzTime4ButtonMs: Long = 0L,
+    val bestBlitzTime6ButtonMs: Long = 0L
 )
 
 /**
@@ -52,6 +58,10 @@ interface SettingsRepository {
     fun setPlayerTimeoutSeconds(seconds: Int)
     fun setPracticeModeEnabled(enabled: Boolean)
     fun setReverseModeEnabled(enabled: Boolean)
+    fun setAudioOnlyModeEnabled(enabled: Boolean)
+    fun setGameMode(mode: GameMode)
+    fun setBestBlitzTime4ButtonMs(ms: Long)
+    fun setBestBlitzTime6ButtonMs(ms: Long)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -85,6 +95,10 @@ class DataStoreSettingsRepository(
         private val KEY_PLAYER_TIMEOUT_SECONDS = intPreferencesKey("player_timeout_seconds")
         private val KEY_PRACTICE_MODE_ENABLED = booleanPreferencesKey("practice_mode_enabled")
         private val KEY_REVERSE_MODE_ENABLED = booleanPreferencesKey("reverse_mode_enabled")
+        private val KEY_AUDIO_ONLY_MODE_ENABLED = booleanPreferencesKey("audio_only_mode_enabled")
+        private val KEY_GAME_MODE = stringPreferencesKey("game_mode")
+        private val KEY_BEST_BLITZ_TIME_4_BUTTON_MS = longPreferencesKey("best_blitz_time_4_button_ms")
+        private val KEY_BEST_BLITZ_TIME_6_BUTTON_MS = longPreferencesKey("best_blitz_time_6_button_ms")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -101,8 +115,22 @@ class DataStoreSettingsRepository(
             memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false,
             playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10,
             practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false,
-            reverseModeEnabled = prefs[KEY_REVERSE_MODE_ENABLED] ?: false
+            reverseModeEnabled = prefs[KEY_REVERSE_MODE_ENABLED] ?: false,
+            audioOnlyModeEnabled = prefs[KEY_AUDIO_ONLY_MODE_ENABLED] ?: false,
+            gameMode = readGameMode(prefs),
+            bestBlitzTime4ButtonMs = prefs[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] ?: 0L,
+            bestBlitzTime6ButtonMs = prefs[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] ?: 0L
         )
+    }
+
+    private fun readGameMode(prefs: Preferences): GameMode {
+        val name = prefs[KEY_GAME_MODE] ?: return GameMode.CLASSIC
+        return try {
+            GameMode.valueOf(name)
+        } catch (_: IllegalArgumentException) {
+            Log.w(TAG, "Invalid game mode name: $name, defaulting to CLASSIC")
+            GameMode.CLASSIC
+        }
     }
 
     private fun readSoundPack(prefs: Preferences): SoundPack {
@@ -125,6 +153,10 @@ class DataStoreSettingsRepository(
     override fun setPlayerTimeoutSeconds(seconds: Int) = write { it[KEY_PLAYER_TIMEOUT_SECONDS] = seconds }
     override fun setPracticeModeEnabled(enabled: Boolean) = write { it[KEY_PRACTICE_MODE_ENABLED] = enabled }
     override fun setReverseModeEnabled(enabled: Boolean) = write { it[KEY_REVERSE_MODE_ENABLED] = enabled }
+    override fun setAudioOnlyModeEnabled(enabled: Boolean) = write { it[KEY_AUDIO_ONLY_MODE_ENABLED] = enabled }
+    override fun setGameMode(mode: GameMode) = write { it[KEY_GAME_MODE] = mode.name }
+    override fun setBestBlitzTime4ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] = ms }
+    override fun setBestBlitzTime6ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] = ms }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

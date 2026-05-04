@@ -1,5 +1,6 @@
 package com.happypuppy.memorylights.domain.model
 
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 
@@ -37,7 +38,14 @@ data class SimonGameUiState(
     val timeoutResetTick: Int = 0, // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
     val playerTimeoutSeconds: Int = 10, // Configurable inactivity timeout (5/10/15/30 sec). Drives both the timer and ring drain duration
     val practiceModeEnabled: Boolean = false, // Practice mode (F15): wrong button replays sequence instead of ending game
-    val reverseModeEnabled: Boolean = false // Reverse mode (F1): player must repeat sequence in reverse order
+    val reverseModeEnabled: Boolean = false, // Reverse mode (F1): player must repeat sequence in reverse order
+    val audioOnlyModeEnabled: Boolean = false, // Audio-Only mode (F3): hide button colors during sequence playback
+    val gameMode: GameMode = GameMode.CLASSIC, // Game mode (F4): Classic (open-ended) or Speed Blitz (sprint to BLITZ_TARGET_LEVEL)
+    val blitzStartTimeMs: Long = 0L, // Wall-clock start of the current Speed Blitz run; 0 = not started
+    val blitzElapsedMs: Long = 0L, // Final elapsed time when blitz run completes (won or lost); 0 while still in flight
+    val blitzWon: Boolean = false, // True when the player completed BLITZ_TARGET_LEVEL levels — drives "VICTORY" overlay vs GAME OVER
+    val bestBlitzTime4ButtonMs: Long = 0L, // Persisted best blitz time for 4-button mode; 0 = no completion yet
+    val bestBlitzTime6ButtonMs: Long = 0L // Persisted best blitz time for 6-button mode; 0 = no completion yet
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int
@@ -45,4 +53,8 @@ data class SimonGameUiState(
 
     val playerTimeoutMs: Long
         get() = playerTimeoutSeconds * 1000L
+
+    /** Best blitz time for the current button-count, or 0 if none recorded. */
+    val currentBestBlitzTimeMs: Long
+        get() = if (memoryLightsPlusEnabled) bestBlitzTime6ButtonMs else bestBlitzTime4ButtonMs
 }

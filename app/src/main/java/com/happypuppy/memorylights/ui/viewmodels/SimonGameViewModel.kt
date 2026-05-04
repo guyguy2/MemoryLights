@@ -11,6 +11,7 @@ import com.happypuppy.memorylights.data.repository.StatisticsRepository
 import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.calculateSequenceTiming
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -133,7 +134,11 @@ class SimonGameViewModel(
             memoryLightsPlusEnabled = settings.memoryLightsPlusEnabled,
             playerTimeoutSeconds = settings.playerTimeoutSeconds,
             practiceModeEnabled = settings.practiceModeEnabled,
-            reverseModeEnabled = settings.reverseModeEnabled
+            reverseModeEnabled = settings.reverseModeEnabled,
+            audioOnlyModeEnabled = settings.audioOnlyModeEnabled,
+            gameMode = settings.gameMode,
+            bestBlitzTime4ButtonMs = settings.bestBlitzTime4ButtonMs,
+            bestBlitzTime6ButtonMs = settings.bestBlitzTime6ButtonMs
         )}
     }
 
@@ -376,6 +381,62 @@ class SimonGameViewModel(
     }
 
     /**
+     * Toggle Audio-Only Mode (F3). When enabled, the watch phase plays only
+     * sounds — buttons stay dark — so the player must recognize the pack's
+     * tones. Player presses still light up normally for tactile feedback.
+     */
+    fun setAudioOnlyModeEnabled(enabled: Boolean) {
+        Log.d(TAG, "Setting audio-only mode enabled: $enabled")
+        _uiState.update { it.copy(audioOnlyModeEnabled = enabled) }
+        settingsRepository.setAudioOnlyModeEnabled(enabled)
+    }
+
+    /**
+     * Switch between Classic and Speed Blitz (F4). Always resets the current
+     * run because the rules change; persists the new mode.
+     */
+    fun setGameMode(mode: GameMode) {
+        if (_uiState.value.gameMode == mode) return
+        Log.d(TAG, "Setting game mode: $mode")
+
+        cancelTimeoutTimer()
+        activeSequenceJob?.cancel()
+        activeSequenceJob = null
+        gameOverTextAnimationJob?.cancel()
+        gameOverTextAnimationJob = null
+        highScoreTextAnimationJob?.cancel()
+        highScoreTextAnimationJob = null
+        speedUpTextJob?.cancel()
+        speedUpTextJob = null
+
+        _uiState.update { it.copy(
+            gameMode = mode,
+            gameState = GameState.WaitingToStart,
+            level = 1,
+            roundCount = 0,
+            sequence = emptyList(),
+            playerSequence = emptyList(),
+            currentlyLit = null,
+            allButtonsLit = false,
+            showYourTurnText = false,
+            showSpeedUpText = false,
+            showHighScoreParticles = false,
+            showHighScoreText = false,
+            showGameOverText = false,
+            blitzStartTimeMs = 0L,
+            blitzElapsedMs = 0L,
+            blitzWon = false
+        )}
+
+        settingsRepository.setGameMode(mode)
+
+        if (isAppInForeground) {
+            generateNextSequence()
+            showSequence()
+        }
+    }
+
+    /**
      * Toggle difficulty setting
      */
     fun setDifficultyEnabled(enabled: Boolean) {
@@ -419,7 +480,10 @@ class SimonGameViewModel(
                 showSpeedUpText = false,
                 showHighScoreParticles = false,
                 showHighScoreText = false,
-                showGameOverText = false
+                showGameOverText = false,
+                blitzStartTimeMs = 0L,
+                blitzElapsedMs = 0L,
+                blitzWon = false
             )}
             
             settingsRepository.setMemoryLightsPlusEnabled(enabled)
@@ -490,7 +554,10 @@ class SimonGameViewModel(
                 playerSequence = emptyList(),
                 currentlyLit = null,
                 allButtonsLit = false,
-                showYourTurnText = false
+                showYourTurnText = false,
+                blitzStartTimeMs = 0L,
+                blitzElapsedMs = 0L,
+                blitzWon = false
             )
         }
 
@@ -554,7 +621,16 @@ class SimonGameViewModel(
         speedUpTextJob = null
 
         // Clear particle effects, high score text, game over text, and YOUR TURN text when starting new game
-        _uiState.update { it.copy(showHighScoreParticles = false, showHighScoreText = false, showGameOverText = false, showYourTurnText = false, showSpeedUpText = false) }
+        _uiState.update { it.copy(
+            showHighScoreParticles = false,
+            showHighScoreText = false,
+            showGameOverText = false,
+            showYourTurnText = false,
+            showSpeedUpText = false,
+            blitzStartTimeMs = 0L,
+            blitzElapsedMs = 0L,
+            blitzWon = false
+        ) }
         // No startup animation on manual game restart
         initializeNewGame()
     }
@@ -642,7 +718,20 @@ class SimonGameViewModel(
         // Calculate dynamic timing based on difficulty setting and level
         val (litDuration, pauseDuration) = currentSequenceTiming()
 
-        _uiState.update { it.copy(gameState = GameState.ShowingSequence) }
+        // Capture the blitz start moment lazily on the first sequence display of
+        // a fresh blitz run (level 1 + no recorded start). Done here rather than
+        // in initializeNewGame so the startup animation isn't included in the
+        // recorded time.
+        val shouldStartBlitzTimer = _uiState.value.gameMode == GameMode.SPEED_BLITZ &&
+                _uiState.value.level == 1 &&
+                _uiState.value.blitzStartTimeMs == 0L
+
+        _uiState.update {
+            it.copy(
+                gameState = GameState.ShowingSequence,
+                blitzStartTimeMs = if (shouldStartBlitzTimer) System.currentTimeMillis() else it.blitzStartTimeMs
+            )
+        }
 
         // Cancel any existing sequence job
         activeSequenceJob?.cancel()
@@ -804,6 +893,54 @@ class SimonGameViewModel(
     }
 
     /**
+     * Player completed BLITZ_TARGET_LEVEL levels in Speed Blitz mode.
+     * Compute elapsed time, persist a new best if applicable, and land on
+     * GameOver with `blitzWon=true` so the UI shows the victory variant.
+     * Statistics flows are intentionally not touched — blitz uses its own
+     * best-time slot and isn't part of the classic gamesPlayed/avg score.
+     */
+    private fun handleBlitzWin() {
+        val state = _uiState.value
+        val startMs = state.blitzStartTimeMs
+        val elapsedMs = if (startMs > 0L) System.currentTimeMillis() - startMs else 0L
+        Log.d(TAG, "Blitz win! Elapsed ${elapsedMs}ms (${if (state.memoryLightsPlusEnabled) "6-button" else "4-button"})")
+
+        cancelTimeoutTimer()
+        activeSequenceJob?.cancel()
+        activeSequenceJob = null
+
+        // A new best beats the prior time, OR sets it for the first time when
+        // the slot is still 0L. Time-based best: lower is better.
+        val priorBest = state.currentBestBlitzTimeMs
+        val isNewBest = priorBest == 0L || elapsedMs < priorBest
+        val newBest = if (isNewBest) elapsedMs else priorBest
+
+        _uiState.update { it.copy(
+            gameState = GameState.GameOver,
+            blitzWon = true,
+            blitzElapsedMs = elapsedMs,
+            currentlyLit = null,
+            allButtonsLit = false,
+            showHighScoreParticles = isNewBest,
+            showHighScoreText = isNewBest,
+            showGameOverText = !isNewBest,
+            bestBlitzTime4ButtonMs = if (isNewBest && !it.memoryLightsPlusEnabled) newBest else it.bestBlitzTime4ButtonMs,
+            bestBlitzTime6ButtonMs = if (isNewBest && it.memoryLightsPlusEnabled) newBest else it.bestBlitzTime6ButtonMs
+        )}
+
+        if (isNewBest) {
+            if (state.memoryLightsPlusEnabled) {
+                settingsRepository.setBestBlitzTime6ButtonMs(newBest)
+            } else {
+                settingsRepository.setBestBlitzTime4ButtonMs(newBest)
+            }
+            startHighScoreTextAnimation()
+        } else {
+            startGameOverTextAnimation()
+        }
+    }
+
+    /**
      * Wrong-button branch shared by [checkSequenceMatch]'s "out of bounds" and
      * "mismatch" paths. In normal play this routes to [handleGameOver]; in
      * practice mode (F15) it plays the error tone, briefly waits, clears the
@@ -878,6 +1015,16 @@ class SimonGameViewModel(
     private fun advanceToNextLevel() {
         val newLevel = _uiState.value.level + 1
         Log.d(TAG, "Advancing to level $newLevel")
+
+        // Speed Blitz finish line: the player just recalled a sequence of
+        // BLITZ_TARGET_LEVEL buttons correctly. Skip the normal level-up path
+        // and route to the blitz win handler so we record elapsed time + best.
+        if (_uiState.value.gameMode == GameMode.SPEED_BLITZ &&
+            newLevel > GameConstants.BLITZ_TARGET_LEVEL
+        ) {
+            handleBlitzWin()
+            return
+        }
 
         // Detect crossing into a faster difficulty tier so the UI can flash
         // a "Speed Up!" cue. Mirrors the threshold in calculateSequenceTiming:
@@ -988,21 +1135,30 @@ class SimonGameViewModel(
     private fun handleGameOver(reason: String = "Game over") {
         // Cancel any running timeout timer
         cancelTimeoutTimer()
-        val currentLevel = _uiState.value.level
-        val currentHighScore = _uiState.value.currentHighScore
-        Log.d(TAG, "$reason at level $currentLevel (high score: $currentHighScore for ${if (_uiState.value.memoryLightsPlusEnabled) "6-button" else "4-button"} mode)")
+        val state = _uiState.value
+        val currentLevel = state.level
+        val isBlitz = state.gameMode == GameMode.SPEED_BLITZ
+
+        // In Speed Blitz a loss doesn't touch the classic high-score slot —
+        // best is time-based and only awarded on completion. We still record
+        // generic statistics (gamesPlayed / totalScore) so the player's
+        // overall play history isn't blank.
+        val currentHighScore = state.currentHighScore
+        val isNewHighScore = !isBlitz && currentLevel > currentHighScore
+        val newHighScore = if (isNewHighScore) currentLevel else currentHighScore
+        val blitzElapsedMs = if (isBlitz && state.blitzStartTimeMs > 0L) {
+            System.currentTimeMillis() - state.blitzStartTimeMs
+        } else 0L
+
+        Log.d(TAG, "$reason at level $currentLevel (mode: ${state.gameMode}, high score: $currentHighScore for ${if (state.memoryLightsPlusEnabled) "6-button" else "4-button"} mode${if (isBlitz) ", blitz elapsed ${blitzElapsedMs}ms" else ""})")
 
         // Don't do game over animation if app is in background
         if (!isAppInForeground) {
             Log.d(TAG, "App is in background, skipping game over animation")
             // Just update the game state immediately
-            updateGameOverState(currentLevel, currentHighScore, false)
+            updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs)
             return
         }
-
-        // Check if this is a new high score
-        val isNewHighScore = currentLevel > currentHighScore
-        val newHighScore = if (isNewHighScore) currentLevel else currentHighScore
 
         // Play error sound when game is over
         soundManager.playErrorSound()
@@ -1015,12 +1171,17 @@ class SimonGameViewModel(
             // Wait for flash animation to complete (in flashAllButtons)
             delay(GameConstants.GAME_OVER_ANIMATION_WAIT_MS)
 
-            updateGameOverState(currentLevel, newHighScore, isNewHighScore)
+            updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs)
         }
     }
 
     // Helper function to update the game state after game over
-    private fun updateGameOverState(currentLevel: Int, newHighScore: Int, isNewHighScore: Boolean) {
+    private fun updateGameOverState(
+        currentLevel: Int,
+        newHighScore: Int,
+        isNewHighScore: Boolean,
+        blitzElapsedMs: Long = 0L
+    ) {
         _uiState.update { currentState ->
             if (currentState.memoryLightsPlusEnabled) {
                 currentState.copy(
@@ -1028,7 +1189,9 @@ class SimonGameViewModel(
                     highScore6Button = newHighScore,
                     showHighScoreParticles = isNewHighScore,
                     showHighScoreText = isNewHighScore,
-                    showGameOverText = !isNewHighScore // Show GAME OVER when NOT a new high score
+                    showGameOverText = !isNewHighScore, // Show GAME OVER when NOT a new high score
+                    blitzElapsedMs = if (blitzElapsedMs > 0L) blitzElapsedMs else currentState.blitzElapsedMs,
+                    blitzWon = false
                 )
             } else {
                 currentState.copy(
@@ -1036,7 +1199,9 @@ class SimonGameViewModel(
                     highScore4Button = newHighScore,
                     showHighScoreParticles = isNewHighScore,
                     showHighScoreText = isNewHighScore,
-                    showGameOverText = !isNewHighScore // Show GAME OVER when NOT a new high score
+                    showGameOverText = !isNewHighScore, // Show GAME OVER when NOT a new high score
+                    blitzElapsedMs = if (blitzElapsedMs > 0L) blitzElapsedMs else currentState.blitzElapsedMs,
+                    blitzWon = false
                 )
             }
         }

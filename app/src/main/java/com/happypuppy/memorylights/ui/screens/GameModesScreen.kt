@@ -14,6 +14,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.domain.enums.GameMode
+import com.happypuppy.memorylights.ui.theme.SurfaceContainer
 import kotlinx.coroutines.launch
 
 /**
@@ -32,15 +34,20 @@ fun GameModesScreen(
     difficultyEnabled: Boolean,
     reverseModeEnabled: Boolean,
     practiceModeEnabled: Boolean,
+    audioOnlyModeEnabled: Boolean,
     memoryLightsPlusEnabled: Boolean,
+    gameMode: GameMode,
     hasActiveGame: Boolean,
     onDifficultyToggled: (Boolean) -> Unit,
     onReverseModeToggled: (Boolean) -> Unit,
     onPracticeModeToggled: (Boolean) -> Unit,
+    onAudioOnlyModeToggled: (Boolean) -> Unit,
     onMemoryLightsPlusToggled: (Boolean) -> Unit,
+    onGameModeSelected: (GameMode) -> Unit,
     onBackPressed: () -> Unit
 ) {
     var pendingMemoryLightsPlusToggle by remember { mutableStateOf<Boolean?>(null) }
+    var pendingGameModeChange by remember { mutableStateOf<GameMode?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -83,6 +90,22 @@ fun GameModesScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // Game mode picker — Classic vs Speed Blitz. Switching mid-game
+            // ends the current run, so prompt before flipping if there's
+            // something to lose. Mirrors the ML+ confirm-dialog flow.
+            GameModeCard(
+                selected = gameMode,
+                onSelect = { newMode ->
+                    if (newMode == gameMode) return@GameModeCard
+                    if (hasActiveGame) {
+                        pendingGameModeChange = newMode
+                    } else {
+                        onGameModeSelected(newMode)
+                        toast("Mode: ${newMode.displayName}")
+                    }
+                }
+            )
+
             val toggleDifficulty: (Boolean) -> Unit = { value ->
                 onDifficultyToggled(value)
                 toast("Difficulty: ${if (value) "On" else "Off"}")
@@ -119,6 +142,18 @@ fun GameModesScreen(
                 onToggle = togglePractice
             )
 
+            val toggleAudioOnly: (Boolean) -> Unit = { value ->
+                onAudioOnlyModeToggled(value)
+                toast("Audio-Only: ${if (value) "On" else "Off"}")
+            }
+            ToggleCard(
+                title = "Audio-Only Mode",
+                description = "Hide button colors during playback — recognize the sequence by sound alone",
+                iconResId = R.drawable.music_note_24px,
+                checked = audioOnlyModeEnabled,
+                onToggle = toggleAudioOnly
+            )
+
             val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
                 if (hasActiveGame) {
                     pendingMemoryLightsPlusToggle = newValue
@@ -138,6 +173,59 @@ fun GameModesScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    pendingGameModeChange?.let { newMode ->
+        AlertDialog(
+            onDismissRequest = { pendingGameModeChange = null },
+            title = {
+                Text(
+                    text = "End current game?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+            },
+            text = {
+                Text(
+                    text = "Switching to ${newMode.displayName} will end your current run. Continue?",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onGameModeSelected(newMode)
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Mode: ${newMode.displayName}",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                        pendingGameModeChange = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Switch")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingGameModeChange = null },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = com.happypuppy.memorylights.ui.theme.DialogBackground,
+            titleContentColor = Color.White,
+            textContentColor = Color.White
+        )
     }
 
     pendingMemoryLightsPlusToggle?.let { newValue ->
@@ -185,6 +273,67 @@ fun GameModesScreen(
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
+    }
+}
+
+@Composable
+private fun GameModeCard(
+    selected: GameMode,
+    onSelect: (GameMode) -> Unit
+) {
+    SettingsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.speed_24px),
+                    contentDescription = "Game mode",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Game Mode",
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
+
+                    Text(
+                        text = "Classic plays until you miss; Speed Blitz races to level 20",
+                        color = Color.Gray,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GameMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = mode == selected,
+                        onClick = { onSelect(mode) },
+                        label = { Text(mode.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = SurfaceContainer,
+                            labelColor = Color.Gray,
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 

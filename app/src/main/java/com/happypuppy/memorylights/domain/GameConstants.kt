@@ -36,6 +36,11 @@ object GameConstants {
     const val DIFFICULTY_INTERVAL = 4 // Speed increases every 4 rounds starting at round 5
     const val SPEED_UP_TEXT_DISPLAY_MS = 1200L
 
+    // Speed Blitz target — number of correctly-recalled levels needed to win.
+    // Tuned for a ~3-5 minute sprint at base difficulty; high enough to make
+    // the time field meaningful, low enough to fit in a coffee break.
+    const val BLITZ_TARGET_LEVEL = 20
+
     // Sound settings
     const val DEFAULT_MASTER_VOLUME = 1.0f
     const val MIN_VOLUME = 0.0f

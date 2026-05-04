@@ -84,7 +84,7 @@ fun SettingsScreen(
         ) {
             NavCard(
                 title = "Game Modes",
-                summary = "Difficulty, Reverse, Practice, Memory Lights+",
+                summary = "Classic / Speed Blitz, Difficulty, Reverse, Practice, Audio-Only, Memory Lights+",
                 iconPainterResId = R.drawable.speed_24px,
                 iconTint = Color.White,
                 onClick = onGameModesClick

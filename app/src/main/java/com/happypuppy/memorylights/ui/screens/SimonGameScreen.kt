@@ -65,6 +65,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.GameConstants
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
@@ -87,6 +88,20 @@ import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 private val OverlayBias6Button = BiasAlignment(0f, -0.18f)
 private val OverlayBias4Button = BiasAlignment(0f, -0.07f)
 private val OverlayBias4ButtonTurn = BiasAlignment(0f, -0.13f)
+
+/**
+ * Format Speed Blitz elapsed time as `M:SS.s` — minutes, seconds, tenths.
+ * Tenths help differentiate near-tied runs without the noise of full
+ * milliseconds. Negative or zero inputs render as `0:00.0` so a stale
+ * state never shows an unexpected `-` or rolls weirdly past midnight.
+ */
+private fun formatBlitzTime(ms: Long): String {
+    val safe = ms.coerceAtLeast(0L)
+    val minutes = safe / 60_000L
+    val seconds = (safe % 60_000L) / 1_000L
+    val tenths = (safe % 1_000L) / 100L
+    return "%d:%02d.%d".format(minutes, seconds, tenths)
+}
 
 @Composable
 fun MemoryLightsGame(viewModel: SimonGameViewModel) {
@@ -149,14 +164,18 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 difficultyEnabled = uiState.difficultyEnabled,
                 reverseModeEnabled = uiState.reverseModeEnabled,
                 practiceModeEnabled = uiState.practiceModeEnabled,
+                audioOnlyModeEnabled = uiState.audioOnlyModeEnabled,
                 memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                gameMode = uiState.gameMode,
                 hasActiveGame = gameStateAtSettingsEntry is GameState.ShowingSequence ||
                         gameStateAtSettingsEntry is GameState.PlayerRepeating ||
                         gameStateAtSettingsEntry is GameState.Paused,
                 onDifficultyToggled = { viewModel.setDifficultyEnabled(it) },
                 onReverseModeToggled = { viewModel.setReverseModeEnabled(it) },
                 onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
+                onAudioOnlyModeToggled = { viewModel.setAudioOnlyModeEnabled(it) },
                 onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
+                onGameModeSelected = { viewModel.setGameMode(it) },
                 onBackPressed = { navController.popBackStack() }
             )
         }
@@ -244,6 +263,15 @@ fun SimonGameScreen(
             view.announceForAccessibility("New high score! Level ${uiState.level}.")
         }
     }
+
+    // Audio-Only Mode (F3): swallow currentlyLit during the watch phase so
+    // the panels stay dark while the sound plays. Player presses still light
+    // up — that branch goes through `currentlyLit` while gameState is
+    // PlayerRepeating, which this guard does not touch. The all-buttons
+    // game-over flash is also unaffected.
+    val displayLit: SimonButton? = if (
+        uiState.audioOnlyModeEnabled && uiState.gameState == GameState.ShowingSequence
+    ) null else uiState.currentlyLit
 
     // Function to handle both press and release events. Memoized so SimonPanel
     // children don't get a fresh lambda — and a fresh recomposition — on every
@@ -381,7 +409,7 @@ fun SimonGameScreen(
                                     SimonPanel(
                                         color = button.color,
                                         colorName = button.displayName,
-                                        isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
+                                        isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
                                             .weight(1f)
@@ -400,7 +428,7 @@ fun SimonGameScreen(
                                     SimonPanel(
                                         color = button.color,
                                         colorName = button.displayName,
-                                        isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
+                                        isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
                                             .weight(1f)
@@ -425,7 +453,7 @@ fun SimonGameScreen(
                                     SimonPanel(
                                         color = button.color,
                                         colorName = button.displayName,
-                                        isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
+                                        isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
                                             .weight(1f)
@@ -444,7 +472,7 @@ fun SimonGameScreen(
                                     SimonPanel(
                                         color = button.color,
                                         colorName = button.displayName,
-                                        isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
+                                        isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
                                             .weight(1f)
@@ -463,7 +491,7 @@ fun SimonGameScreen(
                                     SimonPanel(
                                         color = button.color,
                                         colorName = button.displayName,
-                                        isLit = uiState.currentlyLit == button || uiState.allButtonsLit,
+                                        isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
                                             .weight(1f)
@@ -488,7 +516,7 @@ fun SimonGameScreen(
                             SimonPanel(
                                 color = SimonButton.GREEN.color,
                                 colorName = "Green",
-                                isLit = uiState.currentlyLit == SimonButton.GREEN || uiState.allButtonsLit,
+                                isLit = displayLit == SimonButton.GREEN || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.GREEN] == true,
                                 modifier = Modifier
                                     .weight(1f)
@@ -503,7 +531,7 @@ fun SimonGameScreen(
                             SimonPanel(
                                 color = SimonButton.RED.color,
                                 colorName = "Red",
-                                isLit = uiState.currentlyLit == SimonButton.RED || uiState.allButtonsLit,
+                                isLit = displayLit == SimonButton.RED || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.RED] == true,
                                 modifier = Modifier
                                     .weight(1f)
@@ -520,7 +548,7 @@ fun SimonGameScreen(
                             SimonPanel(
                                 color = SimonButton.YELLOW.color,
                                 colorName = "Yellow",
-                                isLit = uiState.currentlyLit == SimonButton.YELLOW || uiState.allButtonsLit,
+                                isLit = displayLit == SimonButton.YELLOW || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.YELLOW] == true,
                                 modifier = Modifier
                                     .weight(1f)
@@ -535,7 +563,7 @@ fun SimonGameScreen(
                             SimonPanel(
                                 color = SimonButton.BLUE.color,
                                 colorName = "Blue",
-                                isLit = uiState.currentlyLit == SimonButton.BLUE || uiState.allButtonsLit,
+                                isLit = displayLit == SimonButton.BLUE || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.BLUE] == true,
                                 modifier = Modifier
                                     .weight(1f)
@@ -775,19 +803,41 @@ fun SimonGameScreen(
                             } else if (uiState.gameState == GameState.GameOver) {
                                 // Score summary so the game-over moment lingers
                                 // long enough for the player to register it.
-                                Text(
-                                    text = uiState.level.toString(),
-                                    color = Color.White,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (uiState.currentHighScore > 0) {
+                                // In Speed Blitz the headline is the elapsed
+                                // time; level is implicit (always 20 on win,
+                                // wherever the player died on loss).
+                                if (uiState.gameMode == GameMode.SPEED_BLITZ &&
+                                    uiState.blitzElapsedMs > 0L
+                                ) {
                                     Text(
-                                        text = "Best ${uiState.currentHighScore}",
-                                        color = Color(0xFFFFC107),
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Medium
+                                        text = formatBlitzTime(uiState.blitzElapsedMs),
+                                        color = Color.White,
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
+                                    if (uiState.currentBestBlitzTimeMs > 0L) {
+                                        Text(
+                                            text = "Best ${formatBlitzTime(uiState.currentBestBlitzTimeMs)}",
+                                            color = Color(0xFFFFC107),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else {
+                                    Text(
+                                        text = uiState.level.toString(),
+                                        color = Color.White,
+                                        fontSize = 26.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (uiState.currentHighScore > 0) {
+                                        Text(
+                                            text = "Best ${uiState.currentHighScore}",
+                                            color = Color(0xFFFFC107),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),
@@ -910,7 +960,9 @@ fun SimonGameScreen(
                 }
             }
 
-            // HIGH SCORE text overlay for new high score celebration
+            // Headline overlay text — switches between HIGH SCORE / VICTORY /
+            // GAME OVER depending on whether the run was a Speed Blitz win
+            // and whether it set a new best.
             AnimatedVisibility(
                 visible = uiState.showHighScoreText,
                 enter = fadeIn() + scaleIn(initialScale = 0.7f),
@@ -922,8 +974,8 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "HIGH SCORE!",
-                        color = Color.Yellow,
+                        text = if (uiState.blitzWon) "BEST TIME!" else "HIGH SCORE!",
+                        color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -933,7 +985,7 @@ fun SimonGameScreen(
                 }
             }
 
-            // GAME OVER text overlay when game ends without high score
+            // GAME OVER / VICTORY (blitz win without a new best) overlay.
             AnimatedVisibility(
                 visible = uiState.showGameOverText,
                 enter = fadeIn() + scaleIn(initialScale = 0.85f),
@@ -945,8 +997,8 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "GAME OVER",
-                        color = Color.Yellow,
+                        text = if (uiState.blitzWon) "VICTORY!" else "GAME OVER",
+                        color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -1161,6 +1213,96 @@ fun SimonGameScreen(
                     }
                 }
             }
+
+            // Speed Blitz HUD (F4) — sits at the top of the play area in any
+            // active blitz state, showing progress to BLITZ_TARGET_LEVEL and
+            // the live elapsed timer. Hidden in Classic mode and on the
+            // GameOver screen (the disc shows the final time there).
+            if (uiState.gameMode == GameMode.SPEED_BLITZ &&
+                (uiState.gameState == GameState.ShowingSequence ||
+                        uiState.gameState == GameState.PlayerRepeating ||
+                        uiState.gameState == GameState.Paused)
+            ) {
+                BlitzHud(
+                    level = uiState.level,
+                    targetLevel = GameConstants.BLITZ_TARGET_LEVEL,
+                    bestTimeMs = uiState.currentBestBlitzTimeMs,
+                    startTimeMs = uiState.blitzStartTimeMs,
+                    isPaused = uiState.gameState == GameState.Paused,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                        .zIndex(4f)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Top-of-screen HUD shown only in Speed Blitz: progress (X / target) and a
+ * live elapsed-time readout that ticks at 10 Hz so the tenths digit moves
+ * visibly. The clock is read from `System.currentTimeMillis()` rather than
+ * tracked in UiState to keep the ViewModel from emitting at 10 Hz.
+ */
+@Composable
+private fun BlitzHud(
+    level: Int,
+    targetLevel: Int,
+    bestTimeMs: Long,
+    startTimeMs: Long,
+    isPaused: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(startTimeMs, isPaused) {
+        if (startTimeMs <= 0L || isPaused) return@LaunchedEffect
+        while (true) {
+            nowMs = System.currentTimeMillis()
+            kotlinx.coroutines.delay(100L)
+        }
+    }
+    val elapsed = if (startTimeMs > 0L) (nowMs - startTimeMs).coerceAtLeast(0L) else 0L
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = modifier
+            .background(
+                Color.Black.copy(alpha = 0.55f),
+                RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = "Lvl $level / $targetLevel",
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = "•",
+            color = Color.Gray,
+            fontSize = 13.sp
+        )
+        Text(
+            text = formatBlitzTime(elapsed),
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+        if (bestTimeMs > 0L) {
+            Text(
+                text = "•",
+                color = Color.Gray,
+                fontSize = 13.sp
+            )
+            Text(
+                text = "Best ${formatBlitzTime(bestTimeMs)}",
+                color = Color(0xFFFFC107),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

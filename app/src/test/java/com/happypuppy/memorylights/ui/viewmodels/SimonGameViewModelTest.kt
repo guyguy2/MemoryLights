@@ -6,6 +6,7 @@ import com.happypuppy.memorylights.data.repository.StatisticsRepository
 import com.happypuppy.memorylights.data.repository.AppSettings
 import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
+import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.GameStatistics
@@ -237,6 +238,58 @@ class SimonGameViewModelTest {
             assertEquals(1, state.level)
             verify { settingsRepository.setMemoryLightsPlusEnabled(true) }
         }
+
+    @Test
+    fun `setAudioOnlyModeEnabled updates state and persists`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            assertEquals(false, vm.uiState.value.audioOnlyModeEnabled)
+
+            vm.setAudioOnlyModeEnabled(true)
+            runCurrent()
+
+            assertEquals(true, vm.uiState.value.audioOnlyModeEnabled)
+            verify { settingsRepository.setAudioOnlyModeEnabled(true) }
+        }
+
+    @Test
+    fun `setGameMode to Speed Blitz resets the run`() = runTest(testDispatcher.scheduler) {
+        val vm = createViewModel()
+        advanceToPlayerTurn()
+        assertEquals(GameMode.CLASSIC, vm.uiState.value.gameMode)
+
+        // Advance one level so we have non-trivial state to reset
+        vm.onButtonClick(vm.uiState.value.sequence[0], isPress = true)
+        advanceTimeBy(4_000)
+        runCurrent()
+        assertEquals(2, vm.uiState.value.level)
+
+        vm.setGameMode(GameMode.SPEED_BLITZ)
+        advanceTimeBy(2_000)
+        runCurrent()
+
+        val state = vm.uiState.value
+        assertEquals(GameMode.SPEED_BLITZ, state.gameMode)
+        assertEquals(1, state.level)
+        verify { settingsRepository.setGameMode(GameMode.SPEED_BLITZ) }
+    }
+
+    @Test
+    fun `setGameMode no-op when already in that mode`() = runTest(testDispatcher.scheduler) {
+        val vm = createViewModel(AppSettings(gameMode = GameMode.SPEED_BLITZ))
+        advanceToPlayerTurn()
+        assertEquals(GameMode.SPEED_BLITZ, vm.uiState.value.gameMode)
+
+        // Reaching PlayerRepeating already required one persist call during
+        // load; reset by clearing recorded calls then issuing the no-op.
+        vm.setGameMode(GameMode.SPEED_BLITZ)
+        runCurrent()
+
+        // Still blitz, no extra persist
+        assertEquals(GameMode.SPEED_BLITZ, vm.uiState.value.gameMode)
+        verify(exactly = 0) { settingsRepository.setGameMode(any()) }
+    }
 
     @Test
     fun `practice mode wrong button replays sequence instead of game over`() =
