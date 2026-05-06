@@ -20,9 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.ui.theme.CardBackground
@@ -82,8 +80,7 @@ fun StatisticsScreen(
                 Text(
                     text = stringResource(R.string.statistics_section_heading),
                     color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
 
@@ -155,13 +152,13 @@ fun StatisticsScreen(
                         Text(
                             text = stringResource(R.string.statistics_reset_title),
                             color = Color.White,
-                            fontSize = 16.sp
+                            style = MaterialTheme.typography.bodyLarge
                         )
 
                         Text(
                             text = stringResource(R.string.statistics_reset_summary),
                             color = Color.Gray,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
@@ -263,15 +260,14 @@ fun StatisticCard(
                 Text(
                     text = title,
                     color = Color.White,
-                    fontSize = 16.sp
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
 
             Text(
                 text = value,
                 color = color,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium
             )
         }
     }

@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -149,13 +148,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_reset_title),
                             color = Color.White,
-                            fontSize = 16.sp
+                            style = MaterialTheme.typography.bodyLarge
                         )
 
                         Text(
                             text = stringResource(R.string.settings_reset_summary),
                             color = Color.Gray,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
 
@@ -216,13 +215,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_rate_title),
                             color = Color.White,
-                            fontSize = 16.sp
+                            style = MaterialTheme.typography.bodyLarge
                         )
 
                         Text(
                             text = stringResource(R.string.settings_rate_summary),
                             color = Color.Gray,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -248,13 +247,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_about_title),
                             color = Color.White,
-                            fontSize = 16.sp
+                            style = MaterialTheme.typography.bodyLarge
                         )
 
                         Text(
                             text = stringResource(R.string.settings_about_summary),
                             color = Color.Gray,
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -405,8 +404,8 @@ private fun NavCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = Color.White, fontSize = 16.sp)
-                Text(text = summary, color = Color.Gray, fontSize = 14.sp)
+                Text(text = title, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                Text(text = summary, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
             }
 
             Icon(
@@ -476,13 +475,13 @@ fun SoundPackOption(
             Text(
                 text = stringResource(soundPack.displayNameRes),
                 color = Color.White,
-                fontSize = 16.sp
+                style = MaterialTheme.typography.bodyLarge
             )
 
             Text(
                 text = stringResource(soundPack.descriptionRes),
                 color = Color.Gray,
-                fontSize = 14.sp
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

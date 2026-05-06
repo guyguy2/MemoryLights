@@ -768,7 +768,7 @@ fun SimonGameScreen(
                                 Text(
                                     text = stringResource(uiState.currentSoundPack.displayNameRes),
                                     color = Color.Gray,
-                                    fontSize = 10.sp
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                             }
                         }
@@ -792,13 +792,12 @@ fun SimonGameScreen(
                                 Text(
                                     text = stringResource(R.string.game_sound_load_failed),
                                     color = Color(0xFFFFB300),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                                 Text(
                                     text = stringResource(R.string.game_audio_fallback),
                                     color = Color.Gray,
-                                    fontSize = 9.sp
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                 )
                             } else if (!uiState.soundsLoaded) {
                                 // Show loading indicator while sounds are loading
@@ -811,7 +810,7 @@ fun SimonGameScreen(
                                 Text(
                                     text = stringResource(R.string.game_loading),
                                     color = Color.Gray,
-                                    fontSize = 10.sp
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                             } else if (uiState.gameState == GameState.GameOver) {
                                 // Score summary so the game-over moment lingers
@@ -825,8 +824,7 @@ fun SimonGameScreen(
                                     Text(
                                         text = formatBlitzTime(uiState.blitzElapsedMs),
                                         color = Color.White,
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.titleLarge
                                     )
                                     if (uiState.currentBestBlitzTimeMs > 0L) {
                                         Text(
@@ -835,23 +833,20 @@ fun SimonGameScreen(
                                                 formatBlitzTime(uiState.currentBestBlitzTimeMs)
                                             ),
                                             color = Color(0xFFFFC107),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Medium
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                         )
                                     }
                                 } else {
                                     Text(
                                         text = uiState.level.toString(),
                                         color = Color.White,
-                                        fontSize = 26.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp)
                                     )
                                     if (uiState.currentHighScore > 0) {
                                         Text(
                                             text = stringResource(R.string.game_best_score, uiState.currentHighScore),
                                             color = Color(0xFFFFC107),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Medium
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                         )
                                     }
                                 }
@@ -867,8 +862,7 @@ fun SimonGameScreen(
                                 Text(
                                     text = uiState.level.toString(),
                                     color = Color.White,
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp)
                                 )
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),
@@ -879,7 +873,7 @@ fun SimonGameScreen(
                                 Text(
                                     text = stringResource(R.string.game_tap_to_start),
                                     color = Color.Gray,
-                                    fontSize = 9.sp
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
                                 )
                             } else {
                                 // Animated level display with smooth transitions
@@ -897,8 +891,7 @@ fun SimonGameScreen(
                                     Text(
                                         text = level.toString(),
                                         color = Color.White,
-                                        fontSize = 36.sp,
-                                        fontWeight = FontWeight.Bold
+                                        style = MaterialTheme.typography.displaySmall
                                     )
                                 }
                                 // Sequence-progress indicator under the level number
@@ -910,8 +903,7 @@ fun SimonGameScreen(
                                     Text(
                                         text = "${uiState.playerSequence.size} / ${uiState.sequence.size}",
                                         color = Color.Gray,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
+                                        style = MaterialTheme.typography.labelMedium
                                     )
                                 }
                             }
@@ -922,7 +914,7 @@ fun SimonGameScreen(
                             Text(
                                 text = stringResource(R.string.game_high_score_inline, uiState.currentHighScore),
                                 color = Color.Gray,
-                                fontSize = 10.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .padding(bottom = 10.dp)
@@ -995,8 +987,7 @@ fun SimonGameScreen(
                             else R.string.overlay_high_score
                         ),
                         color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineLarge,
                         modifier = Modifier
                             .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
@@ -1021,8 +1012,7 @@ fun SimonGameScreen(
                             else R.string.overlay_game_over
                         ),
                         color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineLarge,
                         modifier = Modifier
                             .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
@@ -1047,8 +1037,7 @@ fun SimonGameScreen(
                     Text(
                         text = stringResource(R.string.overlay_speed_up),
                         color = Color(0xFFFF7043),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier
                             .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
                             .shadow(4.dp)
@@ -1070,8 +1059,7 @@ fun SimonGameScreen(
                     Text(
                         text = stringResource(R.string.overlay_your_turn),
                         color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier
                             .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4ButtonTurn)
                             .shadow(4.dp)
@@ -1156,7 +1144,7 @@ fun SimonGameScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.game_replay), fontSize = 13.sp)
+                            Text(stringResource(R.string.game_replay), style = MaterialTheme.typography.labelLarge)
                         }
                         OutlinedButton(
                             onClick = {
@@ -1178,7 +1166,7 @@ fun SimonGameScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.game_share), fontSize = 13.sp)
+                            Text(stringResource(R.string.game_share), style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
@@ -1223,14 +1211,13 @@ fun SimonGameScreen(
                         Text(
                             text = stringResource(R.string.game_paused),
                             color = Color.White,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.headlineMedium
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.game_paused_hint),
                             color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -1299,31 +1286,28 @@ private fun BlitzHud(
         Text(
             text = stringResource(R.string.blitz_level_progress, level, targetLevel),
             color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
+            style = MaterialTheme.typography.labelLarge
         )
         Text(
             text = stringResource(R.string.blitz_separator),
             color = Color.Gray,
-            fontSize = 13.sp
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal)
         )
         Text(
             text = formatBlitzTime(elapsed),
             color = Color.White,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
         )
         if (bestTimeMs > 0L) {
             Text(
                 text = stringResource(R.string.blitz_separator),
                 color = Color.Gray,
-                fontSize = 13.sp
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal)
             )
             Text(
                 text = stringResource(R.string.game_best_time, formatBlitzTime(bestTimeMs)),
                 color = Color(0xFFFFC107),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.labelMedium
             )
         }
     }

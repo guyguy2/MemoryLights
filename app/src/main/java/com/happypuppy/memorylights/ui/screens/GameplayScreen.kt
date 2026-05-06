@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.ui.theme.SurfaceContainer
 import kotlinx.coroutines.launch
@@ -95,13 +94,13 @@ fun GameplayScreen(
                             Text(
                                 text = stringResource(R.string.gameplay_timeout_title),
                                 color = Color.White,
-                                fontSize = 16.sp
+                                style = MaterialTheme.typography.bodyLarge
                             )
 
                             Text(
                                 text = stringResource(R.string.gameplay_timeout_summary),
                                 color = Color.Gray,
-                                fontSize = 14.sp
+                                style = MaterialTheme.typography.bodyMedium
                             )
                         }
                     }

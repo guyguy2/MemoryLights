@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.ui.theme.SurfaceContainer
@@ -101,7 +100,7 @@ fun SoundAndHapticsScreen(
                 Text(
                     text = stringResource(R.string.sound_packs_heading),
                     color = Color.White,
-                    fontSize = 18.sp
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
 
@@ -161,7 +160,7 @@ fun SoundAndHapticsScreen(
                             Text(
                                 text = stringResource(R.string.sound_packs_more),
                                 color = Color.Gray,
-                                fontSize = 12.sp
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }

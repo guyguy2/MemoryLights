@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.ui.theme.SurfaceContainer
@@ -333,13 +332,13 @@ private fun GameModeCard(
                     Text(
                         text = stringResource(R.string.game_modes_card_title),
                         color = Color.White,
-                        fontSize = 16.sp
+                        style = MaterialTheme.typography.bodyLarge
                     )
 
                     Text(
                         text = stringResource(R.string.game_modes_card_summary),
                         color = Color.Gray,
-                        fontSize = 14.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -395,8 +394,8 @@ private fun ToggleCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = Color.White, fontSize = 16.sp)
-                Text(text = description, color = Color.Gray, fontSize = 14.sp)
+                Text(text = title, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                Text(text = description, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
             }
 
             Switch(
