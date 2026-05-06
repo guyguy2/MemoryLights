@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -166,6 +167,9 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 practiceModeEnabled = uiState.practiceModeEnabled,
                 audioOnlyModeEnabled = uiState.audioOnlyModeEnabled,
                 memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                dailyChallengeEnabled = uiState.dailyChallengeEnabled,
+                dailyCompletedToday = uiState.dailyCompletedEpochDay == java.time.LocalDate.now().toEpochDay(),
+                dailyBestLevel = uiState.dailyBestLevel,
                 gameMode = uiState.gameMode,
                 hasActiveGame = gameStateAtSettingsEntry is GameState.ShowingSequence ||
                         gameStateAtSettingsEntry is GameState.PlayerRepeating ||
@@ -175,6 +179,7 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 onPracticeModeToggled = { viewModel.setPracticeModeEnabled(it) },
                 onAudioOnlyModeToggled = { viewModel.setAudioOnlyModeEnabled(it) },
                 onMemoryLightsPlusToggled = { viewModel.setMemoryLightsPlusEnabled(it) },
+                onDailyChallengeToggled = { viewModel.setDailyChallengeEnabled(it) },
                 onGameModeSelected = { viewModel.setGameMode(it) },
                 onBackPressed = { navController.popBackStack() }
             )
@@ -232,11 +237,13 @@ fun SimonGameScreen(
         derivedStateOf { SimonButton.getAvailableButtons(uiState.memoryLightsPlusEnabled) }
     }
 
+    val context = LocalContext.current
+
     // Announce level changes (skip initial level 1 on game start)
     var previousLevel by remember { mutableIntStateOf(0) }
     LaunchedEffect(uiState.level) {
         if (previousLevel > 0 && uiState.level > previousLevel) {
-            view.announceForAccessibility("Level ${uiState.level}")
+            view.announceForAccessibility(context.getString(R.string.a11y_level_announce, uiState.level))
         }
         previousLevel = uiState.level
     }
@@ -245,13 +252,13 @@ fun SimonGameScreen(
     LaunchedEffect(uiState.gameState) {
         when (uiState.gameState) {
             GameState.PlayerRepeating -> {
-                view.announceForAccessibility("Your turn. Repeat the sequence.")
+                view.announceForAccessibility(context.getString(R.string.a11y_your_turn))
             }
             GameState.GameOver -> {
-                view.announceForAccessibility("Game over. You reached level ${uiState.level}.")
+                view.announceForAccessibility(context.getString(R.string.a11y_game_over_level, uiState.level))
             }
             GameState.Paused -> {
-                view.announceForAccessibility("Game paused.")
+                view.announceForAccessibility(context.getString(R.string.a11y_paused))
             }
             else -> { /* No announcement for other states */ }
         }
@@ -260,7 +267,7 @@ fun SimonGameScreen(
     // Announce new high score celebration
     LaunchedEffect(uiState.showHighScoreText) {
         if (uiState.showHighScoreText) {
-            view.announceForAccessibility("New high score! Level ${uiState.level}.")
+            view.announceForAccessibility(context.getString(R.string.a11y_high_score_celebrate, uiState.level))
         }
     }
 
@@ -290,23 +297,26 @@ fun SimonGameScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Memory Lights") },
+                title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     // Mute/Unmute button
                     IconButton(onClick = onToggleSound) {
                         Icon(
                             painter = painterResource(
-                                id = if (uiState.soundEnabled) 
-                                    R.drawable.volume_up_24px 
-                                else 
+                                id = if (uiState.soundEnabled)
+                                    R.drawable.volume_up_24px
+                                else
                                     R.drawable.volume_off_24px
                             ),
-                            contentDescription = if (uiState.soundEnabled) "Mute" else "Unmute",
+                            contentDescription = stringResource(
+                                if (uiState.soundEnabled) R.string.game_action_mute
+                                else R.string.game_action_unmute
+                            ),
                             tint = Color.White,
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                    
+
                     // Vibration toggle button
                     IconButton(onClick = onToggleVibration) {
                         Icon(
@@ -316,7 +326,10 @@ fun SimonGameScreen(
                                 else
                                     R.drawable.vibration_off_24px
                             ),
-                            contentDescription = if (uiState.vibrateEnabled) "Disable Vibration" else "Enable Vibration",
+                            contentDescription = stringResource(
+                                if (uiState.vibrateEnabled) R.string.game_action_disable_vibration
+                                else R.string.game_action_enable_vibration
+                            ),
                             tint = Color.White,
                             modifier = Modifier.size(28.dp)
                         )
@@ -329,7 +342,7 @@ fun SimonGameScreen(
                         IconButton(onClick = onPauseGame) {
                             Icon(
                                 painter = painterResource(R.drawable.pause_24px),
-                                contentDescription = "Pause",
+                                contentDescription = stringResource(R.string.action_pause),
                                 tint = Color.White,
                                 modifier = Modifier.size(28.dp)
                             )
@@ -340,7 +353,7 @@ fun SimonGameScreen(
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.action_settings),
                             tint = Color.White,
                             modifier = Modifier.size(28.dp)
                         )
@@ -408,7 +421,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.displayName,
+                                        colorName = stringResource(button.displayNameRes),
                                         isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -427,7 +440,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.BLUE, SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.displayName,
+                                        colorName = stringResource(button.displayNameRes),
                                         isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -452,7 +465,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.GREEN, SimonButton.RED).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.displayName,
+                                        colorName = stringResource(button.displayNameRes),
                                         isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -471,7 +484,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.YELLOW, SimonButton.BLUE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.displayName,
+                                        colorName = stringResource(button.displayNameRes),
                                         isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -490,7 +503,7 @@ fun SimonGameScreen(
                                 listOf(SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
                                     SimonPanel(
                                         color = button.color,
-                                        colorName = button.displayName,
+                                        colorName = stringResource(button.displayNameRes),
                                         isLit = displayLit == button || uiState.allButtonsLit,
                                         userPressed = localPressedButtons[button] == true,
                                         modifier = Modifier
@@ -515,7 +528,7 @@ fun SimonGameScreen(
                             // Green panel (top-left)
                             SimonPanel(
                                 color = SimonButton.GREEN.color,
-                                colorName = "Green",
+                                colorName = stringResource(SimonButton.GREEN.displayNameRes),
                                 isLit = displayLit == SimonButton.GREEN || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.GREEN] == true,
                                 modifier = Modifier
@@ -530,7 +543,7 @@ fun SimonGameScreen(
                             // Red panel (top-right)
                             SimonPanel(
                                 color = SimonButton.RED.color,
-                                colorName = "Red",
+                                colorName = stringResource(SimonButton.RED.displayNameRes),
                                 isLit = displayLit == SimonButton.RED || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.RED] == true,
                                 modifier = Modifier
@@ -547,7 +560,7 @@ fun SimonGameScreen(
                             // Yellow panel (bottom-left)
                             SimonPanel(
                                 color = SimonButton.YELLOW.color,
-                                colorName = "Yellow",
+                                colorName = stringResource(SimonButton.YELLOW.displayNameRes),
                                 isLit = displayLit == SimonButton.YELLOW || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.YELLOW] == true,
                                 modifier = Modifier
@@ -562,7 +575,7 @@ fun SimonGameScreen(
                             // Blue panel (bottom-right)
                             SimonPanel(
                                 color = SimonButton.BLUE.color,
-                                colorName = "Blue",
+                                colorName = stringResource(SimonButton.BLUE.displayNameRes),
                                 isLit = displayLit == SimonButton.BLUE || uiState.allButtonsLit,
                                 userPressed = localPressedButtons[SimonButton.BLUE] == true,
                                 modifier = Modifier
@@ -747,13 +760,13 @@ fun SimonGameScreen(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.music_note_24px),
-                                    contentDescription = "Sound Pack",
+                                    contentDescription = stringResource(R.string.game_sound_pack),
                                     tint = Color.Gray,
                                     modifier = Modifier.size(10.dp)
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = uiState.currentSoundPack.displayName,
+                                    text = stringResource(uiState.currentSoundPack.displayNameRes),
                                     color = Color.Gray,
                                     fontSize = 10.sp
                                 )
@@ -771,19 +784,19 @@ fun SimonGameScreen(
                                 // staring at a silent indefinite spinner.
                                 Icon(
                                     imageVector = Icons.Default.Warning,
-                                    contentDescription = "Sound load failed",
+                                    contentDescription = stringResource(R.string.game_sound_load_failed),
                                     tint = Color(0xFFFFB300),
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Sound load failed",
+                                    text = stringResource(R.string.game_sound_load_failed),
                                     color = Color(0xFFFFB300),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "Game playable without audio",
+                                    text = stringResource(R.string.game_audio_fallback),
                                     color = Color.Gray,
                                     fontSize = 9.sp
                                 )
@@ -796,7 +809,7 @@ fun SimonGameScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Loading...",
+                                    text = stringResource(R.string.game_loading),
                                     color = Color.Gray,
                                     fontSize = 10.sp
                                 )
@@ -817,7 +830,10 @@ fun SimonGameScreen(
                                     )
                                     if (uiState.currentBestBlitzTimeMs > 0L) {
                                         Text(
-                                            text = "Best ${formatBlitzTime(uiState.currentBestBlitzTimeMs)}",
+                                            text = stringResource(
+                                                R.string.game_best_time,
+                                                formatBlitzTime(uiState.currentBestBlitzTimeMs)
+                                            ),
                                             color = Color(0xFFFFC107),
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Medium
@@ -832,7 +848,7 @@ fun SimonGameScreen(
                                     )
                                     if (uiState.currentHighScore > 0) {
                                         Text(
-                                            text = "Best ${uiState.currentHighScore}",
+                                            text = stringResource(R.string.game_best_score, uiState.currentHighScore),
                                             color = Color(0xFFFFC107),
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Medium
@@ -841,7 +857,7 @@ fun SimonGameScreen(
                                 }
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),
-                                    contentDescription = "Play Again",
+                                    contentDescription = stringResource(R.string.game_play_again),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -856,12 +872,12 @@ fun SimonGameScreen(
                                 )
                                 Icon(
                                     painter = painterResource(R.drawable.play_arrow_24px),
-                                    contentDescription = "Tap to start",
+                                    contentDescription = stringResource(R.string.game_tap_to_start),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = "Tap to start",
+                                    text = stringResource(R.string.game_tap_to_start),
                                     color = Color.Gray,
                                     fontSize = 9.sp
                                 )
@@ -904,7 +920,7 @@ fun SimonGameScreen(
                         // High score display at bottom - only show when NOT in GameOver state
                         if (uiState.currentHighScore > 0 && uiState.gameState != GameState.GameOver) {
                             Text(
-                                text = "High: ${uiState.currentHighScore}",
+                                text = stringResource(R.string.game_high_score_inline, uiState.currentHighScore),
                                 color = Color.Gray,
                                 fontSize = 10.sp,
                                 modifier = Modifier
@@ -974,7 +990,10 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (uiState.blitzWon) "BEST TIME!" else "HIGH SCORE!",
+                        text = stringResource(
+                            if (uiState.blitzWon) R.string.overlay_best_time
+                            else R.string.overlay_high_score
+                        ),
                         color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
@@ -997,7 +1016,10 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (uiState.blitzWon) "VICTORY!" else "GAME OVER",
+                        text = stringResource(
+                            if (uiState.blitzWon) R.string.overlay_victory
+                            else R.string.overlay_game_over
+                        ),
                         color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
@@ -1023,7 +1045,7 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "SPEED UP!",
+                        text = stringResource(R.string.overlay_speed_up),
                         color = Color(0xFFFF7043),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
@@ -1046,7 +1068,7 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "YOUR TURN",
+                        text = stringResource(R.string.overlay_your_turn),
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -1113,7 +1135,6 @@ fun SimonGameScreen(
                 exit = fadeOut(),
                 modifier = Modifier.fillMaxSize()
             ) {
-                val context = LocalContext.current
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.BottomCenter
@@ -1135,7 +1156,7 @@ fun SimonGameScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Replay", fontSize = 13.sp)
+                            Text(stringResource(R.string.game_replay), fontSize = 13.sp)
                         }
                         OutlinedButton(
                             onClick = {
@@ -1157,7 +1178,7 @@ fun SimonGameScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Share", fontSize = 13.sp)
+                            Text(stringResource(R.string.game_share), fontSize = 13.sp)
                         }
                     }
                 }
@@ -1166,6 +1187,7 @@ fun SimonGameScreen(
             // Paused overlay (F14). Tap anywhere on the dim backdrop to resume.
             // Z-ordered above all game content so the player can't accidentally
             // hit a colored panel while paused.
+            val pauseOverlayCd = stringResource(R.string.a11y_pause_overlay)
             AnimatedVisibility(
                 visible = uiState.gameState == GameState.Paused,
                 enter = fadeIn(),
@@ -1184,7 +1206,7 @@ fun SimonGameScreen(
                             onClick = onResumeGame
                         )
                         .semantics {
-                            contentDescription = "Game paused. Tap to resume."
+                            contentDescription = pauseOverlayCd
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1199,14 +1221,14 @@ fun SimonGameScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "PAUSED",
+                            text = stringResource(R.string.game_paused),
                             color = Color.White,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Tap to resume",
+                            text = stringResource(R.string.game_paused_hint),
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 14.sp
                         )
@@ -1275,13 +1297,13 @@ private fun BlitzHud(
             .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         Text(
-            text = "Lvl $level / $targetLevel",
+            text = stringResource(R.string.blitz_level_progress, level, targetLevel),
             color = Color.White,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "•",
+            text = stringResource(R.string.blitz_separator),
             color = Color.Gray,
             fontSize = 13.sp
         )
@@ -1293,12 +1315,12 @@ private fun BlitzHud(
         )
         if (bestTimeMs > 0L) {
             Text(
-                text = "•",
+                text = stringResource(R.string.blitz_separator),
                 color = Color.Gray,
                 fontSize = 13.sp
             )
             Text(
-                text = "Best ${formatBlitzTime(bestTimeMs)}",
+                text = stringResource(R.string.game_best_time, formatBlitzTime(bestTimeMs)),
                 color = Color(0xFFFFC107),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium

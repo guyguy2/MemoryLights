@@ -292,6 +292,48 @@ class SimonGameViewModelTest {
     }
 
     @Test
+    fun `daily challenge produces deterministic sequence for fixed epoch day`() =
+        runTest(testDispatcher.scheduler) {
+            // Two ViewModels initialized with daily mode on, both pinned to the
+            // same epoch day, must produce identical first sequences. That's
+            // the whole point of F6: same seed → same buttons for everyone.
+            val day = 19_852L
+
+            val vm1 = createViewModel(AppSettings(dailyChallengeEnabled = true))
+            vm1.currentEpochDay = { day }
+            advanceToPlayerTurn()
+            val seq1 = vm1.uiState.value.sequence
+            assertEquals(1, seq1.size)
+
+            val vm2 = createViewModel(AppSettings(dailyChallengeEnabled = true))
+            vm2.currentEpochDay = { day }
+            advanceToPlayerTurn()
+            val seq2 = vm2.uiState.value.sequence
+
+            assertEquals(seq1, seq2)
+        }
+
+    @Test
+    fun `daily completion records today's epoch day and best level on game over`() =
+        runTest(testDispatcher.scheduler) {
+            val day = 19_852L
+            val vm = createViewModel(AppSettings(dailyChallengeEnabled = true))
+            vm.currentEpochDay = { day }
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(day, vm.uiState.value.dailyCompletedEpochDay)
+            assertEquals(1, vm.uiState.value.dailyBestLevel)
+            verify { settingsRepository.setDailyCompletion(day, 1) }
+        }
+
+    @Test
     fun `practice mode wrong button replays sequence instead of game over`() =
         runTest(testDispatcher.scheduler) {
             val vm = createViewModel(AppSettings(practiceModeEnabled = true, highScore4Button = 0))

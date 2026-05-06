@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -57,12 +58,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -83,24 +84,27 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             NavCard(
-                title = "Game Modes",
-                summary = "Classic / Speed Blitz, Difficulty, Reverse, Practice, Audio-Only, Memory Lights+",
+                title = stringResource(R.string.settings_game_modes_title),
+                summary = stringResource(R.string.settings_game_modes_summary),
                 iconPainterResId = R.drawable.speed_24px,
                 iconTint = Color.White,
                 onClick = onGameModesClick
             )
 
             NavCard(
-                title = "Gameplay",
-                summary = "Player timeout",
+                title = stringResource(R.string.settings_gameplay_title),
+                summary = stringResource(R.string.settings_gameplay_summary),
                 iconPainterResId = R.drawable.schedule_24px,
                 iconTint = Color.White,
                 onClick = onGameplayClick
             )
 
             NavCard(
-                title = "Sound & Haptics",
-                summary = "Current pack: ${currentSoundPack.displayName}",
+                title = stringResource(R.string.settings_sound_title),
+                summary = stringResource(
+                    R.string.settings_sound_summary,
+                    stringResource(currentSoundPack.displayNameRes)
+                ),
                 iconPainterResId = R.drawable.music_note_24px,
                 iconTint = Color.White,
                 onClick = onSoundAndHapticsClick
@@ -115,8 +119,8 @@ fun SettingsScreen(
             )
 
             NavCard(
-                title = "Statistics",
-                summary = "View your game progress and stats",
+                title = stringResource(R.string.settings_statistics_title),
+                summary = stringResource(R.string.settings_statistics_summary),
                 iconImageVector = Icons.Default.DateRange,
                 iconTint = Color(0xFF4CAF50),
                 onClick = onStatisticsClicked
@@ -134,7 +138,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.counter_0_24px),
-                        contentDescription = "Reset Score and Statistics",
+                        contentDescription = stringResource(R.string.settings_reset_cd),
                         tint = Color(0xFFFF9800),
                         modifier = Modifier.size(24.dp)
                     )
@@ -143,13 +147,13 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Reset Score & Statistics",
+                            text = stringResource(R.string.settings_reset_title),
                             color = Color.White,
                             fontSize = 16.sp
                         )
 
                         Text(
-                            text = "Clears high score, games played, and all statistics",
+                            text = stringResource(R.string.settings_reset_summary),
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -161,7 +165,7 @@ fun SettingsScreen(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Reset")
+                        Text(stringResource(R.string.action_reset))
                     }
                 }
             }
@@ -201,7 +205,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Star,
-                        contentDescription = "Rate App",
+                        contentDescription = stringResource(R.string.settings_rate_cd),
                         tint = Color(0xFFFFC107),
                         modifier = Modifier.size(24.dp)
                     )
@@ -210,13 +214,13 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Rate this App",
+                            text = stringResource(R.string.settings_rate_title),
                             color = Color.White,
                             fontSize = 16.sp
                         )
 
                         Text(
-                            text = "Enjoying Memory Lights? Let us know!",
+                            text = stringResource(R.string.settings_rate_summary),
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -233,7 +237,7 @@ fun SettingsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "About",
+                        contentDescription = stringResource(R.string.settings_about_cd),
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
@@ -242,13 +246,13 @@ fun SettingsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "About",
+                            text = stringResource(R.string.settings_about_title),
                             color = Color.White,
                             fontSize = 16.sp
                         )
 
                         Text(
-                            text = "Version 1.0.0 • © 2025",
+                            text = stringResource(R.string.settings_about_summary),
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -265,7 +269,7 @@ fun SettingsScreen(
             onDismissRequest = { showAboutDialog = false },
             title = {
                 Text(
-                    text = "About Memory Lights",
+                    text = stringResource(R.string.about_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
                 )
@@ -273,7 +277,7 @@ fun SettingsScreen(
             text = {
                 Column {
                     Text(
-                        text = "Memory Lights is a classic electronic memory game that challenges players to repeat sequences of lights and sounds.",
+                        text = stringResource(R.string.about_dialog_body_1),
                         color = Color.White,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -281,7 +285,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Each round adds a new step to the sequence, testing your memory limits as you progress through increasingly difficult patterns.",
+                        text = stringResource(R.string.about_dialog_body_2),
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -289,13 +293,13 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Version: 1.0.0",
+                        text = stringResource(R.string.about_dialog_version),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
 
                     Text(
-                        text = "© 2025 Memory Lights Game",
+                        text = stringResource(R.string.about_dialog_copyright),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -304,7 +308,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showAboutDialog = false }) {
                     Text(
-                        text = "Close",
+                        text = stringResource(R.string.action_close),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -320,14 +324,14 @@ fun SettingsScreen(
             onDismissRequest = { showResetHighScoreDialog = false },
             title = {
                 Text(
-                    text = "Reset High Score",
+                    text = stringResource(R.string.reset_high_score_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to reset your high score and all statistics? This will reset games played, total score, and best streak. This action cannot be undone.",
+                    text = stringResource(R.string.reset_high_score_body),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -342,7 +346,7 @@ fun SettingsScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Reset")
+                    Text(stringResource(R.string.action_reset))
                 }
             },
             dismissButton = {
@@ -352,7 +356,7 @@ fun SettingsScreen(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
             containerColor = DialogBackground,
@@ -470,13 +474,13 @@ fun SoundPackOption(
 
         Column {
             Text(
-                text = soundPack.displayName,
+                text = stringResource(soundPack.displayNameRes),
                 color = Color.White,
                 fontSize = 16.sp
             )
 
             Text(
-                text = soundPack.description,
+                text = stringResource(soundPack.descriptionRes),
                 color = Color.Gray,
                 fontSize = 14.sp
             )

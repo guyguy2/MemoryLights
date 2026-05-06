@@ -171,4 +171,28 @@ class DataStoreSettingsRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `setDailyChallengeEnabled persists`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(false, awaitItem().dailyChallengeEnabled)
+            repo.setDailyChallengeEnabled(true)
+            assertEquals(true, awaitItem().dailyChallengeEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setDailyCompletion records both day and best level atomically`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            val initial = awaitItem()
+            assertEquals(0L, initial.dailyCompletedEpochDay)
+            assertEquals(0, initial.dailyBestLevel)
+            repo.setDailyCompletion(epochDay = 19_852L, bestLevel = 7)
+            val updated = awaitItem()
+            assertEquals(19_852L, updated.dailyCompletedEpochDay)
+            assertEquals(7, updated.dailyBestLevel)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

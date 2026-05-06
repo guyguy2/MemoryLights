@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
             // Check resources for each sound pack
             soundPacks.forEach { soundPack ->
                 val prefix = soundPack.resourcePrefix
-                Log.d(TAG, "Checking ${soundPack.displayName} (${prefix}) sound pack:")
+                Log.d(TAG, "Checking ${getString(soundPack.displayNameRes)} (${prefix}) sound pack:")
 
                 // Check button sounds
                 buttons.forEach { button ->

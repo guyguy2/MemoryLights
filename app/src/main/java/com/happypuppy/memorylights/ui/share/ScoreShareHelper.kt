@@ -12,6 +12,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
+import com.happypuppy.memorylights.R
 import java.io.File
 import java.io.FileOutputStream
 
@@ -33,12 +34,14 @@ object ScoreShareHelper {
         is6ButtonMode: Boolean
     ) {
         try {
-            val bitmap = renderCard(level, bestScore, is6ButtonMode)
+            val bitmap = renderCard(context, level, bestScore, is6ButtonMode)
             val uri = writeToCache(context, bitmap)
             bitmap.recycle()
 
-            val mode = if (is6ButtonMode) "Memory Lights+" else "Memory Lights"
-            val text = "I scored level $level in $mode! Best: $bestScore"
+            val modeName = context.getString(
+                if (is6ButtonMode) R.string.share_app_plus else R.string.share_app_classic
+            )
+            val text = context.getString(R.string.share_card_text, level, modeName, bestScore)
 
             val send = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
@@ -50,7 +53,7 @@ object ScoreShareHelper {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(
-                Intent.createChooser(send, "Share your score").apply {
+                Intent.createChooser(send, context.getString(R.string.share_card_chooser_title)).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
             )
@@ -72,7 +75,7 @@ object ScoreShareHelper {
         )
     }
 
-    private fun renderCard(level: Int, bestScore: Int, is6ButtonMode: Boolean): Bitmap {
+    private fun renderCard(context: Context, level: Int, bestScore: Int, is6ButtonMode: Boolean): Bitmap {
         val bitmap = Bitmap.createBitmap(CARD_SIZE, CARD_SIZE, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -91,7 +94,7 @@ object ScoreShareHelper {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             letterSpacing = 0.18f
         }
-        canvas.drawText("MEMORY LIGHTS", center, 180f, brandPaint)
+        canvas.drawText(context.getString(R.string.share_card_brand), center, 180f, brandPaint)
 
         // Six color discs across top to brand the card.
         val discs = listOf(
@@ -120,7 +123,7 @@ object ScoreShareHelper {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             letterSpacing = 0.4f
         }
-        canvas.drawText("LEVEL REACHED", center, 480f, labelPaint)
+        canvas.drawText(context.getString(R.string.share_card_label), center, 480f, labelPaint)
 
         val levelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = white
@@ -136,9 +139,11 @@ object ScoreShareHelper {
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         }
-        canvas.drawText("Best: $bestScore", center, 840f, bestPaint)
+        canvas.drawText(context.getString(R.string.share_card_best, bestScore), center, 840f, bestPaint)
 
-        val modeText = if (is6ButtonMode) "MEMORY LIGHTS+" else "STANDARD MODE"
+        val modeText = context.getString(
+            if (is6ButtonMode) R.string.share_card_mode_plus else R.string.share_card_mode_classic
+        )
         val modePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = accent
             textSize = 40f

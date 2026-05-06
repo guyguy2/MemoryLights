@@ -10,7 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
@@ -33,6 +35,7 @@ fun GameplayScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -46,12 +49,12 @@ fun GameplayScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gameplay") },
+                title = { Text(stringResource(R.string.gameplay_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -81,7 +84,7 @@ fun GameplayScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(R.drawable.schedule_24px),
-                            contentDescription = "Player timeout",
+                            contentDescription = stringResource(R.string.gameplay_timeout_cd),
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
@@ -90,13 +93,13 @@ fun GameplayScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Player Timeout",
+                                text = stringResource(R.string.gameplay_timeout_title),
                                 color = Color.White,
                                 fontSize = 16.sp
                             )
 
                             Text(
-                                text = "How long you have to press the next button",
+                                text = stringResource(R.string.gameplay_timeout_summary),
                                 color = Color.Gray,
                                 fontSize = 14.sp
                             )
@@ -115,10 +118,10 @@ fun GameplayScreen(
                                 onClick = {
                                     if (playerTimeoutSeconds != seconds) {
                                         onPlayerTimeoutChanged(seconds)
-                                        toast("Timeout: ${seconds}s")
+                                        toast(context.getString(R.string.snack_timeout_seconds, seconds))
                                     }
                                 },
-                                label = { Text("${seconds}s") },
+                                label = { Text(stringResource(R.string.gameplay_timeout_chip, seconds)) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = SurfaceContainer,
                                     labelColor = Color.Gray,

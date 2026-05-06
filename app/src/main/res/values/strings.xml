@@ -1,3 +1,195 @@
 <resources>
     <string name="app_name">Memory Lights</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_switch">Switch</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Game screen: top bar -->
+    <string name="game_action_mute">Mute</string>
+    <string name="game_action_unmute">Unmute</string>
+    <string name="game_action_disable_vibration">Disable Vibration</string>
+    <string name="game_action_enable_vibration">Enable Vibration</string>
+
+    <!-- Game screen: center disc -->
+    <string name="game_loading">Loading…</string>
+    <string name="game_tap_to_start">Tap to start</string>
+    <string name="game_sound_load_failed">Sound load failed</string>
+    <string name="game_audio_fallback">Game playable without audio</string>
+    <string name="game_play_again">Play Again</string>
+    <string name="game_sound_pack">Sound Pack</string>
+    <string name="game_high_score_inline">High: %1$d</string>
+    <string name="game_best_score">Best %1$d</string>
+    <string name="game_best_time">Best %1$s</string>
+
+    <!-- Game screen: overlay text -->
+    <string name="overlay_high_score">HIGH SCORE!</string>
+    <string name="overlay_best_time">BEST TIME!</string>
+    <string name="overlay_game_over">GAME OVER</string>
+    <string name="overlay_victory">VICTORY!</string>
+    <string name="overlay_speed_up">SPEED UP!</string>
+    <string name="overlay_your_turn">YOUR TURN</string>
+
+    <!-- Game screen: pause overlay -->
+    <string name="game_paused">PAUSED</string>
+    <string name="game_paused_hint">Tap to resume</string>
+
+    <!-- Game over actions -->
+    <string name="game_replay">Replay</string>
+    <string name="game_share">Share</string>
+
+    <!-- Speed Blitz HUD -->
+    <string name="blitz_level_progress">Lvl %1$d / %2$d</string>
+    <string name="blitz_separator">•</string>
+
+    <!-- A11y announcements -->
+    <string name="a11y_level_announce">Level %1$d</string>
+    <string name="a11y_your_turn">Your turn. Repeat the sequence.</string>
+    <string name="a11y_game_over_level">Game over. You reached level %1$d.</string>
+    <string name="a11y_paused">Game paused.</string>
+    <string name="a11y_high_score_celebrate">New high score! Level %1$d.</string>
+    <string name="a11y_pause_overlay">Game paused. Tap to resume.</string>
+
+    <!-- Settings hub -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_game_modes_title">Game Modes</string>
+    <string name="settings_game_modes_summary">Classic / Speed Blitz, Difficulty, Reverse, Practice, Audio-Only, Memory Lights+</string>
+    <string name="settings_gameplay_title">Gameplay</string>
+    <string name="settings_gameplay_summary">Player timeout</string>
+    <string name="settings_sound_title">Sound &amp; Haptics</string>
+    <string name="settings_sound_summary">Current pack: %1$s</string>
+    <string name="settings_statistics_title">Statistics</string>
+    <string name="settings_statistics_summary">View your game progress and stats</string>
+    <string name="settings_reset_title">Reset Score &amp; Statistics</string>
+    <string name="settings_reset_summary">Clears high score, games played, and all statistics</string>
+    <string name="settings_reset_cd">Reset Score and Statistics</string>
+    <string name="settings_rate_title">Rate this App</string>
+    <string name="settings_rate_summary">Enjoying Memory Lights? Let us know!</string>
+    <string name="settings_rate_cd">Rate App</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_about_summary">Version 1.0.0 • © 2025</string>
+    <string name="settings_about_cd">About</string>
+
+    <!-- About dialog -->
+    <string name="about_dialog_title">About Memory Lights</string>
+    <string name="about_dialog_body_1">Memory Lights is a classic electronic memory game that challenges players to repeat sequences of lights and sounds.</string>
+    <string name="about_dialog_body_2">Each round adds a new step to the sequence, testing your memory limits as you progress through increasingly difficult patterns.</string>
+    <string name="about_dialog_version">Version: 1.0.0</string>
+    <string name="about_dialog_copyright">© 2025 Memory Lights Game</string>
+
+    <!-- Reset dialog (Settings) -->
+    <string name="reset_high_score_title">Reset High Score</string>
+    <string name="reset_high_score_body">Are you sure you want to reset your high score and all statistics? This will reset games played, total score, and best streak. This action cannot be undone.</string>
+
+    <!-- Game Modes screen -->
+    <string name="game_modes_title">Game Modes</string>
+    <string name="game_modes_card_title">Game Mode</string>
+    <string name="game_modes_card_summary">Classic plays until you miss; Speed Blitz races to level 20</string>
+    <string name="game_modes_card_cd">Game mode</string>
+
+    <string name="toggle_difficulty_title">Difficulty</string>
+    <string name="toggle_difficulty_summary">Increase speed as levels progress</string>
+    <string name="toggle_reverse_title">Reverse Mode</string>
+    <string name="toggle_reverse_summary">Watch the sequence forward, then repeat it in reverse</string>
+    <string name="toggle_practice_title">Practice Mode</string>
+    <string name="toggle_practice_summary">Wrong buttons replay the sequence instead of ending the run. High scores are not recorded while enabled.</string>
+    <string name="toggle_audio_only_title">Audio-Only Mode</string>
+    <string name="toggle_audio_only_summary">Hide button colors during playback — recognize the sequence by sound alone</string>
+    <string name="toggle_daily_challenge_title">Daily Challenge</string>
+    <string name="toggle_daily_challenge_summary">Same sequence for everyone today; come back tomorrow for a new one</string>
+    <string name="toggle_daily_challenge_completed">Completed today — come back tomorrow!</string>
+    <string name="toggle_memory_lights_plus_title">Memory Lights+</string>
+    <string name="toggle_memory_lights_plus_summary">6 buttons</string>
+
+    <string name="snack_difficulty_on">Difficulty: On</string>
+    <string name="snack_difficulty_off">Difficulty: Off</string>
+    <string name="snack_reverse_on">Reverse Mode: On</string>
+    <string name="snack_reverse_off">Reverse Mode: Off</string>
+    <string name="snack_practice_on">Practice Mode: On</string>
+    <string name="snack_practice_off">Practice Mode: Off</string>
+    <string name="snack_audio_only_on">Audio-Only: On</string>
+    <string name="snack_audio_only_off">Audio-Only: Off</string>
+    <string name="snack_daily_on">Daily Challenge: On</string>
+    <string name="snack_daily_off">Daily Challenge: Off</string>
+    <string name="snack_memory_lights_plus_on">Memory Lights+: On</string>
+    <string name="snack_memory_lights_plus_off">Memory Lights+: Off</string>
+    <string name="snack_mode">Mode: %1$s</string>
+    <string name="snack_sound_pack">Sound pack: %1$s</string>
+    <string name="snack_timeout_seconds">Timeout: %1$ds</string>
+
+    <string name="confirm_end_game_title">End current game?</string>
+    <string name="confirm_end_game_mode">Switching to %1$s will end your current run. Continue?</string>
+    <string name="confirm_end_game_generic">Switching modes will end your current run. Continue?</string>
+
+    <!-- Gameplay sub-screen -->
+    <string name="gameplay_title">Gameplay</string>
+    <string name="gameplay_timeout_title">Player Timeout</string>
+    <string name="gameplay_timeout_summary">How long you have to press the next button</string>
+    <string name="gameplay_timeout_cd">Player timeout</string>
+    <string name="gameplay_timeout_chip">%1$ds</string>
+
+    <!-- Sound &amp; Haptics sub-screen -->
+    <string name="sound_haptics_title">Sound &amp; Haptics</string>
+    <string name="sound_packs_heading">Sound Packs</string>
+    <string name="sound_packs_more">More sound options</string>
+    <string name="sound_packs_more_cd">More options</string>
+
+    <!-- Statistics screen -->
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_section_heading">Game Statistics</string>
+    <string name="statistic_games_played">Games Played</string>
+    <string name="statistic_high_score">High Score</string>
+    <string name="statistic_average_score">Average Score</string>
+    <string name="statistic_total_score">Total Score</string>
+    <string name="statistic_best_streak">Best Streak</string>
+    <string name="statistics_average_format">%1$.1f</string>
+    <string name="statistics_reset_title">Reset All Statistics</string>
+    <string name="statistics_reset_summary">Clear all game progress and statistics</string>
+    <string name="statistics_reset_dialog_title">Reset Statistics</string>
+    <string name="statistics_reset_dialog_body">Are you sure you want to reset all statistics? This will clear all your game progress and cannot be undone.</string>
+    <string name="statistics_reset_cd">Reset Statistics</string>
+
+    <!-- Sound packs (enum-bound) -->
+    <string name="sound_pack_standard_name">Standard</string>
+    <string name="sound_pack_standard_desc">Classic Simon game sounds</string>
+    <string name="sound_pack_funny_name">Funny</string>
+    <string name="sound_pack_funny_desc">Humorous sound effects</string>
+    <string name="sound_pack_electronic_name">Electronic</string>
+    <string name="sound_pack_electronic_desc">Modern electronic sounds</string>
+    <string name="sound_pack_retro_name">Retro Gaming</string>
+    <string name="sound_pack_retro_desc">8-bit style game sounds</string>
+    <string name="sound_pack_musical_name">Musical</string>
+    <string name="sound_pack_musical_desc">Pentatonic piano tones</string>
+    <string name="sound_pack_nature_name">Nature</string>
+    <string name="sound_pack_nature_desc">Birds, water, chimes, and rumble</string>
+    <string name="sound_pack_scifi_name">Sci-Fi</string>
+    <string name="sound_pack_scifi_desc">Chiptune bleeps and zaps</string>
+
+    <!-- Game modes (enum-bound) -->
+    <string name="game_mode_classic">Classic</string>
+    <string name="game_mode_speed_blitz">Speed Blitz</string>
+
+    <!-- Simon buttons -->
+    <string name="simon_green">Green</string>
+    <string name="simon_red">Red</string>
+    <string name="simon_yellow">Yellow</string>
+    <string name="simon_blue">Blue</string>
+    <string name="simon_purple">Purple</string>
+    <string name="simon_orange">Orange</string>
+
+    <!-- Score share card (F10) -->
+    <string name="share_card_brand">MEMORY LIGHTS</string>
+    <string name="share_card_label">LEVEL REACHED</string>
+    <string name="share_card_best">Best: %1$d</string>
+    <string name="share_card_mode_classic">STANDARD MODE</string>
+    <string name="share_card_mode_plus">MEMORY LIGHTS+</string>
+    <string name="share_card_text">I scored level %1$d in %2$s! Best: %3$d</string>
+    <string name="share_card_chooser_title">Share your score</string>
+    <string name="share_app_classic">Memory Lights</string>
+    <string name="share_app_plus">Memory Lights+</string>
 </resources>

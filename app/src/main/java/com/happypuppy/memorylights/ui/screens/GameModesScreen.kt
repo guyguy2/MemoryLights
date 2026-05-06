@@ -10,7 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
@@ -36,6 +38,9 @@ fun GameModesScreen(
     practiceModeEnabled: Boolean,
     audioOnlyModeEnabled: Boolean,
     memoryLightsPlusEnabled: Boolean,
+    dailyChallengeEnabled: Boolean,
+    dailyCompletedToday: Boolean,
+    dailyBestLevel: Int,
     gameMode: GameMode,
     hasActiveGame: Boolean,
     onDifficultyToggled: (Boolean) -> Unit,
@@ -43,6 +48,7 @@ fun GameModesScreen(
     onPracticeModeToggled: (Boolean) -> Unit,
     onAudioOnlyModeToggled: (Boolean) -> Unit,
     onMemoryLightsPlusToggled: (Boolean) -> Unit,
+    onDailyChallengeToggled: (Boolean) -> Unit,
     onGameModeSelected: (GameMode) -> Unit,
     onBackPressed: () -> Unit
 ) {
@@ -51,6 +57,7 @@ fun GameModesScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -64,12 +71,12 @@ fun GameModesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Game Modes") },
+                title = { Text(stringResource(R.string.game_modes_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -101,18 +108,18 @@ fun GameModesScreen(
                         pendingGameModeChange = newMode
                     } else {
                         onGameModeSelected(newMode)
-                        toast("Mode: ${newMode.displayName}")
+                        toast(context.getString(R.string.snack_mode, context.getString(newMode.displayNameRes)))
                     }
                 }
             )
 
             val toggleDifficulty: (Boolean) -> Unit = { value ->
                 onDifficultyToggled(value)
-                toast("Difficulty: ${if (value) "On" else "Off"}")
+                toast(context.getString(if (value) R.string.snack_difficulty_on else R.string.snack_difficulty_off))
             }
             ToggleCard(
-                title = "Difficulty",
-                description = "Increase speed as levels progress",
+                title = stringResource(R.string.toggle_difficulty_title),
+                description = stringResource(R.string.toggle_difficulty_summary),
                 iconResId = R.drawable.speed_24px,
                 checked = difficultyEnabled,
                 onToggle = toggleDifficulty
@@ -120,11 +127,11 @@ fun GameModesScreen(
 
             val toggleReverse: (Boolean) -> Unit = { value ->
                 onReverseModeToggled(value)
-                toast("Reverse Mode: ${if (value) "On" else "Off"}")
+                toast(context.getString(if (value) R.string.snack_reverse_on else R.string.snack_reverse_off))
             }
             ToggleCard(
-                title = "Reverse Mode",
-                description = "Watch the sequence forward, then repeat it in reverse",
+                title = stringResource(R.string.toggle_reverse_title),
+                description = stringResource(R.string.toggle_reverse_summary),
                 iconResId = R.drawable.speed_24px,
                 checked = reverseModeEnabled,
                 onToggle = toggleReverse
@@ -132,11 +139,11 @@ fun GameModesScreen(
 
             val togglePractice: (Boolean) -> Unit = { value ->
                 onPracticeModeToggled(value)
-                toast("Practice Mode: ${if (value) "On" else "Off"}")
+                toast(context.getString(if (value) R.string.snack_practice_on else R.string.snack_practice_off))
             }
             ToggleCard(
-                title = "Practice Mode",
-                description = "Wrong buttons replay the sequence instead of ending the run. High scores are not recorded while enabled.",
+                title = stringResource(R.string.toggle_practice_title),
+                description = stringResource(R.string.toggle_practice_summary),
                 iconResId = R.drawable.reset_score_24px,
                 checked = practiceModeEnabled,
                 onToggle = togglePractice
@@ -144,14 +151,35 @@ fun GameModesScreen(
 
             val toggleAudioOnly: (Boolean) -> Unit = { value ->
                 onAudioOnlyModeToggled(value)
-                toast("Audio-Only: ${if (value) "On" else "Off"}")
+                toast(context.getString(if (value) R.string.snack_audio_only_on else R.string.snack_audio_only_off))
             }
             ToggleCard(
-                title = "Audio-Only Mode",
-                description = "Hide button colors during playback — recognize the sequence by sound alone",
+                title = stringResource(R.string.toggle_audio_only_title),
+                description = stringResource(R.string.toggle_audio_only_summary),
                 iconResId = R.drawable.music_note_24px,
                 checked = audioOnlyModeEnabled,
                 onToggle = toggleAudioOnly
+            )
+
+            val toggleDaily: (Boolean) -> Unit = { value ->
+                onDailyChallengeToggled(value)
+                toast(context.getString(if (value) R.string.snack_daily_on else R.string.snack_daily_off))
+            }
+            // Subtitle: when on AND a run was already played today, lead with
+            // "Today's best: level N" so the player can see their progress
+            // without leaving the toggle.
+            val dailyDescription = if (dailyChallengeEnabled && dailyCompletedToday && dailyBestLevel > 0) {
+                stringResource(R.string.toggle_daily_challenge_completed) +
+                    " " + stringResource(R.string.statistic_high_score) + ": $dailyBestLevel"
+            } else {
+                stringResource(R.string.toggle_daily_challenge_summary)
+            }
+            ToggleCard(
+                title = stringResource(R.string.toggle_daily_challenge_title),
+                description = dailyDescription,
+                iconResId = R.drawable.schedule_24px,
+                checked = dailyChallengeEnabled,
+                onToggle = toggleDaily
             )
 
             val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
@@ -159,12 +187,12 @@ fun GameModesScreen(
                     pendingMemoryLightsPlusToggle = newValue
                 } else {
                     onMemoryLightsPlusToggled(newValue)
-                    toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
+                    toast(context.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
                 }
             }
             ToggleCard(
-                title = "Memory Lights+",
-                description = "6 buttons",
+                title = stringResource(R.string.toggle_memory_lights_plus_title),
+                description = stringResource(R.string.toggle_memory_lights_plus_summary),
                 iconResId = R.drawable.play_arrow_24px,
                 iconTint = Color(0xFF4CAF50),
                 checked = memoryLightsPlusEnabled,
@@ -180,14 +208,17 @@ fun GameModesScreen(
             onDismissRequest = { pendingGameModeChange = null },
             title = {
                 Text(
-                    text = "End current game?",
+                    text = stringResource(R.string.confirm_end_game_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    text = "Switching to ${newMode.displayName} will end your current run. Continue?",
+                    text = stringResource(
+                        R.string.confirm_end_game_mode,
+                        stringResource(newMode.displayNameRes)
+                    ),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -197,9 +228,10 @@ fun GameModesScreen(
                     onClick = {
                         onGameModeSelected(newMode)
                         snackbarHostState.currentSnackbarData?.dismiss()
+                        val msg = context.getString(R.string.snack_mode, context.getString(newMode.displayNameRes))
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
-                                message = "Mode: ${newMode.displayName}",
+                                message = msg,
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -209,7 +241,7 @@ fun GameModesScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Switch")
+                    Text(stringResource(R.string.action_switch))
                 }
             },
             dismissButton = {
@@ -219,7 +251,7 @@ fun GameModesScreen(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
             containerColor = com.happypuppy.memorylights.ui.theme.DialogBackground,
@@ -233,14 +265,14 @@ fun GameModesScreen(
             onDismissRequest = { pendingMemoryLightsPlusToggle = null },
             title = {
                 Text(
-                    text = "End current game?",
+                    text = stringResource(R.string.confirm_end_game_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    text = "Switching modes will end your current run. Continue?",
+                    text = stringResource(R.string.confirm_end_game_generic),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -249,14 +281,14 @@ fun GameModesScreen(
                 TextButton(
                     onClick = {
                         onMemoryLightsPlusToggled(newValue)
-                        toast("Memory Lights+: ${if (newValue) "On" else "Off"}")
+                        toast(context.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
                         pendingMemoryLightsPlusToggle = null
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Switch")
+                    Text(stringResource(R.string.action_switch))
                 }
             },
             dismissButton = {
@@ -266,7 +298,7 @@ fun GameModesScreen(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
             containerColor = com.happypuppy.memorylights.ui.theme.DialogBackground,
@@ -290,7 +322,7 @@ private fun GameModeCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(R.drawable.speed_24px),
-                    contentDescription = "Game mode",
+                    contentDescription = stringResource(R.string.game_modes_card_cd),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
@@ -299,13 +331,13 @@ private fun GameModeCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Game Mode",
+                        text = stringResource(R.string.game_modes_card_title),
                         color = Color.White,
                         fontSize = 16.sp
                     )
 
                     Text(
-                        text = "Classic plays until you miss; Speed Blitz races to level 20",
+                        text = stringResource(R.string.game_modes_card_summary),
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
@@ -322,7 +354,7 @@ private fun GameModeCard(
                     FilterChip(
                         selected = mode == selected,
                         onClick = { onSelect(mode) },
-                        label = { Text(mode.displayName) },
+                        label = { Text(stringResource(mode.displayNameRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = SurfaceContainer,
                             labelColor = Color.Gray,

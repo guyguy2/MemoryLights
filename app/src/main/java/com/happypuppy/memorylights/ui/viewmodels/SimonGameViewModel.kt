@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import kotlin.random.Random
 
 /**
  * ViewModel for the Memory Lights game logic with lifecycle awareness
@@ -70,6 +72,14 @@ class SimonGameViewModel(
     // taps a pack so they audition multiple colors rather than only GREEN
     // every time (#63). Wraps around the available button list.
     private var previewToneIndex = 0
+
+    // Seeded RNG for the active Daily Challenge run (F6). Held for the
+    // duration of a run so successive `generateNextSequence` calls produce
+    // a deterministic, reproducible stream. Null in classic random play.
+    private var dailyRandom: Random? = null
+
+    /** Today's epoch day. Indirected so tests can stub it. */
+    internal var currentEpochDay: () -> Long = { LocalDate.now().toEpochDay() }
 
     init {
         Log.d(TAG, "Initializing SimonGameViewModel")
@@ -138,7 +148,10 @@ class SimonGameViewModel(
             audioOnlyModeEnabled = settings.audioOnlyModeEnabled,
             gameMode = settings.gameMode,
             bestBlitzTime4ButtonMs = settings.bestBlitzTime4ButtonMs,
-            bestBlitzTime6ButtonMs = settings.bestBlitzTime6ButtonMs
+            bestBlitzTime6ButtonMs = settings.bestBlitzTime6ButtonMs,
+            dailyChallengeEnabled = settings.dailyChallengeEnabled,
+            dailyCompletedEpochDay = settings.dailyCompletedEpochDay,
+            dailyBestLevel = settings.dailyBestLevel
         )}
     }
 
@@ -392,6 +405,67 @@ class SimonGameViewModel(
     }
 
     /**
+     * Toggle Daily Challenge (F6). When enabled, every run uses a deterministic
+     * sequence seeded from today's epoch day, so all players see the same
+     * pattern on the same calendar day. Toggling resets the active run since
+     * the sequence-generation rules are changing mid-flight.
+     *
+     * Per-day completion is tracked separately on game-over: see [updateGameOverState].
+     */
+    fun setDailyChallengeEnabled(enabled: Boolean) {
+        if (_uiState.value.dailyChallengeEnabled == enabled) return
+        Log.d(TAG, "Setting daily challenge enabled: $enabled")
+
+        cancelTimeoutTimer()
+        activeSequenceJob?.cancel()
+        activeSequenceJob = null
+        gameOverTextAnimationJob?.cancel()
+        gameOverTextAnimationJob = null
+        highScoreTextAnimationJob?.cancel()
+        highScoreTextAnimationJob = null
+        speedUpTextJob?.cancel()
+        speedUpTextJob = null
+
+        dailyRandom = null
+
+        _uiState.update { it.copy(
+            dailyChallengeEnabled = enabled,
+            gameState = GameState.WaitingToStart,
+            level = 1,
+            roundCount = 0,
+            sequence = emptyList(),
+            playerSequence = emptyList(),
+            currentlyLit = null,
+            allButtonsLit = false,
+            showYourTurnText = false,
+            showSpeedUpText = false,
+            showHighScoreParticles = false,
+            showHighScoreText = false,
+            showGameOverText = false,
+            blitzStartTimeMs = 0L,
+            blitzElapsedMs = 0L,
+            blitzWon = false
+        )}
+
+        settingsRepository.setDailyChallengeEnabled(enabled)
+
+        if (isAppInForeground) {
+            seedDailyRandomIfNeeded()
+            generateNextSequence()
+            showSequence()
+        }
+    }
+
+    /** Seed [dailyRandom] for a fresh run if Daily Challenge is on; otherwise clear it. */
+    private fun seedDailyRandomIfNeeded() {
+        dailyRandom = if (_uiState.value.dailyChallengeEnabled) {
+            Random(currentEpochDay())
+        } else {
+            null
+        }
+    }
+
+    /**
      * Switch between Classic and Speed Blitz (F4). Always resets the current
      * run because the rules change; persists the new mode.
      */
@@ -431,6 +505,7 @@ class SimonGameViewModel(
         settingsRepository.setGameMode(mode)
 
         if (isAppInForeground) {
+            seedDailyRandomIfNeeded()
             generateNextSequence()
             showSequence()
         }
@@ -490,6 +565,7 @@ class SimonGameViewModel(
 
             // Start a new game with the new mode if app is in foreground
             if (isAppInForeground) {
+                seedDailyRandomIfNeeded()
                 generateNextSequence()
                 showSequence()
             }
@@ -560,6 +636,8 @@ class SimonGameViewModel(
                 blitzWon = false
             )
         }
+
+        seedDailyRandomIfNeeded()
 
         // Start the game by generating and showing the first sequence
         // Only if app is in foreground
@@ -694,8 +772,11 @@ class SimonGameViewModel(
     // Add a new button to the sequence
     private fun generateNextSequence() {
         val availableButtons = SimonButton.getAvailableButtons(_uiState.value.memoryLightsPlusEnabled)
-        val newButton = availableButtons.random()
-        Log.d(TAG, "Adding new button to sequence: $newButton (mode: ${if(_uiState.value.memoryLightsPlusEnabled) "6-button" else "4-button"})")
+        // Daily Challenge (F6): pull from the seeded RNG so the sequence is
+        // identical for every player on the same calendar day.
+        val rng = dailyRandom
+        val newButton = if (rng != null) availableButtons.random(rng) else availableButtons.random()
+        Log.d(TAG, "Adding new button to sequence: $newButton (mode: ${if(_uiState.value.memoryLightsPlusEnabled) "6-button" else "4-button"}${if (rng != null) ", daily" else ""})")
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -1225,6 +1306,21 @@ class SimonGameViewModel(
             } else {
                 settingsRepository.setHighScore4Button(newHighScore)
             }
+        }
+
+        // Daily Challenge (F6): record today's run. If the stored epoch day
+        // is older than today, the day rolled over since the last recorded
+        // run — start fresh today. Otherwise keep today's best level.
+        if (_uiState.value.dailyChallengeEnabled) {
+            val today = currentEpochDay()
+            val priorDay = _uiState.value.dailyCompletedEpochDay
+            val priorBest = _uiState.value.dailyBestLevel
+            val newBest = if (today == priorDay) maxOf(priorBest, currentLevel) else currentLevel
+            _uiState.update { it.copy(
+                dailyCompletedEpochDay = today,
+                dailyBestLevel = newBest
+            )}
+            settingsRepository.setDailyCompletion(today, newBest)
         }
     }
     

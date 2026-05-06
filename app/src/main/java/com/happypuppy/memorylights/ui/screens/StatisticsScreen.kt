@@ -19,9 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.theme.DialogBackground
@@ -40,12 +42,12 @@ fun StatisticsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Statistics") },
+                title = { Text(stringResource(R.string.statistics_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -72,13 +74,13 @@ fun StatisticsScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.DateRange,
-                    contentDescription = "Statistics",
+                    contentDescription = stringResource(R.string.statistics_title),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = "Game Statistics",
+                    text = stringResource(R.string.statistics_section_heading),
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -88,35 +90,35 @@ fun StatisticsScreen(
             // Statistics Cards. Each row gets a distinct icon so the eye can
             // anchor on the metric without reading every label (#57).
             StatisticCard(
-                title = "Games Played",
+                title = stringResource(R.string.statistic_games_played),
                 value = statistics.gamesPlayed.toString(),
                 icon = Icons.Default.PlayArrow,
                 color = Color(0xFF2196F3)
             )
 
             StatisticCard(
-                title = "High Score",
+                title = stringResource(R.string.statistic_high_score),
                 value = currentHighScore.toString(),
                 icon = Icons.Default.Star,
                 color = Color(0xFFFFC107)
             )
 
             StatisticCard(
-                title = "Average Score",
-                value = String.format("%.1f", statistics.averageScore),
+                title = stringResource(R.string.statistic_average_score),
+                value = stringResource(R.string.statistics_average_format, statistics.averageScore),
                 icon = Icons.AutoMirrored.Filled.List,
                 color = Color(0xFF4CAF50)
             )
 
             StatisticCard(
-                title = "Total Score",
+                title = stringResource(R.string.statistic_total_score),
                 value = statistics.totalScore.toString(),
                 icon = Icons.Default.AddCircle,
                 color = Color(0xFF9C27B0)
             )
 
             StatisticCard(
-                title = "Best Streak",
+                title = stringResource(R.string.statistic_best_streak),
                 value = statistics.bestStreak.toString(),
                 icon = Icons.Default.CheckCircle,
                 color = Color(0xFFFF5722)
@@ -142,7 +144,7 @@ fun StatisticsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Reset Statistics",
+                        contentDescription = stringResource(R.string.statistics_reset_cd),
                         tint = Color(0xFFFF5722),
                         modifier = Modifier.size(24.dp)
                     )
@@ -151,13 +153,13 @@ fun StatisticsScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Reset All Statistics",
+                            text = stringResource(R.string.statistics_reset_title),
                             color = Color.White,
                             fontSize = 16.sp
                         )
 
                         Text(
-                            text = "Clear all game progress and statistics",
+                            text = stringResource(R.string.statistics_reset_summary),
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -169,7 +171,7 @@ fun StatisticsScreen(
                             contentColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Text("Reset")
+                        Text(stringResource(R.string.action_reset))
                     }
                 }
             }
@@ -184,14 +186,14 @@ fun StatisticsScreen(
             onDismissRequest = { showResetDialog = false },
             title = {
                 Text(
-                    text = "Reset Statistics",
+                    text = stringResource(R.string.statistics_reset_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
                     color = Color.White
                 )
             },
             text = {
                 Text(
-                    text = "Are you sure you want to reset all statistics? This will clear all your game progress and cannot be undone.",
+                    text = stringResource(R.string.statistics_reset_dialog_body),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -206,7 +208,7 @@ fun StatisticsScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Reset")
+                    Text(stringResource(R.string.action_reset))
                 }
             },
             dismissButton = {
@@ -216,7 +218,7 @@ fun StatisticsScreen(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
             containerColor = DialogBackground,

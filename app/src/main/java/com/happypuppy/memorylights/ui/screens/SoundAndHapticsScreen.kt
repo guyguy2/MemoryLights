@@ -18,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
@@ -42,6 +44,7 @@ fun SoundAndHapticsScreen(
     val soundPackListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -59,12 +62,12 @@ fun SoundAndHapticsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sound & Haptics") },
+                title = { Text(stringResource(R.string.sound_haptics_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -90,13 +93,13 @@ fun SoundAndHapticsScreen(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.music_note_24px),
-                    contentDescription = "Sound Packs",
+                    contentDescription = stringResource(R.string.sound_packs_heading),
                     tint = Color.White,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Text(
-                    text = "Sound Packs",
+                    text = stringResource(R.string.sound_packs_heading),
                     color = Color.White,
                     fontSize = 18.sp
                 )
@@ -119,7 +122,7 @@ fun SoundAndHapticsScreen(
                             isSelected = soundPack == currentSoundPack,
                             onSelect = {
                                 onSoundPackSelected(soundPack)
-                                toast("Sound pack: ${soundPack.displayName}")
+                                toast(context.getString(R.string.snack_sound_pack, context.getString(soundPack.displayNameRes)))
                             }
                         )
                     }
@@ -151,12 +154,12 @@ fun SoundAndHapticsScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "More options",
+                                contentDescription = stringResource(R.string.sound_packs_more_cd),
                                 tint = Color.Gray
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "More sound options",
+                                text = stringResource(R.string.sound_packs_more),
                                 color = Color.Gray,
                                 fontSize = 12.sp
                             )

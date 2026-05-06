@@ -36,7 +36,12 @@ data class AppSettings(
     val audioOnlyModeEnabled: Boolean = false,
     val gameMode: GameMode = GameMode.CLASSIC,
     val bestBlitzTime4ButtonMs: Long = 0L,
-    val bestBlitzTime6ButtonMs: Long = 0L
+    val bestBlitzTime6ButtonMs: Long = 0L,
+    val dailyChallengeEnabled: Boolean = false,
+    /** Epoch day (`LocalDate.toEpochDay()`) of the last daily run completed; 0 = never. */
+    val dailyCompletedEpochDay: Long = 0L,
+    /** Best level reached on `dailyCompletedEpochDay`'s daily run. Resets when the day rolls over. */
+    val dailyBestLevel: Int = 0
 )
 
 /**
@@ -62,6 +67,8 @@ interface SettingsRepository {
     fun setGameMode(mode: GameMode)
     fun setBestBlitzTime4ButtonMs(ms: Long)
     fun setBestBlitzTime6ButtonMs(ms: Long)
+    fun setDailyChallengeEnabled(enabled: Boolean)
+    fun setDailyCompletion(epochDay: Long, bestLevel: Int)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -99,6 +106,9 @@ class DataStoreSettingsRepository(
         private val KEY_GAME_MODE = stringPreferencesKey("game_mode")
         private val KEY_BEST_BLITZ_TIME_4_BUTTON_MS = longPreferencesKey("best_blitz_time_4_button_ms")
         private val KEY_BEST_BLITZ_TIME_6_BUTTON_MS = longPreferencesKey("best_blitz_time_6_button_ms")
+        private val KEY_DAILY_CHALLENGE_ENABLED = booleanPreferencesKey("daily_challenge_enabled")
+        private val KEY_DAILY_COMPLETED_EPOCH_DAY = longPreferencesKey("daily_completed_epoch_day")
+        private val KEY_DAILY_BEST_LEVEL = intPreferencesKey("daily_best_level")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -119,7 +129,10 @@ class DataStoreSettingsRepository(
             audioOnlyModeEnabled = prefs[KEY_AUDIO_ONLY_MODE_ENABLED] ?: false,
             gameMode = readGameMode(prefs),
             bestBlitzTime4ButtonMs = prefs[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] ?: 0L,
-            bestBlitzTime6ButtonMs = prefs[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] ?: 0L
+            bestBlitzTime6ButtonMs = prefs[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] ?: 0L,
+            dailyChallengeEnabled = prefs[KEY_DAILY_CHALLENGE_ENABLED] ?: false,
+            dailyCompletedEpochDay = prefs[KEY_DAILY_COMPLETED_EPOCH_DAY] ?: 0L,
+            dailyBestLevel = prefs[KEY_DAILY_BEST_LEVEL] ?: 0
         )
     }
 
@@ -157,6 +170,11 @@ class DataStoreSettingsRepository(
     override fun setGameMode(mode: GameMode) = write { it[KEY_GAME_MODE] = mode.name }
     override fun setBestBlitzTime4ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] = ms }
     override fun setBestBlitzTime6ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] = ms }
+    override fun setDailyChallengeEnabled(enabled: Boolean) = write { it[KEY_DAILY_CHALLENGE_ENABLED] = enabled }
+    override fun setDailyCompletion(epochDay: Long, bestLevel: Int) = write {
+        it[KEY_DAILY_COMPLETED_EPOCH_DAY] = epochDay
+        it[KEY_DAILY_BEST_LEVEL] = bestLevel
+    }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

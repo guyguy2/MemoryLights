@@ -45,7 +45,10 @@ data class SimonGameUiState(
     val blitzElapsedMs: Long = 0L, // Final elapsed time when blitz run completes (won or lost); 0 while still in flight
     val blitzWon: Boolean = false, // True when the player completed BLITZ_TARGET_LEVEL levels — drives "VICTORY" overlay vs GAME OVER
     val bestBlitzTime4ButtonMs: Long = 0L, // Persisted best blitz time for 4-button mode; 0 = no completion yet
-    val bestBlitzTime6ButtonMs: Long = 0L // Persisted best blitz time for 6-button mode; 0 = no completion yet
+    val bestBlitzTime6ButtonMs: Long = 0L, // Persisted best blitz time for 6-button mode; 0 = no completion yet
+    val dailyChallengeEnabled: Boolean = false, // Daily Challenge (F6): seed sequence with today's epoch day
+    val dailyCompletedEpochDay: Long = 0L, // Epoch day of the last daily run played
+    val dailyBestLevel: Int = 0 // Best level on dailyCompletedEpochDay; resets when day rolls over
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int
