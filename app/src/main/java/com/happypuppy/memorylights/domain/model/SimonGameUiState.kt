@@ -3,6 +3,7 @@ package com.happypuppy.memorylights.domain.model
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 
 /**
  * Data class to represent game UI state.
@@ -48,7 +49,8 @@ data class SimonGameUiState(
     val bestBlitzTime6ButtonMs: Long = 0L, // Persisted best blitz time for 6-button mode; 0 = no completion yet
     val dailyChallengeEnabled: Boolean = false, // Daily Challenge (F6): seed sequence with today's epoch day
     val dailyCompletedEpochDay: Long = 0L, // Epoch day of the last daily run played
-    val dailyBestLevel: Int = 0 // Best level on dailyCompletedEpochDay; resets when day rolls over
+    val dailyBestLevel: Int = 0, // Best level on dailyCompletedEpochDay; resets when day rolls over
+    val themeMode: ThemeMode = ThemeMode.AMOLED // Surface palette mode (F12): AMOLED black or Material dark
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int

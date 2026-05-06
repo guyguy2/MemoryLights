@@ -28,9 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
-import com.happypuppy.memorylights.ui.theme.CardBackground
-import com.happypuppy.memorylights.ui.theme.DialogBackground
-import com.happypuppy.memorylights.ui.theme.SurfaceSelected
+import com.happypuppy.memorylights.domain.enums.ThemeMode
+import kotlinx.coroutines.launch
 
 /**
  * Top-level Settings screen — a navigation hub since F18. Three chevron
@@ -42,6 +41,8 @@ import com.happypuppy.memorylights.ui.theme.SurfaceSelected
 @Composable
 fun SettingsScreen(
     currentSoundPack: SoundPack,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onGameModesClick: () -> Unit,
     onGameplayClick: () -> Unit,
     onSoundAndHapticsClick: () -> Unit,
@@ -50,6 +51,14 @@ fun SettingsScreen(
     onBackPressed: () -> Unit
 ) {
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    fun toast(message: String) {
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+        }
+    }
 
     var showAboutDialog by remember { mutableStateOf(false) }
     var showResetHighScoreDialog by remember { mutableStateOf(false) }
@@ -67,13 +76,14 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
-        containerColor = Color.Black
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -109,12 +119,22 @@ fun SettingsScreen(
                 onClick = onSoundAndHapticsClick
             )
 
+            ThemeCard(
+                themeMode = themeMode,
+                onThemeModeChange = { newMode ->
+                    if (newMode != themeMode) {
+                        onThemeModeChange(newMode)
+                        toast(context.getString(R.string.snack_theme, context.getString(newMode.displayNameRes)))
+                    }
+                }
+            )
+
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
                 thickness = 1.dp,
-                color = SurfaceSelected
+                color = MaterialTheme.colorScheme.surfaceContainerHighest
             )
 
             NavCard(
@@ -174,7 +194,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
                 thickness = 1.dp,
-                color = SurfaceSelected
+                color = MaterialTheme.colorScheme.surfaceContainerHighest
             )
 
             SettingsCard(
@@ -312,7 +332,7 @@ fun SettingsScreen(
                     )
                 }
             },
-            containerColor = DialogBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -358,7 +378,7 @@ fun SettingsScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = DialogBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -429,7 +449,7 @@ fun SettingsCard(
             .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardBackground
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -444,7 +464,7 @@ fun SoundPackOption(
     onSelect: () -> Unit
 ) {
     val backgroundColor = if (isSelected) {
-        SurfaceSelected
+        MaterialTheme.colorScheme.surfaceContainerHighest
     } else {
         Color.Transparent
     }
@@ -483,6 +503,69 @@ fun SoundPackOption(
                 color = Color.Gray,
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+    }
+}
+
+/**
+ * Theme picker card (F12). Two FilterChips for AMOLED Black / Dark.
+ * Mirrors the timeout chip-group pattern in GameplayScreen so users
+ * recognise the segmented-control idiom.
+ */
+@Composable
+private fun ThemeCard(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
+) {
+    SettingsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = stringResource(R.string.settings_theme_cd),
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.settings_theme_title),
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_theme_summary),
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = mode == themeMode,
+                        onClick = { onThemeModeChange(mode) },
+                        label = { Text(stringResource(mode.displayNameRes)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            labelColor = Color.Gray,
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
     }
 }

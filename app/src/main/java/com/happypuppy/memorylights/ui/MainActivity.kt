@@ -6,10 +6,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -54,8 +52,8 @@ class MainActivity : ComponentActivity() {
         // current destination inside MemoryLightsGame.
 
         setContent {
-            MyApplicationTheme {
-                // No need for a Surface here since our Scaffold components handle the surface
+            val uiState by viewModel.uiState.collectAsState()
+            MyApplicationTheme(themeMode = uiState.themeMode) {
                 MemoryLightsGame(viewModel)
             }
         }

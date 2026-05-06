@@ -23,9 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.model.GameStatistics
-import com.happypuppy.memorylights.ui.theme.CardBackground
-import com.happypuppy.memorylights.ui.theme.DialogBackground
-import com.happypuppy.memorylights.ui.theme.SurfaceSelected
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,13 +47,13 @@ fun StatisticsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
-        containerColor = Color.Black
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -127,7 +124,7 @@ fun StatisticsScreen(
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 thickness = 1.dp,
-                color = SurfaceSelected
+                color = MaterialTheme.colorScheme.surfaceContainerHighest
             )
 
             SettingsCard(
@@ -218,7 +215,7 @@ fun StatisticsScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = DialogBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -237,7 +234,7 @@ fun StatisticCard(
             .fillMaxWidth()
             .padding(bottom = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = CardBackground
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
         shape = RoundedCornerShape(12.dp)
     ) {

@@ -121,6 +121,14 @@
     <string name="snack_mode">Mode: %1$s</string>
     <string name="snack_sound_pack">Sound pack: %1$s</string>
     <string name="snack_timeout_seconds">Timeout: %1$ds</string>
+    <string name="snack_theme">Theme: %1$s</string>
+
+    <!-- Theme toggle (F12) -->
+    <string name="theme_mode_amoled">AMOLED Black</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_summary">Surface colors used across menus and dialogs</string>
+    <string name="settings_theme_cd">Theme</string>
 
     <string name="confirm_end_game_title">End current game?</string>
     <string name="confirm_end_game_mode">Switching to %1$s will end your current run. Continue?</string>

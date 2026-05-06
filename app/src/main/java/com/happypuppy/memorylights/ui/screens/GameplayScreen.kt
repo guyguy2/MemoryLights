@@ -15,7 +15,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
-import com.happypuppy.memorylights.ui.theme.SurfaceContainer
 import kotlinx.coroutines.launch
 
 /**
@@ -58,14 +57,14 @@ fun GameplayScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Black
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -122,7 +121,7 @@ fun GameplayScreen(
                                 },
                                 label = { Text(stringResource(R.string.gameplay_timeout_chip, seconds)) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = SurfaceContainer,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                     labelColor = Color.Gray,
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = Color.White

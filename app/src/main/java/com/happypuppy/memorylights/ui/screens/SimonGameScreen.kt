@@ -78,7 +78,6 @@ import com.happypuppy.memorylights.ui.navigation.GameplayRoute
 import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
-import com.happypuppy.memorylights.ui.theme.CardBackground
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 
 // Bias-based alignment for the four center-anchored text overlays
@@ -149,6 +148,8 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
         composable<SettingsRoute> {
             SettingsScreen(
                 currentSoundPack = uiState.currentSoundPack,
+                themeMode = uiState.themeMode,
+                onThemeModeChange = { viewModel.setThemeMode(it) },
                 onGameModesClick = { navController.navigate(GameModesRoute) },
                 onGameplayClick = { navController.navigate(GameplayRoute) },
                 onSoundAndHapticsClick = { navController.navigate(SoundAndHapticsRoute) },
@@ -360,13 +361,13 @@ fun SimonGameScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     actionIconContentColor = Color.White
                 )
             )
         },
-        containerColor = Color.Black
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         // Game content with minimal padding to maximize button size
         Box(
@@ -622,7 +623,9 @@ fun SimonGameScreen(
                                         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                     )
                                     .clip(CircleShape)
-                                    .background(CardBackground)
+                                    // Center disc stays near-black on both AMOLED and DARK so
+                                    // the colored panels keep their contrast pop regardless of theme.
+                                    .background(Color.Black)
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = ripple(),

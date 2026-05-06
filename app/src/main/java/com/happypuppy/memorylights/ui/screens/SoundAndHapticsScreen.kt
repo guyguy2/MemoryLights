@@ -24,8 +24,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
-import com.happypuppy.memorylights.ui.theme.SurfaceContainer
-import com.happypuppy.memorylights.ui.theme.SurfaceContainerFade
 import kotlinx.coroutines.launch
 
 /**
@@ -71,14 +69,14 @@ fun SoundAndHapticsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Black
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -104,12 +102,14 @@ fun SoundAndHapticsScreen(
                 )
             }
 
+            val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            val fadeColor = surfaceContainerColor.copy(alpha = 0.9f)
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceContainer)
+                    .background(surfaceContainerColor)
             ) {
                 LazyColumn(
                     state = soundPackListState,
@@ -137,7 +137,7 @@ fun SoundAndHapticsScreen(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        SurfaceContainerFade
+                                        fadeColor
                                     )
                                 )
                             )
@@ -181,7 +181,7 @@ fun SoundAndHapticsScreen(
                             .background(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        SurfaceContainerFade,
+                                        fadeColor,
                                         Color.Transparent
                                     )
                                 )

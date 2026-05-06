@@ -15,6 +15,7 @@ import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import kotlinx.coroutines.Job
@@ -151,7 +152,8 @@ class SimonGameViewModel(
             bestBlitzTime6ButtonMs = settings.bestBlitzTime6ButtonMs,
             dailyChallengeEnabled = settings.dailyChallengeEnabled,
             dailyCompletedEpochDay = settings.dailyCompletedEpochDay,
-            dailyBestLevel = settings.dailyBestLevel
+            dailyBestLevel = settings.dailyBestLevel,
+            themeMode = settings.themeMode
         )}
     }
 
@@ -391,6 +393,17 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting reverse mode enabled: $enabled")
         _uiState.update { it.copy(reverseModeEnabled = enabled) }
         settingsRepository.setReverseModeEnabled(enabled)
+    }
+
+    /**
+     * Switch surface palette (F12). Pure UI concern — no game-state side
+     * effects, so an active run keeps playing through the change.
+     */
+    fun setThemeMode(mode: ThemeMode) {
+        if (_uiState.value.themeMode == mode) return
+        Log.d(TAG, "Setting theme mode: $mode")
+        _uiState.update { it.copy(themeMode = mode) }
+        settingsRepository.setThemeMode(mode)
     }
 
     /**

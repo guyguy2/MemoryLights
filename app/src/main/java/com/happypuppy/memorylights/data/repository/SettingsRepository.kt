@@ -13,6 +13,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -41,7 +42,8 @@ data class AppSettings(
     /** Epoch day (`LocalDate.toEpochDay()`) of the last daily run completed; 0 = never. */
     val dailyCompletedEpochDay: Long = 0L,
     /** Best level reached on `dailyCompletedEpochDay`'s daily run. Resets when the day rolls over. */
-    val dailyBestLevel: Int = 0
+    val dailyBestLevel: Int = 0,
+    val themeMode: ThemeMode = ThemeMode.AMOLED
 )
 
 /**
@@ -69,6 +71,7 @@ interface SettingsRepository {
     fun setBestBlitzTime6ButtonMs(ms: Long)
     fun setDailyChallengeEnabled(enabled: Boolean)
     fun setDailyCompletion(epochDay: Long, bestLevel: Int)
+    fun setThemeMode(mode: ThemeMode)
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -109,6 +112,7 @@ class DataStoreSettingsRepository(
         private val KEY_DAILY_CHALLENGE_ENABLED = booleanPreferencesKey("daily_challenge_enabled")
         private val KEY_DAILY_COMPLETED_EPOCH_DAY = longPreferencesKey("daily_completed_epoch_day")
         private val KEY_DAILY_BEST_LEVEL = intPreferencesKey("daily_best_level")
+        private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(context.settingsDataStore)
@@ -132,8 +136,19 @@ class DataStoreSettingsRepository(
             bestBlitzTime6ButtonMs = prefs[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] ?: 0L,
             dailyChallengeEnabled = prefs[KEY_DAILY_CHALLENGE_ENABLED] ?: false,
             dailyCompletedEpochDay = prefs[KEY_DAILY_COMPLETED_EPOCH_DAY] ?: 0L,
-            dailyBestLevel = prefs[KEY_DAILY_BEST_LEVEL] ?: 0
+            dailyBestLevel = prefs[KEY_DAILY_BEST_LEVEL] ?: 0,
+            themeMode = readThemeMode(prefs)
         )
+    }
+
+    private fun readThemeMode(prefs: Preferences): ThemeMode {
+        val name = prefs[KEY_THEME_MODE] ?: return ThemeMode.AMOLED
+        return try {
+            ThemeMode.valueOf(name)
+        } catch (_: IllegalArgumentException) {
+            Log.w(TAG, "Invalid theme mode name: $name, defaulting to AMOLED")
+            ThemeMode.AMOLED
+        }
     }
 
     private fun readGameMode(prefs: Preferences): GameMode {
@@ -175,6 +190,7 @@ class DataStoreSettingsRepository(
         it[KEY_DAILY_COMPLETED_EPOCH_DAY] = epochDay
         it[KEY_DAILY_BEST_LEVEL] = bestLevel
     }
+    override fun setThemeMode(mode: ThemeMode) = write { it[KEY_THEME_MODE] = mode.name }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

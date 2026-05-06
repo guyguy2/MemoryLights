@@ -16,7 +16,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
-import com.happypuppy.memorylights.ui.theme.SurfaceContainer
 import kotlinx.coroutines.launch
 
 /**
@@ -80,14 +79,14 @@ fun GameModesScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
+                    containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Black
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -253,7 +252,7 @@ fun GameModesScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = com.happypuppy.memorylights.ui.theme.DialogBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -300,7 +299,7 @@ fun GameModesScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = com.happypuppy.memorylights.ui.theme.DialogBackground,
+            containerColor = MaterialTheme.colorScheme.surface,
             titleContentColor = Color.White,
             textContentColor = Color.White
         )
@@ -355,7 +354,7 @@ private fun GameModeCard(
                         onClick = { onSelect(mode) },
                         label = { Text(stringResource(mode.displayNameRes)) },
                         colors = FilterChipDefaults.filterChipColors(
-                            containerColor = SurfaceContainer,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             labelColor = Color.Gray,
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedLabelColor = Color.White
