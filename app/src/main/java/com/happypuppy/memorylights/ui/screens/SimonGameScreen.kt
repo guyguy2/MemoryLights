@@ -1,9 +1,7 @@
 package com.happypuppy.memorylights.ui.screens
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -31,11 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -65,6 +60,7 @@ import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.PausedOverlay
 import com.happypuppy.memorylights.ui.components.ReplayShareButtons
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
+import com.happypuppy.memorylights.ui.components.TimeoutCountdownRing
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
@@ -733,46 +729,15 @@ fun SimonGameScreen(
             
             // Inactivity countdown ring around the center disc — drains over
             // uiState.playerTimeoutMs during the player's turn and resets on
-            // each press. Color shifts from green → red as time runs out so
-            // the signal is readable peripherally. Re-keying on
-            // playerTimeoutMs lets a mid-turn slider change re-launch the
-            // animation at the new duration.
+            // each press. Color shifts from green to red as time runs out so
+            // the signal is readable peripherally. Re-keying on playerTimeoutMs
+            // lets a mid-turn slider change re-launch the animation at the new
+            // duration. Extracted to a dedicated component (Wave 4).
             if (uiState.gameState == GameState.PlayerRepeating) {
-                val timeoutFraction = remember { Animatable(1f) }
-                LaunchedEffect(uiState.timeoutResetTick, uiState.playerTimeoutMs) {
-                    timeoutFraction.snapTo(1f)
-                    timeoutFraction.animateTo(
-                        targetValue = 0f,
-                        animationSpec = tween(
-                            durationMillis = uiState.playerTimeoutMs.toInt(),
-                            easing = LinearEasing
-                        )
-                    )
-                }
-                val ringColor = lerp(
-                    Color(0xFFE53935), // red — almost out of time
-                    Color(0xFF4CAF50), // green — fresh
-                    timeoutFraction.value
+                TimeoutCountdownRing(
+                    timeoutMs = uiState.playerTimeoutMs,
+                    resetTick = uiState.timeoutResetTick
                 )
-                Canvas(
-                    modifier = Modifier
-                        .size(124.dp)
-                        .zIndex(2f)
-                ) {
-                    val stroke = 4.dp.toPx()
-                    drawArc(
-                        color = ringColor,
-                        startAngle = -90f,
-                        sweepAngle = 360f * timeoutFraction.value,
-                        useCenter = false,
-                        topLeft = Offset(stroke / 2, stroke / 2),
-                        size = Size(
-                            width = size.width - stroke,
-                            height = size.height - stroke
-                        ),
-                        style = Stroke(width = stroke, cap = StrokeCap.Round)
-                    )
-                }
             }
 
             // Center-anchored headline overlays. Each is a fade/scale text
