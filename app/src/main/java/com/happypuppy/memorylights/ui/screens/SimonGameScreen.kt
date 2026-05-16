@@ -1,7 +1,6 @@
 package com.happypuppy.memorylights.ui.screens
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -10,13 +9,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -25,9 +20,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ripple
 import androidx.compose.material3.*
@@ -70,6 +63,7 @@ import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
 import com.happypuppy.memorylights.ui.components.OverlayBias6Button
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.PausedOverlay
+import com.happypuppy.memorylights.ui.components.ReplayShareButtons
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
@@ -890,61 +884,22 @@ fun SimonGameScreen(
             // The disc itself starts a fresh run; Replay lets the player retry
             // the same sequence (highest-leverage retention loop), Share fires
             // an Android share sheet with a 1080x1080 score-card PNG (F10).
-            AnimatedVisibility(
+            // Extracted to a dedicated component (Wave 4) — the share-helper
+            // wiring stays here so the component doesn't need to know about
+            // context, level, high-score, or 6-button mode.
+            ReplayShareButtons(
                 visible = uiState.gameState == GameState.GameOver &&
                         uiState.sequence.isNotEmpty(),
-                enter = fadeIn() + scaleIn(initialScale = 0.9f),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    Row(
-                        modifier = Modifier.padding(bottom = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onReplayLastSequence,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            ),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.game_replay), style = MaterialTheme.typography.labelLarge)
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                ScoreShareHelper.shareScore(
-                                    context = context,
-                                    level = uiState.level,
-                                    bestScore = uiState.currentHighScore,
-                                    is6ButtonMode = uiState.memoryLightsPlusEnabled
-                                )
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color.White
-                            ),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.game_share), style = MaterialTheme.typography.labelLarge)
-                        }
-                    }
+                onReplay = onReplayLastSequence,
+                onShare = {
+                    ScoreShareHelper.shareScore(
+                        context = context,
+                        level = uiState.level,
+                        bestScore = uiState.currentHighScore,
+                        is6ButtonMode = uiState.memoryLightsPlusEnabled
+                    )
                 }
-            }
+            )
 
             // Paused overlay (F14). Tap anywhere on the dim backdrop to resume.
             // Z-ordered above all game content so the player can't accidentally
