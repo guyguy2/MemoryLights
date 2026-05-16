@@ -10,6 +10,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -29,11 +31,26 @@ private val Context.statisticsDataStore: DataStore<Preferences> by preferencesDa
  * Reads are exposed as a Flow so callers stay off the main thread.
  * Writes are fire-and-forget on an IO scope; persistence completes asynchronously.
  * Automatically migrates data from SharedPreferences on first access when constructed via [fromContext].
+ *
+ * Scope ownership: when constructed without an explicit [scope] argument, the repo
+ * owns the internal `Dispatchers.IO` scope and [close] will cancel it. When a scope
+ * is injected (e.g. tests passing a `TestScope`), the caller retains ownership and
+ * [close] is a no-op for that scope; the caller is responsible for cancellation.
  */
-class StatisticsRepository(
+class StatisticsRepository internal constructor(
     private val dataStore: DataStore<Preferences>,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val scope: CoroutineScope,
+    private val ownsScope: Boolean
 ) {
+
+    /**
+     * Test-friendly constructor. Caller retains ownership of the supplied [scope]
+     * and is responsible for cancelling it.
+     */
+    constructor(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    ) : this(dataStore, scope, ownsScope = false)
 
     companion object {
         private val KEY_GAMES_PLAYED = intPreferencesKey("games_played")
@@ -43,7 +60,11 @@ class StatisticsRepository(
         private val KEY_PREVIOUS_LEVEL = intPreferencesKey("previous_level")
 
         fun fromContext(context: Context): StatisticsRepository =
-            StatisticsRepository(context.statisticsDataStore)
+            StatisticsRepository(
+                dataStore = context.statisticsDataStore,
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+                ownsScope = true
+            )
     }
 
     val statisticsFlow: Flow<GameStatistics> = dataStore.data.map { prefs ->
@@ -87,6 +108,18 @@ class StatisticsRepository(
             dataStore.edit { prefs ->
                 prefs.clear()
             }
+        }
+    }
+
+    /**
+     * Cancels the internal write scope if this repository owns it.
+     * Wired through Koin's `onClose` so unit tests and explicit `stopKoin()`
+     * calls release the background job; on real devices the process death
+     * cleans up unowned scopes anyway.
+     */
+    fun close() {
+        if (ownsScope) {
+            scope.cancel()
         }
     }
 }

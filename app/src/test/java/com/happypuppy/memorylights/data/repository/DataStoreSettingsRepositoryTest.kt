@@ -6,13 +6,19 @@ import androidx.datastore.preferences.core.Preferences
 import app.cash.turbine.test
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -194,5 +200,39 @@ class DataStoreSettingsRepositoryTest {
             assertEquals(7, updated.dailyBestLevel)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    /**
+     * Audit item #24: production path (`fromContext`) owns the IO scope and must
+     * cancel it when [DataStoreSettingsRepository.close] is called. We construct
+     * an owned scope by hand here because tests can't easily get a real Context;
+     * see [StatisticsRepositoryTest.close cancels internally-owned scope] for the
+     * parallel coverage.
+     */
+    @Test
+    fun `close cancels internally-owned scope`() {
+        val ownedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val owningRepo = DataStoreSettingsRepository(
+            dataStore = dataStore,
+            scope = ownedScope,
+            ownsScope = true
+        )
+        val job = ownedScope.coroutineContext[Job]!!
+        assertTrue("scope is active before close", job.isActive)
+        owningRepo.close()
+        assertFalse("scope is cancelled after close", job.isActive)
+    }
+
+    @Test
+    fun `close is a no-op when scope is injected`() {
+        val injectedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val job = injectedScope.coroutineContext[Job]!!
+        val injectedRepo = DataStoreSettingsRepository(
+            dataStore = dataStore,
+            scope = injectedScope
+        )
+        injectedRepo.close()
+        assertTrue("injected scope is left alone by close", job.isActive)
+        injectedScope.cancel()
     }
 }

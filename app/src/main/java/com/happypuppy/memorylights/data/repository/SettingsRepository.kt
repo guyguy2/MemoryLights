@@ -16,6 +16,8 @@ import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -72,6 +74,12 @@ interface SettingsRepository {
     fun setDailyChallengeEnabled(enabled: Boolean)
     fun setDailyCompletion(epochDay: Long, bestLevel: Int)
     fun setThemeMode(mode: ThemeMode)
+
+    /**
+     * Cancels any background scope the repository owns. Implementations that
+     * use an injected scope (e.g. tests) must leave the caller's scope alone.
+     */
+    fun close()
 }
 
 private const val LEGACY_PREFS_NAME = "simon_game_prefs"
@@ -86,11 +94,26 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 /**
  * DataStore implementation of SettingsRepository.
  * Automatically migrates data from SharedPreferences on first access when constructed via [fromContext].
+ *
+ * Scope ownership: when constructed without an explicit [scope] argument, the repo
+ * owns the internal `Dispatchers.IO` scope and [close] will cancel it. When a scope
+ * is injected (e.g. tests passing a `TestScope`), the caller retains ownership and
+ * [close] is a no-op for that scope; the caller is responsible for cancellation.
  */
-class DataStoreSettingsRepository(
+class DataStoreSettingsRepository internal constructor(
     private val dataStore: DataStore<Preferences>,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val scope: CoroutineScope,
+    private val ownsScope: Boolean
 ) : SettingsRepository {
+
+    /**
+     * Test-friendly constructor. Caller retains ownership of the supplied [scope]
+     * and is responsible for cancelling it.
+     */
+    constructor(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    ) : this(dataStore, scope, ownsScope = false)
 
     companion object {
         private const val TAG = "SettingsRepository"
@@ -115,7 +138,11 @@ class DataStoreSettingsRepository(
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
-            DataStoreSettingsRepository(context.settingsDataStore)
+            DataStoreSettingsRepository(
+                dataStore = context.settingsDataStore,
+                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+                ownsScope = true
+            )
     }
 
     override val settingsFlow: Flow<AppSettings> = dataStore.data.map { prefs ->
@@ -195,6 +222,12 @@ class DataStoreSettingsRepository(
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {
             dataStore.edit(block)
+        }
+    }
+
+    override fun close() {
+        if (ownsScope) {
+            scope.cancel()
         }
     }
 }
