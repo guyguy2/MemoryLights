@@ -319,6 +319,26 @@ Remaining open audit items: #32 (onboarding — needs UX), #34 (reduce-motion �
 
 Next batch recommendation: **#35 color-blind mode** is still the natural pickup once the UX decision (numeric labels vs distinct shapes vs both) lands — `SimonButtonGrid` already extracts the row-order constants, and now `HeadlineOverlay` shows the pattern for parameterised UI helpers. Alternatively **F8 local achievements / badges** is the next clear mechanical feature: DataStore key-set + a stats-screen row, no UX decision needed.
 
+## Session 2026-05-16 — Wave 4
+
+Four mechanical extractions continuing the Wave 2/Wave 3 thread (#17 `SimonButtonGrid`, #65 `HeadlineOverlay`). `SimonGameScreen.kt` 1088 → 940 lines (-148), below the 1000-line threshold for the first time since Speed Blitz HUD and the inactivity ring landed. New files all live in `ui/components/`:
+
+1. **`PausedOverlay`** — 47-line inline F14 overlay. Dim backdrop + play icon + Paused headline + tap-to-resume. Self-contained semantics (`contentDescription` on the backdrop for TalkBack). Lets `SimonGameScreen` drop both `androidx.compose.ui.semantics.*` imports — every other `contentDescription` in the screen is the positional Icon parameter, not the modifier.
+2. **`ReplayShareButtons`** — 55-line GameOver-only `AnimatedVisibility` row. The `ScoreShareHelper.shareScore(...)` call stays in the screen as an `onShare` lambda so the component doesn't need `LocalContext.current`, `uiState.level`, `uiState.currentHighScore`, or `uiState.memoryLightsPlusEnabled`. Lets the screen drop `BorderStroke`, `OutlinedButton`, `ButtonDefaults`, `Icons.Default.Refresh`, `Icons.Default.Share`, plus the `AnimatedVisibility`/`fadeIn`/`fadeOut`/`scaleIn` set — none of which the screen uses directly anymore.
+3. **`TimeoutCountdownRing`** — 37-line drain-ring around the center disc during `PlayerRepeating`. Takes `timeoutMs` + `resetTick`. Re-keying on `timeoutMs` (not just `resetTick`) lets a mid-turn slider in Settings -> Gameplay re-launch at the new duration without waiting for the old animation to finish. Lets the screen drop `Animatable`, `LinearEasing`, `Size`, `lerp`, and the `drawscope.Stroke` imports — the center-disc Canvas inside the screen uses fully-qualified `androidx.compose.ui.graphics.drawscope.Stroke` inline.
+4. **`PlayerTurnHalo`** — 30-line constant-size pulsing halo during `PlayerRepeating`. Zero parameters (size 130dp, radius 65dp, 0.06->0.18 alpha sweep, 1.00->1.05 scale sweep, 1100ms FastOutSlowIn — all constants). Caller-side `gameState` gate stays in the screen.
+
+All four are byte-equivalent to the prior inline blocks: same sizes, same animation curves, same colors, same z-order. No behaviour change.
+
+64/64 unit tests green, `./gradlew assembleDebug` succeeds. Lint not re-run this wave.
+
+Remaining seams in `SimonGameScreen.kt` couple to multiple state fields and can't be ripped out as cheaply:
+- The center-disc Canvas (4-button + 6-button arc drawing, ~100 lines) splits along the existing `memoryLightsPlusEnabled` branch and is a candidate **if** we extend to color-blind mode (which would add per-button labels there).
+- The level-display Column (~120 lines: level number + Speed Blitz time + tap-to-start + sound-load error + sequence-progress) reads ~9 fields off `uiState`. Worth extracting only if its surface is about to grow.
+- `BlitzHud` is already a private composable inside the screen file — moving it to `ui/components/` is a one-line lift but adds no clarity.
+
+Next batch recommendation: **F8 local achievements / badges** is the highest-leverage no-UX-decision pickup now — the cheap extraction seams are exhausted, and F8 is a clean DataStore + stats-screen row that doesn't require any design call. **#35 color-blind mode** remains the natural pickup once the UX decision lands (numeric labels vs distinct shapes vs both).
+
 ---
 
 ## Critical Files
