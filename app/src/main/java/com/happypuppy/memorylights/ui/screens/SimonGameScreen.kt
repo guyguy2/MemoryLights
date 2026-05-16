@@ -58,6 +58,7 @@ import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
 import com.happypuppy.memorylights.ui.components.OverlayBias6Button
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.PausedOverlay
+import com.happypuppy.memorylights.ui.components.PlayerTurnHalo
 import com.happypuppy.memorylights.ui.components.ReplayShareButtons
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.components.TimeoutCountdownRing
@@ -804,36 +805,10 @@ fun SimonGameScreen(
             // for the entire PlayerRepeating phase. The "YOUR TURN" text only
             // shows for the first 3 rounds (#15 a11y) — after that, this halo
             // is the sole turn indicator, so it animates to stay legible
-            // peripherally even at high levels (#60).
+            // peripherally even at high levels (#60). Extracted to a
+            // dedicated component (Wave 4).
             if (uiState.gameState == GameState.PlayerRepeating) {
-                val turnTransition = rememberInfiniteTransition(label = "turnPulse")
-                val turnAlpha by turnTransition.animateFloat(
-                    initialValue = 0.06f,
-                    targetValue = 0.18f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "turnAlpha"
-                )
-                val turnScale by turnTransition.animateFloat(
-                    initialValue = 1.0f,
-                    targetValue = 1.05f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "turnScale"
-                )
-                Box(
-                    modifier = Modifier
-                        .size(130.dp)
-                        .graphicsLayer(scaleX = turnScale, scaleY = turnScale)
-                        .background(
-                            Color.White.copy(alpha = turnAlpha),
-                            RoundedCornerShape(65.dp)
-                        )
-                )
+                PlayerTurnHalo()
             }
             
             // Particle effect overlay for new high score celebration
