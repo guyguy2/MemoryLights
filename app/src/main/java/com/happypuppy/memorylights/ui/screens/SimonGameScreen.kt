@@ -47,8 +47,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,6 +69,7 @@ import com.happypuppy.memorylights.ui.components.OverlayBias4Button
 import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
 import com.happypuppy.memorylights.ui.components.OverlayBias6Button
 import com.happypuppy.memorylights.ui.components.ParticleEffect
+import com.happypuppy.memorylights.ui.components.PausedOverlay
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
@@ -949,54 +948,12 @@ fun SimonGameScreen(
 
             // Paused overlay (F14). Tap anywhere on the dim backdrop to resume.
             // Z-ordered above all game content so the player can't accidentally
-            // hit a colored panel while paused.
-            val pauseOverlayCd = stringResource(R.string.a11y_pause_overlay)
-            AnimatedVisibility(
+            // hit a colored panel while paused. Extracted to a dedicated
+            // component (Wave 4) — same dim color, icon, copy, and z-order.
+            PausedOverlay(
                 visible = uiState.gameState == GameState.Paused,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(10f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.7f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onResumeGame
-                        )
-                        .semantics {
-                            contentDescription = pauseOverlayCd
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.play_arrow_24px),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(96.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.game_paused),
-                            color = Color.White,
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.game_paused_hint),
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
+                onResume = onResumeGame
+            )
 
             // Speed Blitz HUD (F4) — sits at the top of the play area in any
             // active blitz state, showing progress to BLITZ_TARGET_LEVEL and
