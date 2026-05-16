@@ -45,7 +45,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -56,7 +55,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import android.content.res.Configuration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -71,7 +69,7 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.ParticleEffect
-import com.happypuppy.memorylights.ui.components.SimonPanel
+import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
@@ -400,196 +398,16 @@ fun SimonGameScreen(
                         .background(Color.Black)
                 )
 
-                // Simon Says colored panels - Dynamic layout based on mode and orientation.
-                // remember keyed on the orientation int so the boolean is stable
-                // across unrelated Configuration changes (font scale, locale,
-                // density). Full panel extraction tracked separately as #17.
-                val orientation = LocalConfiguration.current.orientation
-                val isLandscape = remember(orientation) {
-                    orientation == Configuration.ORIENTATION_LANDSCAPE
-                }
-                
-                if (uiState.memoryLightsPlusEnabled) {
-                    // 6-button mode: Layout changes based on orientation
-                    if (isLandscape) {
-                        // Landscape: 2x3 grid layout (2 rows, 3 columns)
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            // Top row: Green, Red, Yellow
-                            Row(modifier = Modifier.weight(1f)) {
-                                listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW).forEach { button ->
-                                    SimonPanel(
-                                        color = button.color,
-                                        colorName = stringResource(button.displayNameRes),
-                                        isLit = displayLit == button || uiState.allButtonsLit,
-                                        userPressed = localPressedButtons[button] == true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .padding(2.dp),
-                                        onTouchStateChanged = { isPressed ->
-                                            handleButtonInteraction(button, isPressed)
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Bottom row: Blue, Purple, Orange
-                            Row(modifier = Modifier.weight(1f)) {
-                                listOf(SimonButton.BLUE, SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
-                                    SimonPanel(
-                                        color = button.color,
-                                        colorName = stringResource(button.displayNameRes),
-                                        isLit = displayLit == button || uiState.allButtonsLit,
-                                        userPressed = localPressedButtons[button] == true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .padding(2.dp),
-                                        onTouchStateChanged = { isPressed ->
-                                            handleButtonInteraction(button, isPressed)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        // Portrait: 3x2 grid layout (3 rows, 2 columns) - original layout
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            // Top row: Green, Red
-                            Row(modifier = Modifier.weight(1f)) {
-                                listOf(SimonButton.GREEN, SimonButton.RED).forEach { button ->
-                                    SimonPanel(
-                                        color = button.color,
-                                        colorName = stringResource(button.displayNameRes),
-                                        isLit = displayLit == button || uiState.allButtonsLit,
-                                        userPressed = localPressedButtons[button] == true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .padding(2.dp),
-                                        onTouchStateChanged = { isPressed ->
-                                            handleButtonInteraction(button, isPressed)
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Middle row: Yellow, Blue
-                            Row(modifier = Modifier.weight(1f)) {
-                                listOf(SimonButton.YELLOW, SimonButton.BLUE).forEach { button ->
-                                    SimonPanel(
-                                        color = button.color,
-                                        colorName = stringResource(button.displayNameRes),
-                                        isLit = displayLit == button || uiState.allButtonsLit,
-                                        userPressed = localPressedButtons[button] == true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .padding(2.dp),
-                                        onTouchStateChanged = { isPressed ->
-                                            handleButtonInteraction(button, isPressed)
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Bottom row: Purple, Orange
-                            Row(modifier = Modifier.weight(1f)) {
-                                listOf(SimonButton.PURPLE, SimonButton.ORANGE).forEach { button ->
-                                    SimonPanel(
-                                        color = button.color,
-                                        colorName = stringResource(button.displayNameRes),
-                                        isLit = displayLit == button || uiState.allButtonsLit,
-                                        userPressed = localPressedButtons[button] == true,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .padding(2.dp),
-                                        onTouchStateChanged = { isPressed ->
-                                            handleButtonInteraction(button, isPressed)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // 4-button mode: 2x2 grid layout (classic mode)
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Row(modifier = Modifier.weight(1f)) {
-                            // Green panel (top-left)
-                            SimonPanel(
-                                color = SimonButton.GREEN.color,
-                                colorName = stringResource(SimonButton.GREEN.displayNameRes),
-                                isLit = displayLit == SimonButton.GREEN || uiState.allButtonsLit,
-                                userPressed = localPressedButtons[SimonButton.GREEN] == true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .padding(4.dp),
-                                onTouchStateChanged = { isPressed ->
-                                    handleButtonInteraction(SimonButton.GREEN, isPressed)
-                                }
-                            )
-
-                            // Red panel (top-right)
-                            SimonPanel(
-                                color = SimonButton.RED.color,
-                                colorName = stringResource(SimonButton.RED.displayNameRes),
-                                isLit = displayLit == SimonButton.RED || uiState.allButtonsLit,
-                                userPressed = localPressedButtons[SimonButton.RED] == true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .padding(4.dp),
-                                onTouchStateChanged = { isPressed ->
-                                    handleButtonInteraction(SimonButton.RED, isPressed)
-                                }
-                            )
-                        }
-
-                        Row(modifier = Modifier.weight(1f)) {
-                            // Yellow panel (bottom-left)
-                            SimonPanel(
-                                color = SimonButton.YELLOW.color,
-                                colorName = stringResource(SimonButton.YELLOW.displayNameRes),
-                                isLit = displayLit == SimonButton.YELLOW || uiState.allButtonsLit,
-                                userPressed = localPressedButtons[SimonButton.YELLOW] == true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .padding(4.dp),
-                                onTouchStateChanged = { isPressed ->
-                                    handleButtonInteraction(SimonButton.YELLOW, isPressed)
-                                }
-                            )
-
-                            // Blue panel (bottom-right)
-                            SimonPanel(
-                                color = SimonButton.BLUE.color,
-                                colorName = stringResource(SimonButton.BLUE.displayNameRes),
-                                isLit = displayLit == SimonButton.BLUE || uiState.allButtonsLit,
-                                userPressed = localPressedButtons[SimonButton.BLUE] == true,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .padding(4.dp),
-                                onTouchStateChanged = { isPressed ->
-                                    handleButtonInteraction(SimonButton.BLUE, isPressed)
-                                }
-                            )
-                        }
-                    }
-                }
+                // Simon Says colored panels — layout/orientation handling is
+                // owned by `SimonButtonGrid` so this screen stays focused on
+                // the overlays, the center disc, and game-state plumbing (#17).
+                SimonButtonGrid(
+                    memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                    litButton = displayLit,
+                    allButtonsLit = uiState.allButtonsLit,
+                    pressedButtons = localPressedButtons,
+                    onButtonInteraction = handleButtonInteraction
+                )
 
                 // Center counter/button. Tappable in idle states (GameOver,
                 // WaitingToStart) to start / restart a game; passive otherwise.
