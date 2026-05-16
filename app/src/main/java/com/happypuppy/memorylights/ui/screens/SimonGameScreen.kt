@@ -13,7 +13,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -34,7 +33,6 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -68,6 +66,10 @@ import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
+import com.happypuppy.memorylights.ui.components.HeadlineOverlay
+import com.happypuppy.memorylights.ui.components.OverlayBias4Button
+import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
+import com.happypuppy.memorylights.ui.components.OverlayBias6Button
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
@@ -77,15 +79,6 @@ import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
-
-// Bias-based alignment for the four center-anchored text overlays
-// (HIGH SCORE, GAME OVER, SPEED UP, YOUR TURN). Each overlay sits above
-// the center disc; the bias is roughly proportional to screen height so
-// the text floats consistently across phone sizes without a magic dp
-// offset (#31).
-private val OverlayBias6Button = BiasAlignment(0f, -0.18f)
-private val OverlayBias4Button = BiasAlignment(0f, -0.07f)
-private val OverlayBias4ButtonTurn = BiasAlignment(0f, -0.13f)
 
 /**
  * Format Speed Blitz elapsed time as `M:SS.s` — minutes, seconds, tenths.
@@ -789,104 +782,65 @@ fun SimonGameScreen(
                 }
             }
 
-            // Headline overlay text — switches between HIGH SCORE / VICTORY /
-            // GAME OVER depending on whether the run was a Speed Blitz win
-            // and whether it set a new best.
-            AnimatedVisibility(
+            // Center-anchored headline overlays. Each is a fade/scale text
+            // popup above the game disc, consolidated into a single
+            // `HeadlineOverlay` composable (#65). HIGH SCORE / GAME OVER
+            // both swap copy + color when the run is a Speed Blitz win.
+            val overlayAlign = if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button
+            val overlayHeadlineColor = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow
+
+            // HIGH SCORE / BEST TIME — snappy 0.7 scale-in/out.
+            HeadlineOverlay(
                 visible = uiState.showHighScoreText,
-                enter = fadeIn() + scaleIn(initialScale = 0.7f),
-                exit = fadeOut() + scaleOut(targetScale = 0.7f),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (uiState.blitzWon) R.string.overlay_best_time
-                            else R.string.overlay_high_score
-                        ),
-                        color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier
-                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
-                            .shadow(4.dp)
-                    )
-                }
-            }
+                text = stringResource(
+                    if (uiState.blitzWon) R.string.overlay_best_time
+                    else R.string.overlay_high_score
+                ),
+                color = overlayHeadlineColor,
+                style = MaterialTheme.typography.headlineLarge,
+                alignment = overlayAlign,
+                initialScale = 0.7f
+            )
 
-            // GAME OVER / VICTORY (blitz win without a new best) overlay.
-            AnimatedVisibility(
+            // GAME OVER / VICTORY — slightly slower 0.85 scale matches the
+            // weightier end-of-run beat.
+            HeadlineOverlay(
                 visible = uiState.showGameOverText,
-                enter = fadeIn() + scaleIn(initialScale = 0.85f),
-                exit = fadeOut() + scaleOut(targetScale = 0.85f),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (uiState.blitzWon) R.string.overlay_victory
-                            else R.string.overlay_game_over
-                        ),
-                        color = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow,
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier
-                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
-                            .shadow(4.dp)
-                    )
-                }
-            }
+                text = stringResource(
+                    if (uiState.blitzWon) R.string.overlay_victory
+                    else R.string.overlay_game_over
+                ),
+                color = overlayHeadlineColor,
+                style = MaterialTheme.typography.headlineLarge,
+                alignment = overlayAlign,
+                initialScale = 0.85f
+            )
 
-            // SPEED UP! transient overlay when difficulty crosses a faster tier
-            // (level 5, 9, 13, ... with difficulty enabled). Clears itself via
-            // SPEED_UP_TEXT_DISPLAY_MS. Surfaces a change that was previously
-            // invisible to the player (#62).
-            AnimatedVisibility(
+            // SPEED UP! transient overlay when difficulty crosses a faster
+            // tier (level 5, 9, 13, ... with difficulty enabled). Clears
+            // itself via SPEED_UP_TEXT_DISPLAY_MS. Surfaces a change that
+            // was previously invisible to the player (#62).
+            HeadlineOverlay(
                 visible = uiState.showSpeedUpText,
-                enter = fadeIn() + scaleIn(initialScale = 0.7f),
-                exit = fadeOut() + scaleOut(targetScale = 0.7f),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.overlay_speed_up),
-                        color = Color(0xFFFF7043),
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier
-                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button)
-                            .shadow(4.dp)
-                    )
-                }
-            }
+                text = stringResource(R.string.overlay_speed_up),
+                color = Color(0xFFFF7043),
+                style = MaterialTheme.typography.headlineMedium,
+                alignment = overlayAlign,
+                initialScale = 0.7f
+            )
 
-            // YOUR TURN text overlay when it's player's turn to repeat the sequence
-            AnimatedVisibility(
+            // YOUR TURN — softer 0.9 scale-in, plain fadeOut (no scaleOut)
+            // so the handoff to the gameplay halo doesn't pop. Uses a
+            // different 4-button bias to clear the level number.
+            HeadlineOverlay(
                 visible = uiState.gameState == GameState.PlayerRepeating && uiState.showYourTurnText,
-                enter = fadeIn() + scaleIn(initialScale = 0.9f),
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.overlay_your_turn),
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier
-                            .align(if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4ButtonTurn)
-                            .shadow(4.dp)
-                    )
-                }
-            }
+                text = stringResource(R.string.overlay_your_turn),
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall,
+                alignment = if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4ButtonTurn,
+                initialScale = 0.9f,
+                useScaleOut = false
+            )
             
             // Persistent player-turn cue: a pulsing halo around the center disc
             // for the entire PlayerRepeating phase. The "YOUR TURN" text only
