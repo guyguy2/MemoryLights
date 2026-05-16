@@ -301,6 +301,24 @@ Remaining open audit items: #32 (onboarding), #34 (reduce-motion — previously 
 
 Next batch recommendation: **#35 color-blind mode** is the natural pickup — the freshly-extracted `SimonButtonGrid` is exactly where pattern/icon overlays would land, and the row-order constants already group "which button sits where" in one place. Needs a brief design call (numeric labels vs distinct shapes vs both) before code.
 
+## Session 2026-05-16 — Wave 3
+
+Single mechanical refactor (#35 deferred — needs UX decision per session brief). Picked the next clear extraction target: **#65 `HeadlineOverlay` extract**. The four center-anchored text overlays above the game disc (HIGH SCORE / BEST TIME, GAME OVER / VICTORY, SPEED UP, YOUR TURN) inlined the same `AnimatedVisibility { Box(fillMax + Center) { Text(...) } }` wrapper four times with only the parameters varying (text/color/style/initialScale/scaleOut). Consolidated into a single `ui/components/HeadlineOverlay.kt` composable parameterised by `visible`, `text`, `color`, `style`, `alignment`, `initialScale`, and `useScaleOut`. The three `OverlayBias*` constants moved alongside the composable so the screen and the overlay share one source of truth (was: `private val` in `SimonGameScreen.kt`; now: top-level in `HeadlineOverlay.kt`). The four call sites went from ~25 lines each to ~9 lines each.
+
+Variance preserved verbatim:
+- HIGH SCORE / BEST TIME: scale 0.7 in+out, `headlineLarge`, color flips green/yellow on `blitzWon`.
+- GAME OVER / VICTORY: scale 0.85 in+out, `headlineLarge`, same color flip.
+- SPEED UP: scale 0.7 in+out, `headlineMedium`, fixed orange.
+- YOUR TURN: scale 0.9 in, **plain `fadeOut()` (no scaleOut)**, `headlineSmall`, fixed white, uses `OverlayBias4ButtonTurn` instead of `OverlayBias4Button` for the 4-button case. The `useScaleOut = false` flag captures that asymmetry without losing the byte-equivalence promise.
+
+`SimonGameScreen.kt`: 1134 → 1088 lines (-46). New file: 85 lines. Net +39 lines on the project but four duplicated wrappers became four declarative calls, future overlay tweaks (animation curve, alignment math, shadow depth) edit one place. `BiasAlignment` + `scaleOut` imports removed from the screen — no longer needed there.
+
+64/64 unit tests green, lint clean, `./gradlew assembleDebug` succeeds. Pure structural refactor: no UiState changes, no animation parameter changes, no behavioural surface to verify live.
+
+Remaining open audit items: #32 (onboarding — needs UX), #34 (reduce-motion — previously cut), #35 (color-blind mode — needs UX). Open features unchanged: F8 achievements, F11 GPGS leaderboard, F13 per-button color picker, F17 IAP, Light theme variant of F12.
+
+Next batch recommendation: **#35 color-blind mode** is still the natural pickup once the UX decision (numeric labels vs distinct shapes vs both) lands — `SimonButtonGrid` already extracts the row-order constants, and now `HeadlineOverlay` shows the pattern for parameterised UI helpers. Alternatively **F8 local achievements / badges** is the next clear mechanical feature: DataStore key-set + a stats-screen row, no UX decision needed.
+
 ---
 
 ## Critical Files
