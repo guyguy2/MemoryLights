@@ -1,6 +1,22 @@
-# Resume note for next session (written 2026-05-16, Wave 4)
+# Resume note for next session (written 2026-05-17, Wave 5)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-05-17, Wave 5)
+
+- Branch `main`, working tree clean. Local commits ahead of origin by 13 (no push during background-agent waves).
+- HEAD: Wave 5 commit `0a59583` `feat(F8): wire achievements through ViewModel + Statistics row`. Prior F8 step in `4ec8c80` `feat(F8): add Achievement enum + DataStore persistence`.
+- 80/80 unit tests green (was 64 — +13 F8 step 1 datastore/enum coverage, +4 F8 step 2 VM cases).
+- `./gradlew assembleDebug` succeeds. Lint not re-run this wave.
+- No emulator at session end — F8 is a stats-screen + persistence feature, no game-flow behaviour change beyond the new write path.
+
+## What changed this session (Wave 5)
+Single feature landed: **F8 local achievements**. The dirty tree at session start was in-flight F8 stats-screen work — inspected via `git diff`, all five files were already coherent (Achievement enum reachable, strings present, repo setter live, GameConstants.BLITZ_TARGET_LEVEL + VM `currentEpochDay` injection seam both in place). Only fix needed was a trailing newline on `StatisticsScreen.kt`. The wave was finish-and-commit, not finish-and-implement.
+
+See `specs/improvements.md` Session 2026-05-17 entry for the full detail. Highlights:
+- `SimonGameViewModel.evaluateAndPersistAchievements(...)` called from both `handleBlitzWin` (BLITZ_TARGET_LEVEL + elapsedMs so Speedrun30s sub-30s fires) and `updateGameOverState` (currentLevel + gamesPlayed+1 + dailyChallengeEnabled). Streak unlocks fire on the *next* game-over because the repo owns the previous-level cursor.
+- `AchievementsSection` composable on `StatisticsScreen` — "N / 8 unlocked" header + one Card per badge (locked: Lock + grey; unlocked: CheckCircle + yellow). TalkBack `contentDescription` per card announces lock state + description.
+- 4 new VM tests: FirstWin at level 1, FirstWin + DailyDone together, hydration from AppSettings on init, re-unlock no-op write.
 
 ## State at session end (2026-05-16, Wave 4)
 - Branch `main`, working tree clean. Local commits ahead of origin (no push during background-agent waves — now ahead by 9 commits).
@@ -31,16 +47,16 @@ Single-item background pass — mechanical extraction matching the Wave 2 patter
 
 #35 (color-blind mode) was the originally-recommended pickup but skipped per session brief — it needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands. Wave 3 picked the next mechanical seam instead.
 
-## Recommended next batch (Wave 5)
-The Wave 3-recommendation list, refreshed after Wave 4 took the four cheapest extractions:
+## Recommended next batch (Wave 6)
+F8 closed this wave. The refreshed list:
 
-1. **F8 Local achievements / badges** (M). Pure DataStore key-set + a stats-screen row. No UX decision needed (icons can pull from `Icons.Default.*`). Pairs naturally with the existing statistics screen. **Now the top mechanical pickup** — the easy extraction seams are exhausted.
-2. **Further `SimonGameScreen.kt` extractions** (S, but coupling-heavy). At 940 lines the file is in better shape; remaining candidates couple to multiple state fields:
-   - `CenterDiscCanvas` (4-button + 6-button arc drawing, ~100 lines) — splits along the existing `if (memoryLightsPlusEnabled)` branch.
-   - `LevelDisplayColumn` (level number + Speed Blitz time + tap-to-start + sound-load error + sequence-progress) — ~120 lines but pulls in `gameState`, `gameMode`, `blitzElapsedMs`, `level`, `currentHighScore`, `soundLoadError`, `soundsLoaded`, `sequence`, `playerSequence`. Worth doing **if** the surface is going to grow (color-blind labels would land here); otherwise diminishing return.
+1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons. The Wave-2 `SimonButtonGrid` is the landing zone. **Top mechanical-once-decided feature** — needs a UX decision first (numeric labels vs distinct shapes vs both).
+2. **Further `SimonGameScreen.kt` extractions** (S, coupling-heavy). At 940 lines remaining candidates couple to multiple state fields:
+   - `CenterDiscCanvas` (4-button + 6-button arc drawing, ~100 lines) — splits along the existing `if (memoryLightsPlusEnabled)` branch. **Worth doing in tandem with #35** since color-blind labels would land here.
+   - `LevelDisplayColumn` (~120 lines, pulls in `gameState`, `gameMode`, `blitzElapsedMs`, `level`, `currentHighScore`, `soundLoadError`, `soundsLoaded`, `sequence`, `playerSequence`). Worth doing **if** the surface is going to grow.
    - `BlitzHud` is already a private composable inside the screen file. Moving it to `ui/components/` is a one-line lift but adds no clarity.
-3. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons. The Wave-2 `SimonButtonGrid` is the landing zone. **Still needs a UX decision** (numeric labels vs distinct shapes vs both) before any code lands.
-4. **#32 Progressive onboarding / first-run tutorial** (M). Useful pre-launch but needs a UX decision.
+3. **#32 Progressive onboarding / first-run tutorial** (M). Useful pre-launch but needs a UX decision.
+4. **F8 polish (post-MVP)** — toast/snackbar when a new badge unlocks (currently silent), and an "achievements" entrypoint card on the main settings hub so unlocking feels visible without a full Statistics screen visit. Both are S-effort and were deliberately scoped out of the initial F8 cut.
 5. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
 
 ## Verification flow
@@ -67,11 +83,11 @@ Standard:
 #32 onboarding (M), #34 reduce-motion (previously cut), #35 color-blind (M).
 
 ## Open features
-F8 achievements (M), F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-gated), Light theme variant of F12 (deferred — needs game-screen `Color.White` audit first).
+F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-gated), Light theme variant of F12 (deferred — needs game-screen `Color.White` audit first). F8 achievements closed Wave 5; post-MVP polish (unlock toast + settings entrypoint card) optional.
 
 ## Resume prompt
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 4 head on main with clean tree (`f0390a3` PlayerTurnHalo). Then pick the next batch from RESUME's recommendation list — default to F8 local achievements (no UX decision needed; the cheap extraction seams are exhausted) unless the user wants the color-blind UX call to happen now. Stop after the work lands + tests + verifies on emulator + commits. If anything blocks, prefer to roll back rather than power through.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 5 head on main with clean tree (`0a59583` F8 wire). The cheap mechanical pickups are exhausted — next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Alternatives: F8 polish (unlock toast + settings entrypoint card, S-effort), the remaining SimonGameScreen.kt coupling-heavy extractions (CenterDiscCanvas / LevelDisplayColumn), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
 ```
