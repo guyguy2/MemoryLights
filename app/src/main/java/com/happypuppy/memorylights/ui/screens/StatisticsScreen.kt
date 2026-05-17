@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -20,8 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameStatistics
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,6 +33,7 @@ import com.happypuppy.memorylights.domain.model.GameStatistics
 fun StatisticsScreen(
     statistics: GameStatistics,
     currentHighScore: Int,
+    unlockedAchievements: Set<String> = emptySet(),
     onResetStatistics: () -> Unit = {},
     onBackPressed: () -> Unit
 ) {
@@ -117,6 +122,9 @@ fun StatisticsScreen(
                 icon = Icons.Default.CheckCircle,
                 color = Color(0xFFFF5722)
             )
+
+            // Achievements Section (F8)
+            AchievementsSection(unlockedAchievements = unlockedAchievements)
 
             // Reset Section
             HorizontalDivider(
@@ -266,6 +274,120 @@ fun StatisticCard(
                 color = color,
                 style = MaterialTheme.typography.titleMedium
             )
+        }
+    }
+}
+
+/**
+ * F8: render the unlocked-achievement count + a row per badge. Locked badges
+ * appear greyed-out so the player sees what's still available. Order follows
+ * [Achievement] enum declaration.
+ */
+@Composable
+private fun AchievementsSection(unlockedAchievements: Set<String>) {
+    val all = Achievement.entries
+    val unlockedCount = all.count { it.name in unlockedAchievements }
+
+    HorizontalDivider(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 8.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Star,
+            contentDescription = null,
+            tint = Color(0xFFFFC107),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = stringResource(R.string.achievements_section_heading),
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = stringResource(R.string.achievements_unlocked_format, unlockedCount, all.size),
+            color = Color.Gray,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+
+    if (unlockedCount == 0) {
+        Text(
+            text = stringResource(R.string.achievements_empty),
+            color = Color.Gray,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+    } else {
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    all.forEach { achievement ->
+        AchievementRow(
+            achievement = achievement,
+            unlocked = achievement.name in unlockedAchievements
+        )
+    }
+}
+
+@Composable
+private fun AchievementRow(achievement: Achievement, unlocked: Boolean) {
+    val title = stringResource(achievement.titleRes)
+    val description = stringResource(achievement.descriptionRes)
+    val icon = if (unlocked) Icons.Default.CheckCircle else Icons.Default.Lock
+    val tint = if (unlocked) Color(0xFFFFC107) else Color.Gray
+    val textColor = if (unlocked) Color.White else Color.Gray
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .semantics {
+                contentDescription = if (unlocked) {
+                    "$title unlocked. $description"
+                } else {
+                    "$title locked. $description"
+                }
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = description,
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }

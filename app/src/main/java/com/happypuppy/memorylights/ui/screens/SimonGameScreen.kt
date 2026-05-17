@@ -184,6 +184,7 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
             StatisticsScreen(
                 statistics = uiState.statistics,
                 currentHighScore = uiState.currentHighScore,
+                unlockedAchievements = uiState.unlockedAchievements,
                 onResetStatistics = { viewModel.resetStatistics() },
                 onBackPressed = {
                     viewModel.exitStatistics()

@@ -50,7 +50,8 @@ data class SimonGameUiState(
     val dailyChallengeEnabled: Boolean = false, // Daily Challenge (F6): seed sequence with today's epoch day
     val dailyCompletedEpochDay: Long = 0L, // Epoch day of the last daily run played
     val dailyBestLevel: Int = 0, // Best level on dailyCompletedEpochDay; resets when day rolls over
-    val themeMode: ThemeMode = ThemeMode.AMOLED // Surface palette mode (F12): AMOLED black or Material dark
+    val themeMode: ThemeMode = ThemeMode.AMOLED, // Surface palette mode (F12): AMOLED black or Material dark
+    val unlockedAchievements: Set<String> = emptySet() // F8: ids of unlocked achievements (Achievement.name)
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int

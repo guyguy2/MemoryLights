@@ -334,6 +334,71 @@ class SimonGameViewModelTest {
         }
 
     @Test
+    fun `game over at level 1 unlocks FirstWin and persists set`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            assertEquals(emptySet<String>(), vm.uiState.value.unlockedAchievements)
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertTrue("FirstWin" in vm.uiState.value.unlockedAchievements)
+            verify { settingsRepository.setUnlockedAchievements(match { "FirstWin" in it }) }
+        }
+
+    @Test
+    fun `daily completion game over unlocks both FirstWin and DailyDone`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(dailyChallengeEnabled = true))
+            vm.currentEpochDay = { 19_852L }
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            val unlocked = vm.uiState.value.unlockedAchievements
+            assertTrue("FirstWin in unlocked", "FirstWin" in unlocked)
+            assertTrue("DailyDone in unlocked", "DailyDone" in unlocked)
+        }
+
+    @Test
+    fun `unlocked achievements load from settings on init`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(unlockedAchievements = setOf("FirstWin", "Level10")))
+            advanceToPlayerTurn()
+
+            assertEquals(setOf("FirstWin", "Level10"), vm.uiState.value.unlockedAchievements)
+        }
+
+    @Test
+    fun `re-unlock with no new achievements does not persist`() =
+        runTest(testDispatcher.scheduler) {
+            // Start with FirstWin already unlocked. A game-over at level 1 would
+            // try to unlock FirstWin again — but since it's already in the set,
+            // setUnlockedAchievements must NOT be called (no-op fast path).
+            val vm = createViewModel(AppSettings(unlockedAchievements = setOf("FirstWin")))
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            // Still just FirstWin — no new unlock happened
+            assertEquals(setOf("FirstWin"), vm.uiState.value.unlockedAchievements)
+            verify(exactly = 0) { settingsRepository.setUnlockedAchievements(any()) }
+        }
+
+    @Test
     fun `practice mode wrong button replays sequence instead of game over`() =
         runTest(testDispatcher.scheduler) {
             val vm = createViewModel(AppSettings(practiceModeEnabled = true, highScore4Button = 0))

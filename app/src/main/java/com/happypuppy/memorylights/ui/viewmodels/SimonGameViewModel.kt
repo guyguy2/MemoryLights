@@ -16,6 +16,7 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
+import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import kotlinx.coroutines.Job
@@ -153,7 +154,8 @@ class SimonGameViewModel(
             dailyChallengeEnabled = settings.dailyChallengeEnabled,
             dailyCompletedEpochDay = settings.dailyCompletedEpochDay,
             dailyBestLevel = settings.dailyBestLevel,
-            themeMode = settings.themeMode
+            themeMode = settings.themeMode,
+            unlockedAchievements = settings.unlockedAchievements
         )}
     }
 
@@ -1032,6 +1034,19 @@ class SimonGameViewModel(
         } else {
             startGameOverTextAnimation()
         }
+
+        // F8: a blitz win doesn't touch the classic statistics path (gamesPlayed,
+        // bestStreak), so the achievement evaluator gets the blitz signals directly.
+        // The level achievements still apply — a 20-level blitz unlocks Level10.
+        val statsAfter = _uiState.value.statistics
+        evaluateAndPersistAchievements(
+            level = GameConstants.BLITZ_TARGET_LEVEL,
+            gamesPlayed = statsAfter.gamesPlayed,
+            bestStreak = statsAfter.bestStreak,
+            blitzWon = true,
+            blitzElapsedMs = elapsedMs,
+            dailyCompleted = state.dailyChallengeEnabled
+        )
     }
 
     /**
@@ -1312,6 +1327,22 @@ class SimonGameViewModel(
         // uiState.statistics once DataStore has persisted the new values.
         statisticsRepository.recordGameResult(currentLevel, _uiState.value.sequence.size)
 
+        // F8: evaluate achievements with the snapshot we'd expect after persistence
+        // lands. We can't read the repo's projected `bestStreak` (it owns the
+        // previous-level cursor), so we conservatively use the cached
+        // `statistics.bestStreak` — any streak-based unlock will fire on the
+        // following game-over once the flow re-emits with the new value. The
+        // level/games-played/daily/blitz signals are all immediate.
+        val statsAfter = _uiState.value.statistics
+        evaluateAndPersistAchievements(
+            level = currentLevel,
+            gamesPlayed = statsAfter.gamesPlayed + 1,
+            bestStreak = statsAfter.bestStreak,
+            blitzWon = false,
+            blitzElapsedMs = 0L,
+            dailyCompleted = _uiState.value.dailyChallengeEnabled
+        )
+
         // Persist the new high score for the active mode (per-key write).
         if (isNewHighScore) {
             if (_uiState.value.memoryLightsPlusEnabled) {
@@ -1337,6 +1368,38 @@ class SimonGameViewModel(
         }
     }
     
+    /**
+     * F8 local achievements. Compute the full set of achievements that should be
+     * unlocked given the supplied snapshot, take the union with what's already
+     * stored, and persist + update UI state when anything new lands. No-op if
+     * nothing was newly unlocked, so this is safe to call on every game-over.
+     */
+    private fun evaluateAndPersistAchievements(
+        level: Int,
+        gamesPlayed: Int,
+        bestStreak: Int,
+        blitzWon: Boolean,
+        blitzElapsedMs: Long,
+        dailyCompleted: Boolean
+    ) {
+        val earned = Achievement.evaluate(
+            level = level,
+            gamesPlayed = gamesPlayed,
+            bestStreak = bestStreak,
+            blitzWon = blitzWon,
+            blitzElapsedMs = blitzElapsedMs,
+            dailyCompleted = dailyCompleted
+        ).map { it.name }.toSet()
+
+        val current = _uiState.value.unlockedAchievements
+        val merged = current + earned
+        if (merged.size == current.size) return // nothing new
+
+        Log.d(TAG, "Unlocking achievements: ${earned - current}")
+        _uiState.update { it.copy(unlockedAchievements = merged) }
+        settingsRepository.setUnlockedAchievements(merged)
+    }
+
     // Start the HIGH SCORE text flash animation
     private fun startHighScoreTextAnimation() {
         Log.d(TAG, "Starting HIGH SCORE text flash animation")
