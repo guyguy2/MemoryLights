@@ -359,6 +359,25 @@ Next batch recommendation: **#35 color-blind mode** is now the highest-priority 
 
 ---
 
+## Session 2026-05-17 — Wave 7
+
+**F8 polish landed** — the two follow-ups deliberately scoped out of the Wave 5 initial cut (unlock toast + settings entrypoint card). Single-commit delivery (`d8b1ae0`):
+
+- **Channel-backed unlock event**: New `Channel<List<Achievement>>(capacity = BUFFERED)` + `unlockEvents: Flow<List<Achievement>>` on `SimonGameViewModel`. Lives outside `SimonGameUiState` because a unlock is a transient event — re-collecting state on rotation must not re-fire a stale toast. `evaluateAndPersistAchievements` computes the newly-unlocked delta in enum-declaration order and `trySend`s through the channel after persisting; the existing "nothing new" early-return short-circuits before the send so re-evaluation of an already-unlocked badge never toasts. Channel closes in `onCleared` so in-flight collectors complete cleanly.
+- **Snackbar in `SimonGameScreen`**: New `unlockEvents: Flow<List<Achievement>>` parameter (defaulted to `emptyFlow()` for previews / non-VM callers). The screen hosts its own `SnackbarHostState`, wires a `SnackbarHost` into the Scaffold, and `LaunchedEffect(unlockEvents)` collects + shows a Short snackbar per emission. Single-badge form uses the badge title; multi-badge form (rare — only on first deep-progress game-over) collapses to "N achievements unlocked" rather than queuing N snackbars. Dismisses any in-flight snackbar before showing the next so back-to-back unlocks don't pile up.
+- **Settings entrypoint card**: New "Achievements" `NavCard` between the Theme card and the Statistics row on `SettingsScreen`, summary "X / 8 unlocked. Tap to view all." Uses `Icons.Default.Star` + amber tint (`0xFFFFC107`) matching the Statistics-screen achievement section. Fans through the existing `onStatisticsClicked` so the full list lives on exactly one route — this is a shortcut, not a duplicated surface. `SettingsScreen` now takes `unlockedAchievements: Set<String> = emptySet()`.
+- **Wiring**: `MemoryLightsGame` passes `viewModel.unlockEvents` to `SimonGameScreen` and `uiState.unlockedAchievements` to `SettingsScreen`. The `composable<SettingsRoute>` block already had access to `uiState`, so this is one-line each side.
+- **4 new strings**: `achievement_unlocked_toast` (single, `%1$s` = title), `achievement_unlocked_toast_multi` (`%1$d` = count), `settings_achievements_title`, `settings_achievements_summary` (`%1$d / %2$d` = unlocked / total).
+- **2 new tests**: `unlockEvents emits newly unlocked achievements in enum order` (collect via `backgroundScope.launch(testDispatcher)` so cancellation is automatic — avoids the deprecated-`launch` lint that fires on bare `kotlinx.coroutines.launch` inside `runTest`); `unlockEvents does not emit when already-unlocked badge re-evaluates`. Existing 80 cases unchanged.
+
+82/82 unit tests green. `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+
+#35 color-blind mode skipped per the session brief — still needs a UX decision (numeric labels vs distinct shapes vs both). Wave 7 cap was 1 plan chunk OR ≤5 small fixes; F8 polish was one logical chunk shipped in one commit.
+
+Next-session pickup options (in priority order): (1) #35 color-blind mode once the UX decision is made; (2) remaining coupling-heavy `SimonGameScreen.kt` extractions — `CenterDiscCanvas` (~100 lines, splits along the `if (memoryLightsPlusEnabled)` branch — natural pairing with #35 since labels would land in the Canvas) or `LevelDisplayColumn` (~120 lines); (3) #32 progressive onboarding (also UX-blocked).
+
+---
+
 ## Critical Files
 
 | Concern | File |

@@ -1,6 +1,26 @@
-# Resume note for next session (written 2026-05-17, Wave 5)
+# Resume note for next session (written 2026-05-17, Wave 7)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-05-17, Wave 7)
+
+- Branch `main`, working tree clean. Local commits ahead of origin by 14 (no push during background-agent waves).
+- HEAD: Wave 7 commit `d8b1ae0` `feat(F8): unlock toast + settings entrypoint card`. Prior F8 work in `0a59583` (stats-screen wire) + `4ec8c80` (enum + DataStore).
+- 82/82 unit tests green (was 80 — +2 new `SimonGameViewModelTest` cases for the unlock-event channel).
+- `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+- No emulator at session end — toast is one composable + a Channel emission; the snackbar is byte-trivial to verify live but doesn't change any game-loop behaviour.
+
+## What changed this session (Wave 7)
+**F8 polish** — the two follow-ups deliberately scoped out of the Wave 5 initial cut, now landed in a single commit:
+
+- **Unlock toast**: New `Channel<List<Achievement>>` + `unlockEvents: Flow<List<Achievement>>` on `SimonGameViewModel`. Lives outside `SimonGameUiState` because an unlock is a one-shot event — collecting state on rotation must not re-fire a stale toast. `evaluateAndPersistAchievements` computes the delta in enum-declaration order and `trySend`s it after persisting; re-unlocks short-circuit before the send (no toast for badges already earned). Channel closes in `onCleared` so in-flight collectors complete cleanly.
+- **Snackbar in `SimonGameScreen`**: New `unlockEvents: Flow<List<Achievement>>` parameter (defaulted to `emptyFlow()` for previews / non-VM callers); the screen hosts a `SnackbarHostState` and shows a Short snackbar per emission. Single-badge form uses the badge title; multi-badge collapses to "N achievements unlocked" (rare — only on first deep-progress game-over).
+- **Settings entrypoint card**: New "Achievements" `NavCard` above the Statistics row on `SettingsScreen` with summary "X / 8 unlocked. Tap to view all." Fans through the existing `onStatisticsClicked` so the full list lives on exactly one route — the card is a shortcut, not a duplicated surface.
+- **Wiring**: `MemoryLightsGame` passes `viewModel.unlockEvents` to the game screen and `uiState.unlockedAchievements` to the settings screen.
+- **Tests**: +2 `SimonGameViewModelTest` cases — `unlockEvents emits newly unlocked achievements in enum order` (FirstWin fires for level-1 game-over when only that delta is new) + `unlockEvents does not emit when already-unlocked badge re-evaluates`. Uses `backgroundScope.launch` to collect into a list without TestScope coroutine-scope lint.
+- **Strings**: 4 new in `values/strings.xml` — `achievement_unlocked_toast`, `achievement_unlocked_toast_multi`, `settings_achievements_title`, `settings_achievements_summary`.
+
+#35 color-blind mode skipped per the brief — still needs a UX decision (numeric labels vs distinct shapes vs both). Wave 7 cap was 1 plan chunk OR ≤5 small fixes; F8 polish was one logical chunk (1 commit).
 
 ## State at session end (2026-05-17, Wave 5)
 
@@ -47,8 +67,8 @@ Single-item background pass — mechanical extraction matching the Wave 2 patter
 
 #35 (color-blind mode) was the originally-recommended pickup but skipped per session brief — it needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands. Wave 3 picked the next mechanical seam instead.
 
-## Recommended next batch (Wave 6)
-F8 closed this wave. The refreshed list:
+## Recommended next batch (Wave 8)
+F8 polish closed this wave. The refreshed list:
 
 1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons. The Wave-2 `SimonButtonGrid` is the landing zone. **Top mechanical-once-decided feature** — needs a UX decision first (numeric labels vs distinct shapes vs both).
 2. **Further `SimonGameScreen.kt` extractions** (S, coupling-heavy). At 940 lines remaining candidates couple to multiple state fields:
@@ -56,8 +76,9 @@ F8 closed this wave. The refreshed list:
    - `LevelDisplayColumn` (~120 lines, pulls in `gameState`, `gameMode`, `blitzElapsedMs`, `level`, `currentHighScore`, `soundLoadError`, `soundsLoaded`, `sequence`, `playerSequence`). Worth doing **if** the surface is going to grow.
    - `BlitzHud` is already a private composable inside the screen file. Moving it to `ui/components/` is a one-line lift but adds no clarity.
 3. **#32 Progressive onboarding / first-run tutorial** (M). Useful pre-launch but needs a UX decision.
-4. **F8 polish (post-MVP)** — toast/snackbar when a new badge unlocks (currently silent), and an "achievements" entrypoint card on the main settings hub so unlocking feels visible without a full Statistics screen visit. Both are S-effort and were deliberately scoped out of the initial F8 cut.
-5. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
+4. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
+
+## Next: pick #35 once UX decision is made (numeric labels vs distinct shapes vs both); otherwise extract `CenterDiscCanvas` from `SimonGameScreen.kt` as a no-UX-decision mechanical step that also primes the landing zone for #35.
 
 ## Verification flow
 Standard:
