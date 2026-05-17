@@ -8,6 +8,7 @@ import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
+import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import io.mockk.every
@@ -16,6 +17,7 @@ import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -396,6 +398,64 @@ class SimonGameViewModelTest {
             // Still just FirstWin — no new unlock happened
             assertEquals(setOf("FirstWin"), vm.uiState.value.unlockedAchievements)
             verify(exactly = 0) { settingsRepository.setUnlockedAchievements(any()) }
+        }
+
+    @Test
+    fun `unlockEvents emits newly unlocked achievements in enum order`() =
+        runTest(testDispatcher.scheduler) {
+            // Start with everything except FirstWin already unlocked so the
+            // game-over at level 1 unlocks exactly one new badge — easy to
+            // assert against without timing-dependency on later batches.
+            val preUnlocked = Achievement.entries
+                .filterNot { it == Achievement.FirstWin }
+                .map { it.name }
+                .toSet()
+            val vm = createViewModel(AppSettings(unlockedAchievements = preUnlocked))
+            advanceToPlayerTurn()
+
+            val collected = mutableListOf<List<Achievement>>()
+            val collectorJob = backgroundScope.launch(testDispatcher) {
+                vm.unlockEvents.collect { collected.add(it) }
+            }
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(1, collected.size)
+            assertEquals(listOf(Achievement.FirstWin), collected.first())
+
+            collectorJob.cancel()
+        }
+
+    @Test
+    fun `unlockEvents does not emit when already-unlocked badge re-evaluates`() =
+        runTest(testDispatcher.scheduler) {
+            // FirstWin already unlocked — game-over at level 1 re-evaluates but
+            // adds nothing new. The channel must stay silent (no transient
+            // toast for badges the player already has).
+            val vm = createViewModel(AppSettings(unlockedAchievements = setOf("FirstWin")))
+            advanceToPlayerTurn()
+
+            val collected = mutableListOf<List<Achievement>>()
+            val collectorJob = backgroundScope.launch(testDispatcher) {
+                vm.unlockEvents.collect { collected.add(it) }
+            }
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.onButtonClick(wrong, isPress = true)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            // No emission — re-unlock fast path skipped the trySend.
+            assertEquals(0, collected.size)
+
+            collectorJob.cancel()
         }
 
     @Test

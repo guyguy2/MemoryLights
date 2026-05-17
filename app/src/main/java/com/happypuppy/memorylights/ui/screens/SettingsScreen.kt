@@ -29,6 +29,7 @@ import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
+import com.happypuppy.memorylights.domain.model.Achievement
 import kotlinx.coroutines.launch
 
 /**
@@ -48,7 +49,8 @@ fun SettingsScreen(
     onSoundAndHapticsClick: () -> Unit,
     onStatisticsClicked: () -> Unit,
     onResetHighScore: () -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    unlockedAchievements: Set<String> = emptySet()
 ) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -135,6 +137,24 @@ fun SettingsScreen(
                     .padding(vertical = 12.dp),
                 thickness = 1.dp,
                 color = MaterialTheme.colorScheme.surfaceContainerHighest
+            )
+
+            // F8 polish: surface unlocked-badge count without requiring a
+            // Statistics-screen visit. Tapping leads to the same Statistics
+            // route where the full Achievements list lives, so this is a
+            // shortcut, not a duplicated surface.
+            val totalAchievements = Achievement.entries.size
+            val unlockedCount = Achievement.entries.count { it.name in unlockedAchievements }
+            NavCard(
+                title = stringResource(R.string.settings_achievements_title),
+                summary = stringResource(
+                    R.string.settings_achievements_summary,
+                    unlockedCount,
+                    totalAchievements
+                ),
+                iconImageVector = Icons.Default.Star,
+                iconTint = Color(0xFFFFC107),
+                onClick = onStatisticsClicked
             )
 
             NavCard(

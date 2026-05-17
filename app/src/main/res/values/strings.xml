@@ -210,6 +210,14 @@
     <string name="achievement_speedrun_30s_desc">Finish Speed Blitz in under 30 seconds</string>
     <string name="achievement_daily_done_title">Daily Devotee</string>
     <string name="achievement_daily_done_desc">Complete the Daily Challenge</string>
+    <!-- Unlock snackbar (F8 polish): single-badge form uses %1$s = badge title;
+         multi-badge form uses %1$d = count of badges unlocked in one game. -->
+    <string name="achievement_unlocked_toast">Achievement unlocked: %1$s</string>
+    <string name="achievement_unlocked_toast_multi">%1$d achievements unlocked</string>
+    <!-- Settings entrypoint card (F8 polish). Summary is the same %1$d / %2$d
+         formatter used on the Statistics screen. -->
+    <string name="settings_achievements_title">Achievements</string>
+    <string name="settings_achievements_summary">%1$d / %2$d unlocked. Tap to view all.</string>
 
     <!-- Score share card (F10) -->
     <string name="share_card_brand">MEMORY LIGHTS</string>

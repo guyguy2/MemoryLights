@@ -20,13 +20,16 @@ import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -63,6 +66,15 @@ class SimonGameViewModel(
     // Private and public state flows
     private val _uiState = MutableStateFlow(SimonGameUiState())
     val uiState: StateFlow<SimonGameUiState> = _uiState.asStateFlow()
+
+    // F8 polish: one-shot achievement-unlock events. Each emission is the list
+    // of [Achievement] values newly unlocked by a single game-over evaluation.
+    // BUFFERED so a brief UI lag during navigation doesn't drop events, but
+    // ordering is preserved. Lives outside [SimonGameUiState] because a
+    // unlock is a transient event, not state — re-collecting it on rotation
+    // must not re-fire a stale toast.
+    private val _unlockEvents = Channel<List<Achievement>>(capacity = Channel.BUFFERED)
+    val unlockEvents: Flow<List<Achievement>> = _unlockEvents.receiveAsFlow()
 
     // Buttons currently held by the player. Used to debounce simultaneous touches —
     // not exposed in UiState because the UI tracks its own visual press state.
@@ -1382,22 +1394,37 @@ class SimonGameViewModel(
         blitzElapsedMs: Long,
         dailyCompleted: Boolean
     ) {
-        val earned = Achievement.evaluate(
+        val earnedSet = Achievement.evaluate(
             level = level,
             gamesPlayed = gamesPlayed,
             bestStreak = bestStreak,
             blitzWon = blitzWon,
             blitzElapsedMs = blitzElapsedMs,
             dailyCompleted = dailyCompleted
-        ).map { it.name }.toSet()
+        )
+        val earnedNames = earnedSet.map { it.name }.toSet()
 
         val current = _uiState.value.unlockedAchievements
-        val merged = current + earned
+        val merged = current + earnedNames
         if (merged.size == current.size) return // nothing new
 
-        Log.d(TAG, "Unlocking achievements: ${earned - current}")
+        // Compute the delta in enum order so the snackbar (and the channel
+        // consumer) sees a stable, declaration-ordered list rather than
+        // whatever the set iterator returns.
+        val newlyUnlocked = Achievement.entries.filter {
+            it.name in earnedNames && it.name !in current
+        }
+
+        Log.d(TAG, "Unlocking achievements: ${newlyUnlocked.map { it.name }}")
         _uiState.update { it.copy(unlockedAchievements = merged) }
         settingsRepository.setUnlockedAchievements(merged)
+
+        // Fire the one-shot event. trySend on a BUFFERED channel only fails
+        // when the consumer hasn't drained — acceptable; the persisted set
+        // is the source of truth and the next session will see the badge.
+        if (newlyUnlocked.isNotEmpty()) {
+            _unlockEvents.trySend(newlyUnlocked)
+        }
     }
 
     // Start the HIGH SCORE text flash animation
@@ -1525,6 +1552,10 @@ class SimonGameViewModel(
         highScoreTextAnimationJob = null
         speedUpTextJob?.cancel()
         speedUpTextJob = null
+
+        // F8 polish: close the unlock-event channel so any in-flight collector
+        // completes cleanly rather than leaking past the VM lifecycle.
+        _unlockEvents.close()
 
         soundManager.release()
     }

@@ -50,6 +50,7 @@ import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
+import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.HeadlineOverlay
@@ -69,6 +70,8 @@ import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Format Speed Blitz elapsed time as `M:SS.s` — minutes, seconds, tenths.
@@ -123,7 +126,8 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 onToggleVibration = { viewModel.toggleVibration() },
                 onPauseGame = { viewModel.pauseGame() },
                 onResumeGame = { viewModel.resumeGame() },
-                onClearParticleEffects = { viewModel.clearParticleEffects() }
+                onClearParticleEffects = { viewModel.clearParticleEffects() },
+                unlockEvents = viewModel.unlockEvents
             )
         }
         composable<SettingsRoute> {
@@ -139,7 +143,8 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                     viewModel.showStatistics()
                     navController.navigate(StatisticsRoute)
                 },
-                onBackPressed = { navController.popBackStack() }
+                onBackPressed = { navController.popBackStack() },
+                unlockedAchievements = uiState.unlockedAchievements
             )
         }
         composable<GameModesRoute> {
@@ -207,7 +212,8 @@ fun SimonGameScreen(
     onToggleVibration: () -> Unit,
     onPauseGame: () -> Unit = {},
     onResumeGame: () -> Unit = {},
-    onClearParticleEffects: (() -> Unit)? = null
+    onClearParticleEffects: (() -> Unit)? = null,
+    unlockEvents: Flow<List<Achievement>> = emptyFlow()
 ) {
     // Single source of truth for which buttons are physically pressed (for UI feedback only)
     var localPressedButtons by remember { mutableStateOf(mapOf<SimonButton, Boolean>()) }
@@ -251,6 +257,33 @@ fun SimonGameScreen(
     LaunchedEffect(uiState.showHighScoreText) {
         if (uiState.showHighScoreText) {
             view.announceForAccessibility(context.getString(R.string.a11y_high_score_celebrate, uiState.level))
+        }
+    }
+
+    // F8 polish: one-shot snackbar when a new achievement unlocks during a
+    // session. Channel-backed flow so re-collecting on rotation doesn't
+    // re-fire stale toasts; multi-unlock game-overs (e.g. FirstWin + Level10
+    // on the very first deep run) collapse into one "N achievements
+    // unlocked" message rather than queuing N snackbars.
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(unlockEvents) {
+        unlockEvents.collect { newlyUnlocked ->
+            if (newlyUnlocked.isEmpty()) return@collect
+            val message = if (newlyUnlocked.size == 1) {
+                context.getString(
+                    R.string.achievement_unlocked_toast,
+                    context.getString(newlyUnlocked.first().titleRes)
+                )
+            } else {
+                context.getString(
+                    R.string.achievement_unlocked_toast_multi,
+                    newlyUnlocked.size
+                )
+            }
+            // Dismiss any in-flight snackbar so back-to-back unlocks don't
+            // queue up; the most recent badge wins the screen.
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
         }
     }
 
@@ -349,6 +382,7 @@ fun SimonGameScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         // Game content with minimal padding to maximize button size
