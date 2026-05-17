@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
@@ -45,7 +46,14 @@ data class AppSettings(
     val dailyCompletedEpochDay: Long = 0L,
     /** Best level reached on `dailyCompletedEpochDay`'s daily run. Resets when the day rolls over. */
     val dailyBestLevel: Int = 0,
-    val themeMode: ThemeMode = ThemeMode.AMOLED
+    val themeMode: ThemeMode = ThemeMode.AMOLED,
+    /**
+     * F8: persisted set of unlocked achievement IDs (matching `Achievement.name`).
+     * Stored as a string set so the data layer never has to import the
+     * domain-facing enum. Unknown IDs in this set are silently ignored at read
+     * time (forward-compat for removed achievements).
+     */
+    val unlockedAchievements: Set<String> = emptySet()
 )
 
 /**
@@ -74,6 +82,7 @@ interface SettingsRepository {
     fun setDailyChallengeEnabled(enabled: Boolean)
     fun setDailyCompletion(epochDay: Long, bestLevel: Int)
     fun setThemeMode(mode: ThemeMode)
+    fun setUnlockedAchievements(ids: Set<String>)
 
     /**
      * Cancels any background scope the repository owns. Implementations that
@@ -136,6 +145,7 @@ class DataStoreSettingsRepository internal constructor(
         private val KEY_DAILY_COMPLETED_EPOCH_DAY = longPreferencesKey("daily_completed_epoch_day")
         private val KEY_DAILY_BEST_LEVEL = intPreferencesKey("daily_best_level")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_UNLOCKED_ACHIEVEMENTS = stringSetPreferencesKey("unlocked_achievements")
 
         fun fromContext(context: Context): DataStoreSettingsRepository =
             DataStoreSettingsRepository(
@@ -164,7 +174,8 @@ class DataStoreSettingsRepository internal constructor(
             dailyChallengeEnabled = prefs[KEY_DAILY_CHALLENGE_ENABLED] ?: false,
             dailyCompletedEpochDay = prefs[KEY_DAILY_COMPLETED_EPOCH_DAY] ?: 0L,
             dailyBestLevel = prefs[KEY_DAILY_BEST_LEVEL] ?: 0,
-            themeMode = readThemeMode(prefs)
+            themeMode = readThemeMode(prefs),
+            unlockedAchievements = prefs[KEY_UNLOCKED_ACHIEVEMENTS] ?: emptySet()
         )
     }
 
@@ -218,6 +229,11 @@ class DataStoreSettingsRepository internal constructor(
         it[KEY_DAILY_BEST_LEVEL] = bestLevel
     }
     override fun setThemeMode(mode: ThemeMode) = write { it[KEY_THEME_MODE] = mode.name }
+    override fun setUnlockedAchievements(ids: Set<String>) = write {
+        // Defensive copy: DataStore stores its own Set, but copying here keeps the
+        // repo independent of the caller's collection lifetime.
+        it[KEY_UNLOCKED_ACHIEVEMENTS] = ids.toSet()
+    }
 
     private fun write(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         scope.launch {

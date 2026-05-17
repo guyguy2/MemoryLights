@@ -189,6 +189,19 @@ class DataStoreSettingsRepositoryTest {
     }
 
     @Test
+    fun `setUnlockedAchievements persists set and reads back`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(emptySet<String>(), awaitItem().unlockedAchievements)
+            repo.setUnlockedAchievements(setOf("FirstWin", "Streak3"))
+            assertEquals(setOf("FirstWin", "Streak3"), awaitItem().unlockedAchievements)
+            // Overwrite — must replace, not append
+            repo.setUnlockedAchievements(setOf("FirstWin", "Streak3", "Level10"))
+            assertEquals(setOf("FirstWin", "Streak3", "Level10"), awaitItem().unlockedAchievements)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `setDailyCompletion records both day and best level atomically`() = runTest(testScope.testScheduler) {
         repo.settingsFlow.test {
             val initial = awaitItem()
