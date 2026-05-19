@@ -1,6 +1,27 @@
-# Resume note for next session (written 2026-05-17, Wave 7)
+# Resume note for next session (written 2026-05-19, Wave 8)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-05-19, Wave 8)
+
+- Branch `main`. Working tree clean after this wave's single commit. Local commits ahead of origin by 16 (no push during background-agent waves).
+- HEAD: Wave 8 commit `refactor: extract CenterDiscCanvas from SimonGameScreen` on top of Wave 7 `d8b1ae0`.
+- 82/82 unit tests green (unchanged — extraction has no logic, only Canvas draw calls).
+- `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+- No emulator at session end — pure mechanical extraction with byte-equivalent arc-drawing math, no behavioural surface to verify live.
+
+## What changed this session (Wave 8)
+Single mechanical extraction matching the Wave 2/3/4 thread (#17 `SimonButtonGrid`, #65 `HeadlineOverlay`, the four Wave-4 components):
+
+- **`CenterDiscCanvas` extract** — the inline center-disc Canvas in `SimonGameScreen` (~110 lines of arc-drawing math across two branches) lifts into `ui/components/CenterDiscCanvas.kt` (141 lines). One parameter: `memoryLightsPlusEnabled: Boolean`. The 6-button branch uses `360f / 6 = 60f` sweepAngle and per-arc `startAngle = index * 60f` over the canonical `[RED, BLUE, ORANGE, YELLOW, PURPLE, GREEN]` clockwise order; the 4-button branch hardcodes 90f sweeps with explicit `startAngle`s (GREEN 180, RED 270, BLUE 0, YELLOW 90). Byte-equivalent to the prior inline blocks — colors, stroke width (8dp), `StrokeCap.Butt`, `Offset(strokeWidth / 2, strokeWidth / 2)` topLeft, and `size.copy(width = ..., height = ...)` size all preserved verbatim.
+- **`availableButtons` derivedState removed from the screen** — its only use was the `sweepAngle = 360f / availableButtons.size` divisor inside the Canvas. Since `SimonButton.getAvailableButtons(true).size == 6` and `getAvailableButtons(false).size == 4` by enum construction, the new component uses a literal `arcCount = if (memoryLightsPlusEnabled) 6 else 4` — semantically identical, fewer moving parts. The screen drops the `availableButtons` `by remember(...) { derivedStateOf { ... } }` block entirely.
+- **Imports trimmed from `SimonGameScreen`**: `androidx.compose.foundation.Canvas`, `androidx.compose.ui.geometry.Offset`, `androidx.compose.ui.graphics.StrokeCap` all removed (no remaining callers). `androidx.compose.ui.graphics.drawscope.Stroke` was already fully-qualified inline so no import to remove.
+
+File line counts: `SimonGameScreen.kt` 975 → 867 (-108). The Wave-4 doc-quoted 940 was stale — Wave-5 + Wave-7 F8 wiring (`SnackbarHost` + `unlockEvents` collection + helper composables) added ~35 lines back. New file: 141 lines.
+
+Triage note: tree at session start had this work in-flight from a prior wave-8 agent that bailed on credits — modified `SimonGameScreen.kt` (Canvas removed + `CenterDiscCanvas` call wired) and new untracked `ui/components/CenterDiscCanvas.kt`. Inspected via `git diff` + full read of the new file. The extraction was clean and byte-equivalent; the only work this wave was the build/test verification + the log entries + the commit. No code rewrites or surgical fixes.
+
+#35 (color-blind mode) skipped per the session brief — still needs the UX call (numeric labels vs distinct shapes vs both). `CenterDiscCanvas` is now the obvious landing zone for per-arc labels.
 
 ## State at session end (2026-05-17, Wave 7)
 
@@ -67,18 +88,17 @@ Single-item background pass — mechanical extraction matching the Wave 2 patter
 
 #35 (color-blind mode) was the originally-recommended pickup but skipped per session brief — it needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands. Wave 3 picked the next mechanical seam instead.
 
-## Recommended next batch (Wave 8)
-F8 polish closed this wave. The refreshed list:
+## Recommended next batch (Wave 9)
+`CenterDiscCanvas` extraction closed this wave. The refreshed list:
 
-1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons. The Wave-2 `SimonButtonGrid` is the landing zone. **Top mechanical-once-decided feature** — needs a UX decision first (numeric labels vs distinct shapes vs both).
-2. **Further `SimonGameScreen.kt` extractions** (S, coupling-heavy). At 940 lines remaining candidates couple to multiple state fields:
-   - `CenterDiscCanvas` (4-button + 6-button arc drawing, ~100 lines) — splits along the existing `if (memoryLightsPlusEnabled)` branch. **Worth doing in tandem with #35** since color-blind labels would land here.
+1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons + per-arc labels on the center disc. Landing zones now both extracted: `SimonButtonGrid` (Wave 2) for per-button labels and `CenterDiscCanvas` (Wave 8) for per-arc labels. **Top mechanical-once-decided feature** — still needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands.
+2. **Further `SimonGameScreen.kt` extractions** (S, coupling-heavy). At 867 lines the remaining candidates couple to multiple state fields:
    - `LevelDisplayColumn` (~120 lines, pulls in `gameState`, `gameMode`, `blitzElapsedMs`, `level`, `currentHighScore`, `soundLoadError`, `soundsLoaded`, `sequence`, `playerSequence`). Worth doing **if** the surface is going to grow.
    - `BlitzHud` is already a private composable inside the screen file. Moving it to `ui/components/` is a one-line lift but adds no clarity.
 3. **#32 Progressive onboarding / first-run tutorial** (M). Useful pre-launch but needs a UX decision.
 4. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
 
-## Next: pick #35 once UX decision is made (numeric labels vs distinct shapes vs both); otherwise extract `CenterDiscCanvas` from `SimonGameScreen.kt` as a no-UX-decision mechanical step that also primes the landing zone for #35.
+## Next: pick #35 once UX decision is made (numeric labels vs distinct shapes vs both); otherwise the cheap mechanical seams are now exhausted — `LevelDisplayColumn` is the only remaining extract and it's coupling-heavy (9 `uiState` fields), so worth doing only if its surface is about to grow.
 
 ## Verification flow
 Standard:
@@ -110,5 +130,5 @@ F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 5 head on main with clean tree (`0a59583` F8 wire). The cheap mechanical pickups are exhausted — next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Alternatives: F8 polish (unlock toast + settings entrypoint card, S-effort), the remaining SimonGameScreen.kt coupling-heavy extractions (CenterDiscCanvas / LevelDisplayColumn), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 8 head on main with clean tree (Wave 8 = `refactor: extract CenterDiscCanvas from SimonGameScreen`). The cheap mechanical pickups are now exhausted — next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Both landing zones (SimonButtonGrid + CenterDiscCanvas) are now extracted and ready to receive labels. Alternatives: the remaining `LevelDisplayColumn` extract (S, coupling-heavy — only worth doing if the surface is about to grow), #32 progressive onboarding (UX-blocked), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
 ```

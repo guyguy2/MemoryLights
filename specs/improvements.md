@@ -378,6 +378,22 @@ Next-session pickup options (in priority order): (1) #35 color-blind mode once t
 
 ---
 
+## Session 2026-05-19 — Wave 8
+
+**`CenterDiscCanvas` extracted from `SimonGameScreen`** — the natural pairing-with-#35 mechanical step flagged in the Wave 4 / Wave 7 followup lists. New `ui/components/CenterDiscCanvas.kt` (141 lines) owns both arc-drawing paths; `SimonGameScreen` drops the inline Canvas plus three Compose imports (`foundation.Canvas`, `ui.geometry.Offset`, `ui.graphics.StrokeCap`) and the now-unused `availableButtons` `derivedStateOf` cache (the screen never read it outside the Canvas — its single use was the `sweepAngle = 360f / availableButtons.size` divisor, replaced by a literal `arcCount = if (memoryLightsPlusEnabled) 6 else 4` since `SimonButton.getAvailableButtons(true).size == 6` and `getAvailableButtons(false).size == 4` by enum construction).
+
+Behaviour-equivalence check: the 6-button branch's `sweepAngle = 60f` and per-arc `startAngle = index * 60f` are byte-identical to the prior inline math (`360f / 6 = 60f`). The 4-button branch hardcoded `90f` sweeps with explicit `startAngle`s (GREEN 180, RED 270, BLUE 0, YELLOW 90) — preserved verbatim. `Stroke` is now imported directly (vs. the prior fully-qualified `androidx.compose.ui.graphics.drawscope.Stroke` inline) since the screen's other inline Canvas (the timeout ring) already moved out in Wave 4.
+
+`SimonGameScreen.kt` 975 → 867 lines (-108; the Wave-4 doc-quoted 940 was stale — Wave-5 + Wave-7 F8 wiring grew the screen back to 975). The remaining ~870 lines cluster around the level-display Column (~120 lines, 9 `uiState` fields) and the GameOver/Settings overlay branches — both coupling-heavy enough that further extraction is diminishing returns at this size without a feature surface (#35 labels, #32 onboarding) to grow into.
+
+82/82 unit tests green (no change in count — the extracted Canvas has no logic, only draws). `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+
+Triage note: tree at session start had two pieces of in-flight Wave 8 work from a prior agent that bailed on credits — modified `SimonGameScreen.kt` (the inline Canvas removed + `CenterDiscCanvas` call added + `availableButtons` derivedState removed) and new untracked `ui/components/CenterDiscCanvas.kt`. Inspected via `git diff` + read of the new file. The extraction was clean and byte-equivalent; the only verification work this wave was the build/test run + this log entry + the commit. No code rewrites.
+
+Next-session pickup options (in priority order): (1) #35 color-blind mode once the UX decision is made — `CenterDiscCanvas` is now the landing zone for per-arc labels alongside `SimonButtonGrid` for per-button labels; (2) `LevelDisplayColumn` extract from `SimonGameScreen` (~120 lines, 9 `uiState` fields — coupling-heavy, only worth doing if its surface is about to grow); (3) #32 progressive onboarding (UX-blocked); (4) Phase 4 Play Store prep (keystore + Play Console submission — user-action only).
+
+---
+
 ## Critical Files
 
 | Concern | File |
