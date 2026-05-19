@@ -11,7 +11,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -28,9 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -53,6 +50,7 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
+import com.happypuppy.memorylights.ui.components.CenterDiscCanvas
 import com.happypuppy.memorylights.ui.components.HeadlineOverlay
 import com.happypuppy.memorylights.ui.components.OverlayBias4Button
 import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
@@ -220,11 +218,6 @@ fun SimonGameScreen(
 
     // Screen reader announcements for accessibility
     val view = LocalView.current
-
-    // Derived state for available buttons - only recomputes when memoryLightsPlusEnabled changes
-    val availableButtons by remember(uiState.memoryLightsPlusEnabled) {
-        derivedStateOf { SimonButton.getAvailableButtons(uiState.memoryLightsPlusEnabled) }
-    }
 
     val context = LocalContext.current
 
@@ -476,110 +469,9 @@ fun SimonGameScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     // Colored arcs - Dynamic based on mode
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val strokeWidth = 8.dp.toPx()
-                        val sweepAngle = 360f / availableButtons.size
-                        
-                        if (uiState.memoryLightsPlusEnabled) {
-                            // 6-button mode: 6 arcs (60 degrees each)
-                            val buttonOrder = listOf(
-                                SimonButton.RED,    // 0-60 degrees (top-right)
-                                SimonButton.BLUE,   // 60-120 degrees (bottom-right)
-                                SimonButton.ORANGE, // 120-180 degrees (bottom)
-                                SimonButton.YELLOW, // 180-240 degrees (bottom-left)
-                                SimonButton.PURPLE, // 240-300 degrees (top-left)
-                                SimonButton.GREEN   // 300-360 degrees (top)
-                            )
-                            
-                            buttonOrder.forEachIndexed { index, button ->
-                                drawArc(
-                                    color = button.color,
-                                    startAngle = index * sweepAngle,
-                                    sweepAngle = sweepAngle,
-                                    useCenter = false,
-                                    topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                                    size = size.copy(
-                                        width = size.width - strokeWidth,
-                                        height = size.height - strokeWidth
-                                    ),
-                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                        width = strokeWidth,
-                                        cap = StrokeCap.Butt
-                                    )
-                                )
-                            }
-                        } else {
-                            // 4-button mode: Classic 4 arcs (90 degrees each)
-                            
-                            // Draw green arc (top-left)
-                            drawArc(
-                                color = SimonButton.GREEN.color,
-                                startAngle = 180f,
-                                sweepAngle = 90f,
-                                useCenter = false,
-                                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                                size = size.copy(
-                                    width = size.width - strokeWidth,
-                                    height = size.height - strokeWidth
-                                ),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = strokeWidth,
-                                    cap = StrokeCap.Butt
-                                )
-                            )
-
-                            // Draw red arc (top-right)
-                            drawArc(
-                                color = SimonButton.RED.color,
-                                startAngle = 270f,
-                                sweepAngle = 90f,
-                                useCenter = false,
-                                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                                size = size.copy(
-                                    width = size.width - strokeWidth,
-                                    height = size.height - strokeWidth
-                                ),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = strokeWidth,
-                                    cap = StrokeCap.Butt
-                                )
-                            )
-
-                            // Draw blue arc (bottom-right)
-                            drawArc(
-                                color = SimonButton.BLUE.color,
-                                startAngle = 0f,
-                                sweepAngle = 90f,
-                                useCenter = false,
-                                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                                size = size.copy(
-                                    width = size.width - strokeWidth,
-                                    height = size.height - strokeWidth
-                                ),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = strokeWidth,
-                                    cap = StrokeCap.Butt
-                                )
-                            )
-
-                            // Draw yellow arc (bottom-left)
-                            drawArc(
-                                color = SimonButton.YELLOW.color,
-                                startAngle = 90f,
-                                sweepAngle = 90f,
-                                useCenter = false,
-                                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                                size = size.copy(
-                                    width = size.width - strokeWidth,
-                                    height = size.height - strokeWidth
-                                ),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = strokeWidth,
-                                    cap = StrokeCap.Butt
-                                )
-                            )
-                        }
-                    }
+                    CenterDiscCanvas(
+                        memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled
+                    )
 
                     // Create a centered inner content Box
                     Box(
