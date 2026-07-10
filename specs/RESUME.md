@@ -1,6 +1,27 @@
-# Resume note for next session (written 2026-07-10, Wave 9)
+# Resume note for next session (written 2026-07-10, Wave 10)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-07-10, Wave 10)
+
+- Branch `main`. Working tree clean after this wave's single commit. Local commits ahead of origin by 19 (no push during background-agent waves).
+- HEAD: Wave 10 `test: cover reverse, pause, replay, blitz loss + formatBlitzTime` on top of Wave 9 `380940b`.
+- 90/90 unit tests green (was 82 — +5 VM, +3 formatBlitzTime).
+- `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+- No production code changes; no emulator needed.
+
+## What changed this session (Wave 10)
+Wave 9 (`CenterDiscContent`) was already on main. #35 / #32 skipped (UX-blocked). Next clear value: missing tests on shipped features.
+
+- **VM coverage**: reverse mode (wrong first press / reverse-order L2→L3), pause/resume gates, `replayLastSequence` preserves level+sequence, blitz loss leaves classic high score alone.
+- **`tap()` helper** in VM tests (press+release) so multi-step input clears `activePresses`.
+- **`FormatBlitzTimeTest`**: clamps, tenths, minute rollover for shared formatter.
+
+## Recommended next batch
+1. **#35 Color-blind mode** (M) once UX is decided.
+2. Optional: lift `BlitzHud` to `ui/components/` (S, low value alone).
+3. **#32 Progressive onboarding** (M, UX-blocked).
+4. **Phase 4 Play Store prep** (user-action only).
 
 ## State at session end (2026-07-10, Wave 9)
 
@@ -17,12 +38,6 @@ Wave 8 (`CenterDiscCanvas`) was already on main at session start. Next clean mec
 - **`SimonGameScreen.kt` 867 → 687** (-180). Remaining private composable: `BlitzHud` only (already isolated; lift is optional).
 
 #35 color-blind mode still skipped (needs UX: numeric labels vs distinct shapes vs both). Landing zones ready: `SimonButtonGrid` + `CenterDiscCanvas`.
-
-## Recommended next batch
-1. **#35 Color-blind mode** (M) once UX is decided.
-2. Optional: lift `BlitzHud` to `ui/components/` (S, low value alone).
-3. **#32 Progressive onboarding** (M, UX-blocked).
-4. **Phase 4 Play Store prep** (user-action only).
 
 ## State at session end (2026-05-19, Wave 8)
 
@@ -110,8 +125,8 @@ Single-item background pass — mechanical extraction matching the Wave 2 patter
 
 #35 (color-blind mode) was the originally-recommended pickup but skipped per session brief — it needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands. Wave 3 picked the next mechanical seam instead.
 
-## Recommended next batch (Wave 10+)
-`CenterDiscContent` extraction closed Wave 9. Cheap mechanical seams in `SimonGameScreen` are exhausted (687 lines; only private `BlitzHud` remains).
+## Recommended next batch (Wave 11+)
+Wave 10 closed the largest missing unit-test gaps on shipped modes. Cheap SimonGameScreen extractions remain exhausted (687 lines; only private `BlitzHud` remains).
 
 1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons + per-arc labels on the center disc. Landing zones: `SimonButtonGrid` + `CenterDiscCanvas`. Needs UX decision first.
 2. **#32 Progressive onboarding / first-run tutorial** (M). UX-blocked.
@@ -149,5 +164,5 @@ F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 9 head on main with clean tree (Wave 9 = `refactor: extract CenterDiscContent from SimonGameScreen`). Cheap mechanical SimonGameScreen extractions are exhausted (687 lines). Next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Landing zones ready: SimonButtonGrid + CenterDiscCanvas. Alternatives: #32 progressive onboarding (UX-blocked), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 10 head on main with clean tree (Wave 10 = `test: cover reverse, pause, replay, blitz loss + formatBlitzTime`). 90 unit tests green. Cheap mechanical SimonGameScreen extractions are exhausted (687 lines). Next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Landing zones ready: SimonButtonGrid + CenterDiscCanvas. Alternatives: #32 progressive onboarding (UX-blocked), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
 ```

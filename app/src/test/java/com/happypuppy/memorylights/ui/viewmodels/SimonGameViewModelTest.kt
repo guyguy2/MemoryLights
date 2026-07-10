@@ -481,5 +481,156 @@ class SimonGameViewModelTest {
             verify(exactly = 0) { settingsRepository.setHighScore4Button(any()) }
             verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
         }
+
+    /**
+     * Press + release so multi-step input clears [activePresses]. Without a
+     * release, later presses are treated as multi-touch and game logic is
+     * ignored (see onButtonClick isFirstButtonPressed gate).
+     */
+    private fun SimonGameViewModel.tap(button: SimonButton) {
+        onButtonClick(button, isPress = true)
+        onButtonClick(button, isPress = false)
+    }
+
+    @Test
+    fun `reverse mode level-2 accepts reverse order and rejects forward`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(reverseModeEnabled = true))
+            advanceToPlayerTurn()
+
+            // Level 1 is a single button — reverse is identity. Clear it.
+            vm.tap(vm.uiState.value.sequence[0])
+            // LEVEL_ADVANCE_DELAY + showSequence for 2 buttons ≈ 1000 + 500 + 2*1000
+            advanceTimeBy(4_000)
+            runCurrent()
+
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(2, vm.uiState.value.level)
+            assertEquals(2, vm.uiState.value.sequence.size)
+
+            val seq = vm.uiState.value.sequence
+            // Reverse expects last-first. When the two steps differ, forward
+            // order (seq[0] first) is a hard fail; if they match, any other
+            // color is the wrong first press.
+            val badFirst = if (seq[0] != seq[1]) {
+                seq[0]
+            } else {
+                SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+                    .first { it != seq.last() }
+            }
+            vm.tap(badFirst)
+            advanceTimeBy(3_000)
+            runCurrent()
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+        }
+
+    @Test
+    fun `reverse mode level-2 reverse presses advance to level 3`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(reverseModeEnabled = true))
+            advanceToPlayerTurn()
+
+            vm.tap(vm.uiState.value.sequence[0])
+            advanceTimeBy(4_000)
+            runCurrent()
+
+            val seq = vm.uiState.value.sequence
+            assertEquals(2, seq.size)
+            // Reverse recall: last button first, then earlier ones.
+            vm.tap(seq[1])
+            vm.tap(seq[0])
+            // LEVEL_ADVANCE_DELAY (1000) + showSequence for 3 buttons
+            // (500 + 3*(600+400)) ≈ 4500ms — allow 6s.
+            advanceTimeBy(6_000)
+            runCurrent()
+
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(3, vm.uiState.value.level)
+            assertEquals(3, vm.uiState.value.sequence.size)
+        }
+
+    @Test
+    fun `pauseGame only works during PlayerRepeating and resume restores it`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+
+            // No-op before the first turn.
+            vm.pauseGame()
+            assertNotEquals(GameState.Paused, vm.uiState.value.gameState)
+
+            advanceToPlayerTurn()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            vm.pauseGame()
+            assertEquals(GameState.Paused, vm.uiState.value.gameState)
+            assertNull(vm.uiState.value.currentlyLit)
+            assertEquals(false, vm.uiState.value.showYourTurnText)
+
+            // Double-pause is a no-op.
+            vm.pauseGame()
+            assertEquals(GameState.Paused, vm.uiState.value.gameState)
+
+            vm.resumeGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // resume when not paused is a no-op.
+            vm.resumeGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+        }
+
+    @Test
+    fun `replayLastSequence keeps level and sequence after game over`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(highScore4Button = 99))
+            advanceToPlayerTurn()
+
+            // Grow to level 2 so the sequence is multi-button and distinctive.
+            vm.tap(vm.uiState.value.sequence[0])
+            advanceTimeBy(4_000)
+            runCurrent()
+            assertEquals(2, vm.uiState.value.level)
+            val lostSequence = vm.uiState.value.sequence
+            assertEquals(2, lostSequence.size)
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != lostSequence[0] }
+            vm.tap(wrong)
+            advanceTimeBy(3_000)
+            runCurrent()
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+
+            vm.replayLastSequence()
+            // showSequence: SEQUENCE_START_DELAY + 2*(lit+pause) ≈ 500 + 2*1000
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            val after = vm.uiState.value
+            assertEquals(GameState.PlayerRepeating, after.gameState)
+            assertEquals(2, after.level)
+            assertEquals(lostSequence, after.sequence)
+            assertTrue(after.playerSequence.isEmpty())
+        }
+
+    @Test
+    fun `blitz loss does not update classic high score`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(
+                AppSettings(gameMode = GameMode.SPEED_BLITZ, highScore4Button = 5)
+            )
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.tap(wrong)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(false, vm.uiState.value.blitzWon)
+            assertEquals(5, vm.uiState.value.highScore4Button)
+            verify(exactly = 0) { settingsRepository.setHighScore4Button(any()) }
+            // Stats still record so play history isn't blank.
+            verify { statisticsRepository.recordGameResult(1, any()) }
+        }
 }
 

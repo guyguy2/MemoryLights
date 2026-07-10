@@ -412,6 +412,18 @@ API is explicit parameters (11 fields) rather than the whole `SimonGameUiState` 
 
 ---
 
+## Session 2026-07-10 — Wave 10
+
+Wave 9 CenterDiscContent was already on `main` at session start. #35 / #32 still UX-blocked. Picked the next high-value mechanical chunk: **missing unit coverage for shipped game-logic paths**.
+
+- **`SimonGameViewModelTest` +5** (21 → 26): reverse-mode wrong first press + reverse-order advance to L3; `pauseGame`/`resumeGame` gates; `replayLastSequence` preserves level/sequence after GameOver; Speed Blitz loss does not touch classic high-score but still records stats.
+- Shared **`tap()` helper** (press+release) so multi-step input clears `activePresses` — without release, later presses are treated as multi-touch and game logic is ignored.
+- **`FormatBlitzTimeTest` +3**: zero/negative clamp, tenths floor, minute rollover for the public `formatBlitzTime` shared by CenterDiscContent + BlitzHud.
+
+82 → 90 unit tests green. `./gradlew assembleDebug testDebugUnitTest` succeeds. No production code changes.
+
+---
+
 ## Critical Files
 
 | Concern | File |
