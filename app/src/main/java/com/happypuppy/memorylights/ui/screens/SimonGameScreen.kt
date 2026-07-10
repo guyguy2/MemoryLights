@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +43,7 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
+import com.happypuppy.memorylights.ui.components.BlitzHud
 import com.happypuppy.memorylights.ui.components.CenterDiscCanvas
 import com.happypuppy.memorylights.ui.components.CenterDiscContent
 import com.happypuppy.memorylights.ui.components.HeadlineOverlay
@@ -56,7 +56,6 @@ import com.happypuppy.memorylights.ui.components.PlayerTurnHalo
 import com.happypuppy.memorylights.ui.components.ReplayShareButtons
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.components.TimeoutCountdownRing
-import com.happypuppy.memorylights.ui.components.formatBlitzTime
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
@@ -622,71 +621,6 @@ fun SimonGameScreen(
                         .zIndex(4f)
                 )
             }
-        }
-    }
-}
-
-/**
- * Top-of-screen HUD shown only in Speed Blitz: progress (X / target) and a
- * live elapsed-time readout that ticks at 10 Hz so the tenths digit moves
- * visibly. The clock is read from `System.currentTimeMillis()` rather than
- * tracked in UiState to keep the ViewModel from emitting at 10 Hz.
- */
-@Composable
-private fun BlitzHud(
-    level: Int,
-    targetLevel: Int,
-    bestTimeMs: Long,
-    startTimeMs: Long,
-    isPaused: Boolean,
-    modifier: Modifier = Modifier
-) {
-    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(startTimeMs, isPaused) {
-        if (startTimeMs <= 0L || isPaused) return@LaunchedEffect
-        while (true) {
-            nowMs = System.currentTimeMillis()
-            kotlinx.coroutines.delay(100L)
-        }
-    }
-    val elapsed = if (startTimeMs > 0L) (nowMs - startTimeMs).coerceAtLeast(0L) else 0L
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier
-            .background(
-                Color.Black.copy(alpha = 0.55f),
-                RoundedCornerShape(14.dp)
-            )
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.blitz_level_progress, level, targetLevel),
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge
-        )
-        Text(
-            text = stringResource(R.string.blitz_separator),
-            color = Color.Gray,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal)
-        )
-        Text(
-            text = formatBlitzTime(elapsed),
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-        )
-        if (bestTimeMs > 0L) {
-            Text(
-                text = stringResource(R.string.blitz_separator),
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal)
-            )
-            Text(
-                text = stringResource(R.string.game_best_time, formatBlitzTime(bestTimeMs)),
-                color = Color(0xFFFFC107),
-                style = MaterialTheme.typography.labelMedium
-            )
         }
     }
 }

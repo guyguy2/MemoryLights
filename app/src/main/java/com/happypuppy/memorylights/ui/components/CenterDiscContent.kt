@@ -39,9 +39,8 @@ import com.happypuppy.memorylights.domain.model.GameState
  * milliseconds. Negative or zero inputs render as `0:00.0` so a stale
  * state never shows an unexpected `-` or rolls weirdly past midnight.
  *
- * Shared by [CenterDiscContent] (GameOver blitz summary) and `BlitzHud`
- * (live timer). Public so the screen's private HUD can call the same
- * formatter without a second copy.
+ * Shared by [CenterDiscContent] (GameOver blitz summary) and [BlitzHud]
+ * (live timer). Public so both call sites share one formatter.
  */
 fun formatBlitzTime(ms: Long): String {
     val safe = ms.coerceAtLeast(0L)

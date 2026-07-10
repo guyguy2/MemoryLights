@@ -441,6 +441,19 @@ Tests: +3 shape mapping, +1 DataStore persist, +1 VM setter (no run reset). 90 �
 
 ---
 
+## Session 2026-07-10 — Wave 11 (BlitzHud extract)
+
+#32 progressive onboarding skipped (UX-blocked per session brief). Optional mechanical leftover from Wave 9:
+
+- **`BlitzHud` lifted** from private composable in `SimonGameScreen` to public `ui/components/BlitzHud.kt`. Live 10 Hz timer, progress text, best-time chip, pause freeze unchanged. Shares `formatBlitzTime` with `CenterDiscContent`.
+- `SimonGameScreen.kt` 691 → 625. No remaining private game-area HUD composables on the screen.
+
+95/95 unit tests green (unchanged). `./gradlew assembleDebug testDebugUnitTest` succeeds.
+
+Cheap game-screen extraction seams are exhausted. Remaining open: #32 (UX), Phase 4 keystore/Console (user), F13 / Light F12 / F11 / F17 (product).
+
+---
+
 ## Critical Files
 
 | Concern | File |
@@ -472,7 +485,7 @@ Resume the Memory Lights roadmap from specs/improvements.md.
 
 Decisions already locked: canonical doc = specs/improvements.md (root IMPROVEMENTS.md already deleted); sound production = synth-first (Python numpy for Musical, jsfxr for Sci-Fi, Freesound CC0 for Nature); milestone order = sound packs first, then Play Store launch.
 
-Status: #35 color-blind mode shipped Wave 10 (shapes, default off). Phase 11 (#17 SimonButtonGrid) + Phase 10 (#24) + F8 achievements + most P1/P2 closed. Open audit: #32 onboarding (UX-blocked), #34 reduce-motion (previously cut). Open features: F11 GPGS (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12. Phase 4 Play Store prep mostly done — keystore + Play Console are user-action only. Read specs/RESUME.md for the latest wave pointer.
+Status: Wave 11 BlitzHud extract closed; #35 color-blind shipped Wave 10 (shapes, default off). Game-screen private HUDs exhausted. Open audit: #32 onboarding (UX-blocked), #34 reduce-motion (previously cut). Open features: F11 GPGS (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12. Phase 4 Play Store prep mostly done — keystore + Play Console are user-action only. Read specs/RESUME.md for the latest wave pointer.
 ```
 
 Tweak the last line if you want to push further per session — e.g., "go through all of Phase 2 and stop", or "run all the way through Phase 2 then start Phase 3 step 1".
