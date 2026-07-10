@@ -1,6 +1,28 @@
-# Resume note for next session (written 2026-05-19, Wave 8)
+# Resume note for next session (written 2026-07-10, Wave 9)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-07-10, Wave 9)
+
+- Branch `main`. Working tree clean after this wave's single commit. Local commits ahead of origin by 18 (no push during background-agent waves).
+- HEAD: Wave 9 `refactor: extract CenterDiscContent from SimonGameScreen` on top of Wave 8 docs head `6dc0cf7`.
+- 82/82 unit tests green (unchanged — pure UI extract, no logic moved).
+- `./gradlew assembleDebug testDebugUnitTest` succeeds. Lint not re-run this wave.
+- No emulator at session end — byte-equivalent inner-disc content, no behavioural surface to verify live.
+
+## What changed this session (Wave 9)
+Wave 8 (`CenterDiscCanvas`) was already on main at session start. Next clean mechanical seam:
+
+- **`CenterDiscContent` extract** — the center-disc sound-pack chip + level/loading/game-over column + high-score footer (~180 lines of branching UI) lifts into `ui/components/CenterDiscContent.kt` (260 lines including KDoc + shared `formatBlitzTime`). Eleven explicit parameters (gameState, gameMode, level, scores, blitz times, load state, sound pack res id, sequence sizes) — no whole-UiState leak. `formatBlitzTime` moves out of the screen so GameOver blitz copy and private `BlitzHud` share one formatter.
+- **`SimonGameScreen.kt` 867 → 687** (-180). Remaining private composable: `BlitzHud` only (already isolated; lift is optional).
+
+#35 color-blind mode still skipped (needs UX: numeric labels vs distinct shapes vs both). Landing zones ready: `SimonButtonGrid` + `CenterDiscCanvas`.
+
+## Recommended next batch
+1. **#35 Color-blind mode** (M) once UX is decided.
+2. Optional: lift `BlitzHud` to `ui/components/` (S, low value alone).
+3. **#32 Progressive onboarding** (M, UX-blocked).
+4. **Phase 4 Play Store prep** (user-action only).
 
 ## State at session end (2026-05-19, Wave 8)
 
@@ -88,17 +110,14 @@ Single-item background pass — mechanical extraction matching the Wave 2 patter
 
 #35 (color-blind mode) was the originally-recommended pickup but skipped per session brief — it needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands. Wave 3 picked the next mechanical seam instead.
 
-## Recommended next batch (Wave 9)
-`CenterDiscCanvas` extraction closed this wave. The refreshed list:
+## Recommended next batch (Wave 10+)
+`CenterDiscContent` extraction closed Wave 9. Cheap mechanical seams in `SimonGameScreen` are exhausted (687 lines; only private `BlitzHud` remains).
 
-1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons + per-arc labels on the center disc. Landing zones now both extracted: `SimonButtonGrid` (Wave 2) for per-button labels and `CenterDiscCanvas` (Wave 8) for per-arc labels. **Top mechanical-once-decided feature** — still needs a UX decision (numeric labels vs distinct shapes vs both) before any code lands.
-2. **Further `SimonGameScreen.kt` extractions** (S, coupling-heavy). At 867 lines the remaining candidates couple to multiple state fields:
-   - `LevelDisplayColumn` (~120 lines, pulls in `gameState`, `gameMode`, `blitzElapsedMs`, `level`, `currentHighScore`, `soundLoadError`, `soundsLoaded`, `sequence`, `playerSequence`). Worth doing **if** the surface is going to grow.
-   - `BlitzHud` is already a private composable inside the screen file. Moving it to `ui/components/` is a one-line lift but adds no clarity.
-3. **#32 Progressive onboarding / first-run tutorial** (M). Useful pre-launch but needs a UX decision.
-4. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
+1. **#35 Color-blind mode** (M). Pattern/icon overlay on buttons + per-arc labels on the center disc. Landing zones: `SimonButtonGrid` + `CenterDiscCanvas`. Needs UX decision first.
+2. **#32 Progressive onboarding / first-run tutorial** (M). UX-blocked.
+3. **Phase 4 Play Store prep wrap-up**. Keystore + Play Console submission are user-action only.
 
-## Next: pick #35 once UX decision is made (numeric labels vs distinct shapes vs both); otherwise the cheap mechanical seams are now exhausted — `LevelDisplayColumn` is the only remaining extract and it's coupling-heavy (9 `uiState` fields), so worth doing only if its surface is about to grow.
+## Next: pick #35 once UX decision is made (numeric labels vs distinct shapes vs both).
 
 ## Verification flow
 Standard:
@@ -130,5 +149,5 @@ F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 8 head on main with clean tree (Wave 8 = `refactor: extract CenterDiscCanvas from SimonGameScreen`). The cheap mechanical pickups are now exhausted — next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Both landing zones (SimonButtonGrid + CenterDiscCanvas) are now extracted and ready to receive labels. Alternatives: the remaining `LevelDisplayColumn` extract (S, coupling-heavy — only worth doing if the surface is about to grow), #32 progressive onboarding (UX-blocked), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 9 head on main with clean tree (Wave 9 = `refactor: extract CenterDiscContent from SimonGameScreen`). Cheap mechanical SimonGameScreen extractions are exhausted (687 lines). Next major item is #35 color-blind mode, which needs a UX decision (numeric labels vs distinct shapes vs both) before any code can land. Landing zones ready: SimonButtonGrid + CenterDiscCanvas. Alternatives: #32 progressive onboarding (UX-blocked), or Phase 4 Play Store prep (user-action only). Ask the user which path to take before starting.
 ```

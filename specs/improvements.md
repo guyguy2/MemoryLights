@@ -394,6 +394,24 @@ Next-session pickup options (in priority order): (1) #35 color-blind mode once t
 
 ---
 
+## Session 2026-07-10 — Wave 9
+
+**`CenterDiscContent` extracted from `SimonGameScreen`** — the coupling-heavy level-display block flagged as the last remaining mechanical seam after Wave 8's `CenterDiscCanvas`. Wave 8 primary target was already committed; this wave picked the next clean extract.
+
+New `ui/components/CenterDiscContent.kt` (260 lines) owns:
+- Sound-pack chip (hidden on GameOver)
+- Loading / sound-error / WaitingToStart / GameOver score summary / in-progress animated level + N/M sequence progress
+- High-score footer (hidden on GameOver)
+- Shared `formatBlitzTime` (was private in the screen; BlitzHud still imports it for the live timer)
+
+API is explicit parameters (11 fields) rather than the whole `SimonGameUiState` — matches Wave 4 component style. Sequence progress uses `sequenceSize` / `playerSequenceSize` ints so the component does not depend on list identity. Branching, strings, sizes, colors, and the `AnimatedContent` vertical slide are byte-equivalent to the prior inline block.
+
+`SimonGameScreen.kt` 867 → 687 lines (-180). Imports dropped: `AnimatedContent`, `slideInVertically` / `slideOutVertically` / `togetherWith`, `Icons.Warning`, `unit.sp` (no remaining callers on the screen). `BlitzHud` stays private in the screen (already isolated; lifting it alone adds little).
+
+#35 color-blind mode still skipped (needs UX decision). Cheap mechanical seams in the game screen are now exhausted; remaining private HUD is `BlitzHud` only.
+
+---
+
 ## Critical Files
 
 | Concern | File |
