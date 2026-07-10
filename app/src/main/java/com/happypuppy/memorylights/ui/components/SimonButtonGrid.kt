@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.happypuppy.memorylights.domain.enums.ColorBlindShape
 import com.happypuppy.memorylights.domain.enums.SimonButton
 
 /**
@@ -44,6 +45,7 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
  *   `null` while audio-only mode is in its ShowingSequence phase.
  * @param allButtonsLit when true, every panel lights up (game-over flash).
  * @param pressedButtons map of buttons that the user is physically holding down.
+ * @param colorBlindModeEnabled when true, each panel draws its [ColorBlindShape] (#35).
  * @param onButtonInteraction (button, isPress) callback. Fires on both press and release.
  */
 @Composable
@@ -53,6 +55,7 @@ fun SimonButtonGrid(
     allButtonsLit: Boolean,
     pressedButtons: Map<SimonButton, Boolean>,
     onButtonInteraction: (SimonButton, Boolean) -> Unit,
+    colorBlindModeEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     // Wrapped in `remember(orientation)` so the boolean is stable across
@@ -68,6 +71,7 @@ fun SimonButtonGrid(
                 litButton = litButton,
                 allButtonsLit = allButtonsLit,
                 pressedButtons = pressedButtons,
+                colorBlindModeEnabled = colorBlindModeEnabled,
                 onButtonInteraction = onButtonInteraction,
                 modifier = modifier
             )
@@ -76,6 +80,7 @@ fun SimonButtonGrid(
                 litButton = litButton,
                 allButtonsLit = allButtonsLit,
                 pressedButtons = pressedButtons,
+                colorBlindModeEnabled = colorBlindModeEnabled,
                 onButtonInteraction = onButtonInteraction,
                 modifier = modifier
             )
@@ -85,6 +90,7 @@ fun SimonButtonGrid(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             modifier = modifier
         )
@@ -104,6 +110,7 @@ private fun SixButtonGridLandscape(
     litButton: SimonButton?,
     allButtonsLit: Boolean,
     pressedButtons: Map<SimonButton, Boolean>,
+    colorBlindModeEnabled: Boolean,
     onButtonInteraction: (SimonButton, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -116,6 +123,7 @@ private fun SixButtonGridLandscape(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = SixButtonPanelPadding
         )
@@ -124,6 +132,7 @@ private fun SixButtonGridLandscape(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = SixButtonPanelPadding
         )
@@ -135,6 +144,7 @@ private fun SixButtonGridPortrait(
     litButton: SimonButton?,
     allButtonsLit: Boolean,
     pressedButtons: Map<SimonButton, Boolean>,
+    colorBlindModeEnabled: Boolean,
     onButtonInteraction: (SimonButton, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -147,6 +157,7 @@ private fun SixButtonGridPortrait(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = SixButtonPanelPadding
         )
@@ -155,6 +166,7 @@ private fun SixButtonGridPortrait(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = SixButtonPanelPadding
         )
@@ -163,6 +175,7 @@ private fun SixButtonGridPortrait(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = SixButtonPanelPadding
         )
@@ -174,6 +187,7 @@ private fun FourButtonGrid(
     litButton: SimonButton?,
     allButtonsLit: Boolean,
     pressedButtons: Map<SimonButton, Boolean>,
+    colorBlindModeEnabled: Boolean,
     onButtonInteraction: (SimonButton, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -186,6 +200,7 @@ private fun FourButtonGrid(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = FourButtonPanelPadding
         )
@@ -194,6 +209,7 @@ private fun FourButtonGrid(
             litButton = litButton,
             allButtonsLit = allButtonsLit,
             pressedButtons = pressedButtons,
+            colorBlindModeEnabled = colorBlindModeEnabled,
             onButtonInteraction = onButtonInteraction,
             panelPadding = FourButtonPanelPadding
         )
@@ -212,6 +228,7 @@ private fun ColumnScope.GridRow(
     litButton: SimonButton?,
     allButtonsLit: Boolean,
     pressedButtons: Map<SimonButton, Boolean>,
+    colorBlindModeEnabled: Boolean,
     onButtonInteraction: (SimonButton, Boolean) -> Unit,
     panelPadding: Dp
 ) {
@@ -222,6 +239,11 @@ private fun ColumnScope.GridRow(
                 colorName = stringResource(button.displayNameRes),
                 isLit = litButton == button || allButtonsLit,
                 userPressed = pressedButtons[button] == true,
+                colorBlindShape = if (colorBlindModeEnabled) {
+                    ColorBlindShape.forButton(button)
+                } else {
+                    null
+                },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
@@ -235,8 +257,7 @@ private fun ColumnScope.GridRow(
 }
 
 // Row orderings are declared as top-level constants so the grid composables
-// stay declarative and so a future swap (e.g. for #35 color-blind labelling
-// or a layout test) only edits one place.
+// stay declarative and so a future layout swap only edits one place.
 private val TopRowLandscape = listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW)
 private val BottomRowLandscape = listOf(SimonButton.BLUE, SimonButton.PURPLE, SimonButton.ORANGE)
 private val TopRowPortrait = listOf(SimonButton.GREEN, SimonButton.RED)

@@ -160,6 +160,7 @@ class SimonGameViewModel(
             practiceModeEnabled = settings.practiceModeEnabled,
             reverseModeEnabled = settings.reverseModeEnabled,
             audioOnlyModeEnabled = settings.audioOnlyModeEnabled,
+            colorBlindModeEnabled = settings.colorBlindModeEnabled,
             gameMode = settings.gameMode,
             bestBlitzTime4ButtonMs = settings.bestBlitzTime4ButtonMs,
             bestBlitzTime6ButtonMs = settings.bestBlitzTime6ButtonMs,
@@ -429,6 +430,18 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting audio-only mode enabled: $enabled")
         _uiState.update { it.copy(audioOnlyModeEnabled = enabled) }
         settingsRepository.setAudioOnlyModeEnabled(enabled)
+    }
+
+    /**
+     * Toggle color-blind mode (#35). Pure UI concern — geometric shape
+     * overlays on panels and center-disc arcs so the sequence is readable
+     * without hue discrimination. Default off preserves the classic look.
+     * Safe mid-run; does not reset the game.
+     */
+    fun setColorBlindModeEnabled(enabled: Boolean) {
+        Log.d(TAG, "Setting color-blind mode enabled: $enabled")
+        _uiState.update { it.copy(colorBlindModeEnabled = enabled) }
+        settingsRepository.setColorBlindModeEnabled(enabled)
     }
 
     /**

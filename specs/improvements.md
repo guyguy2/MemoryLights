@@ -80,7 +80,7 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 | 32 | Progressive onboarding / first-run tutorial | ❌ | M | new |
 | 33 | Snackbar confirmation on settings change | ✅ Phase 5 step 6 (`SnackbarHost` added to Scaffold; sound-pack pick + difficulty toggle + ML+ confirm-dialog accept all fire transient `Short`-duration snackbar; verified live: "Difficulty: On" appears after toggle) | S | `ui/screens/SettingsScreen.kt` |
 | 34 | Reduce-motion option / respect `LocalReducedMotion` | ❌ | S | theme + screen |
-| 35 | Color-blind mode (icons/patterns on buttons) | ❌ | M | `ui/components/SimonPanel.kt` |
+| 35 | Color-blind mode (icons/patterns on buttons) | ✅ Wave 10 (2026-07-10): product decision = geometric shapes (not numbers). Default OFF. Green=circle, Red=triangle, Yellow=square, Blue=cross, Purple=diamond, Orange=stripes. Overlays on `SimonPanel` + small glyphs on `CenterDiscCanvas` arcs. Settings toggle under Gameplay. | M | `domain/enums/ColorBlindShape.kt`, `ui/components/{ColorBlindShapeDraw,SimonPanel,SimonButtonGrid,CenterDiscCanvas}.kt`, settings + VM |
 | 36 | Keyboard / external controller support (TV / ChromeOS / gamepad) | ⏭️ Deferred (2026-05-03) — out of scope for v1.0; revisit if TV / ChromeOS becomes target platform | L | new |
 | 47 | `activePresses` mutable set lacks `@MainThread` discipline — touch + coroutines both touch it without lock. Annotate `@MainThread` or wrap in mutex. | ✅ Phase 5 step 1 (`onButtonClick` annotated `@MainThread`; comment on `activePresses` documents single-mutator contract) | S | `viewmodels/SimonGameViewModel.kt` |
 | 48 | Externalize all UI strings to `strings.xml` — currently only `app_name` is externalized. Blocks i18n + string audit. | ✅ Phase 8 step 1 (2026-05-03): all 5 screens + ScoreShareHelper + MainActivity routed through `stringResource(R.string.*)` / `context.getString(...)`; `SoundPack`, `GameMode`, `SimonButton` carry `@StringRes displayNameRes` (and `descriptionRes` for SoundPack) so the enum-bound copy translates cleanly. ~120 new keys. Domain layer holds `R.string.*` integer IDs only — no Context dependency leaks. 50 unit tests still green; build + lint clean; verified live on Pixel_8_API_34 (Settings hub, Game Modes, GameOver overlay all render from resources). | M | `res/values/strings.xml`, all `ui/screens/*.kt`, `ui/share/ScoreShareHelper.kt`, `domain/enums/{SimonButton,SoundPack,GameMode}.kt`, `ui/MainActivity.kt` |
@@ -424,6 +424,23 @@ Wave 9 CenterDiscContent was already on `main` at session start. #35 / #32 still
 
 ---
 
+## Session 2026-07-10 — Wave 10 continued (#35 Color-blind mode)
+
+**Product decision (locked):** geometric shape/pattern overlays per color — not numeric labels. Distinct silhouettes survive common color-vision deficiencies; numbers would compete with level/sequence UI and read poorly on small panels. Optional small glyphs also drawn on center-disc arcs (cheap once draw helper exists). Default **OFF** so the classic look is unchanged.
+
+Implementation:
+- **`ColorBlindShape` enum** + `forButton(SimonButton)` pure mapping (GREEN=circle, RED=triangle, YELLOW=square, BLUE=cross, PURPLE=diamond, ORANGE=stripes).
+- **`drawColorBlindShape` / `arcMidpoint`** in `ui/components/ColorBlindShapeDraw.kt` — white fill + dark outline for contrast on lit/dim panels.
+- **`SimonPanel`**: optional `colorBlindShape`; centered glyph ~22% of shorter edge.
+- **`SimonButtonGrid`**: `colorBlindModeEnabled` threaded to every row; maps button → shape at the panel call site.
+- **`CenterDiscCanvas`**: small glyphs at each arc midpoint when enabled (4- and 6-button).
+- **Prefs**: `color_blind_mode_enabled` DataStore key; `AppSettings` / `UiState` / `VM.setColorBlindModeEnabled` (no mid-run reset — pure presentation).
+- **Settings UI**: toggle on `GameplayScreen` (accessibility/pacing sub-screen) with snackbar feedback.
+
+Tests: +3 shape mapping, +1 DataStore persist, +1 VM setter (no run reset). 90 → 95 unit tests green.
+
+---
+
 ## Critical Files
 
 | Concern | File |
@@ -455,7 +472,7 @@ Resume the Memory Lights roadmap from specs/improvements.md.
 
 Decisions already locked: canonical doc = specs/improvements.md (root IMPROVEMENTS.md already deleted); sound production = synth-first (Python numpy for Musical, jsfxr for Sci-Fi, Freesound CC0 for Nature); milestone order = sound packs first, then Play Store launch.
 
-Status: Phase 11 (#17 SimonButtonGrid extract, subsumes #20) shipped 2026-05-16 Wave 2. Phase 10 (#24 CoroutineScope cancellation in repos) shipped 2026-05-16. Phase 9 (typography migration #58 + F12 AMOLED/Dark theme toggle) shipped 2026-05-05. Phase 8 (#48 strings.xml + F6 Daily Challenge) shipped 2026-05-03. Phase 7 (F3 / F4 / F18) and Phase 6 (F10 share card / F14 pause / F16 timeout / F15 practice) all done. Most P1/P2 audit items closed. Open candidates: #32 (onboarding tutorial), #35 (color-blind mode — now easier with the grid extracted). Open features: F8 achievements, F11 GPGS leaderboard (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12 (deferred — needs game-screen Color.White audit first). Phase 4 Play Store prep mostly done — keystore generation + Play Console submission are user-action only. #34 reduce-motion was attempted then reverted as low-value. Read the plan file, confirm git state, and pick the next item — ask first if multiple paths look equal.
+Status: #35 color-blind mode shipped Wave 10 (shapes, default off). Phase 11 (#17 SimonButtonGrid) + Phase 10 (#24) + F8 achievements + most P1/P2 closed. Open audit: #32 onboarding (UX-blocked), #34 reduce-motion (previously cut). Open features: F11 GPGS (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12. Phase 4 Play Store prep mostly done — keystore + Play Console are user-action only. Read specs/RESUME.md for the latest wave pointer.
 ```
 
 Tweak the last line if you want to push further per session — e.g., "go through all of Phase 2 and stop", or "run all the way through Phase 2 then start Phase 3 step 1".

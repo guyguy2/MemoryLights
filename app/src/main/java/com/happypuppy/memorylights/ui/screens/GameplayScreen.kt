@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,17 +19,17 @@ import com.happypuppy.memorylights.R
 import kotlinx.coroutines.launch
 
 /**
- * Gameplay settings sub-screen (F18). Hosts pacing-related controls that
- * tune *how* a run feels but don't change its rules. Currently only
- * Player Timeout. Designed to absorb F3 audio-only / F4 blitz / F6 daily
- * / F8 achievement toggles as those land without bloating the top-level
- * Settings list.
+ * Gameplay settings sub-screen (F18). Hosts pacing and accessibility
+ * controls that tune *how* a run feels but don't change its rules:
+ * Player Timeout and Color-Blind Mode (#35).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameplayScreen(
     playerTimeoutSeconds: Int,
+    colorBlindModeEnabled: Boolean,
     onPlayerTimeoutChanged: (Int) -> Unit,
+    onColorBlindModeToggled: (Boolean) -> Unit,
     onBackPressed: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -130,6 +131,66 @@ fun GameplayScreen(
                             )
                         }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // #35 Color-blind mode — pure presentation toggle, safe mid-run.
+            SettingsCard(onClick = {
+                val next = !colorBlindModeEnabled
+                onColorBlindModeToggled(next)
+                toast(
+                    context.getString(
+                        if (next) R.string.snack_color_blind_on else R.string.snack_color_blind_off
+                    )
+                )
+            }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = stringResource(R.string.toggle_color_blind_title),
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.toggle_color_blind_title),
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = stringResource(R.string.toggle_color_blind_summary),
+                            color = Color.Gray,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+
+                    Switch(
+                        checked = colorBlindModeEnabled,
+                        onCheckedChange = { value ->
+                            onColorBlindModeToggled(value)
+                            toast(
+                                context.getString(
+                                    if (value) R.string.snack_color_blind_on else R.string.snack_color_blind_off
+                                )
+                            )
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.primary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.DarkGray
+                        )
+                    )
                 }
             }
 

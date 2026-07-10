@@ -60,7 +60,7 @@
     <string name="settings_game_modes_title">Game Modes</string>
     <string name="settings_game_modes_summary">Classic / Speed Blitz, Difficulty, Reverse, Practice, Audio-Only, Memory Lights+</string>
     <string name="settings_gameplay_title">Gameplay</string>
-    <string name="settings_gameplay_summary">Player timeout</string>
+    <string name="settings_gameplay_summary">Timeout, color-blind mode</string>
     <string name="settings_sound_title">Sound &amp; Haptics</string>
     <string name="settings_sound_summary">Current pack: %1$s</string>
     <string name="settings_statistics_title">Statistics</string>
@@ -121,6 +121,8 @@
     <string name="snack_mode">Mode: %1$s</string>
     <string name="snack_sound_pack">Sound pack: %1$s</string>
     <string name="snack_timeout_seconds">Timeout: %1$ds</string>
+    <string name="snack_color_blind_on">Color-Blind Mode: On</string>
+    <string name="snack_color_blind_off">Color-Blind Mode: Off</string>
     <string name="snack_theme">Theme: %1$s</string>
 
     <!-- Theme toggle (F12) -->
@@ -140,6 +142,8 @@
     <string name="gameplay_timeout_summary">How long you have to press the next button</string>
     <string name="gameplay_timeout_cd">Player timeout</string>
     <string name="gameplay_timeout_chip">%1$ds</string>
+    <string name="toggle_color_blind_title">Color-Blind Mode</string>
+    <string name="toggle_color_blind_summary">Distinct shapes on each button so the game is playable without relying on color</string>
 
     <!-- Sound &amp; Haptics sub-screen -->
     <string name="sound_haptics_title">Sound &amp; Haptics</string>

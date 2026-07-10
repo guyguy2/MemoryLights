@@ -153,6 +153,16 @@ class DataStoreSettingsRepositoryTest {
     }
 
     @Test
+    fun `setColorBlindModeEnabled persists`() = runTest(testScope.testScheduler) {
+        repo.settingsFlow.test {
+            assertEquals(false, awaitItem().colorBlindModeEnabled)
+            repo.setColorBlindModeEnabled(true)
+            assertEquals(true, awaitItem().colorBlindModeEnabled)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `setGameMode persists Speed Blitz selection`() = runTest(testScope.testScheduler) {
         repo.settingsFlow.test {
             assertEquals(GameMode.CLASSIC, awaitItem().gameMode)

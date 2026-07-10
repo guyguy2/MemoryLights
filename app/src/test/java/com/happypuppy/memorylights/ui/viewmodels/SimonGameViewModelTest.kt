@@ -256,6 +256,22 @@ class SimonGameViewModelTest {
         }
 
     @Test
+    fun `setColorBlindModeEnabled updates state and persists without resetting run`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            val levelBefore = vm.uiState.value.level
+            assertEquals(false, vm.uiState.value.colorBlindModeEnabled)
+
+            vm.setColorBlindModeEnabled(true)
+            runCurrent()
+
+            assertEquals(true, vm.uiState.value.colorBlindModeEnabled)
+            assertEquals(levelBefore, vm.uiState.value.level)
+            verify { settingsRepository.setColorBlindModeEnabled(true) }
+        }
+
+    @Test
     fun `setGameMode to Speed Blitz resets the run`() = runTest(testDispatcher.scheduler) {
         val vm = createViewModel()
         advanceToPlayerTurn()

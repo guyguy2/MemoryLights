@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.happypuppy.memorylights.domain.enums.ColorBlindShape
 import com.happypuppy.memorylights.domain.enums.SimonButton
 
 /**
@@ -16,27 +17,33 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
  * Lights+ mode).
  *
  * Previously inlined in `SimonGameScreen`; pulling it out drops ~100 lines
- * from the screen and concentrates the arc-drawing math (and the future
- * landing zone for #35 color-blind labels) in one place. The two code
- * paths are intentionally byte-equivalent to the previous inline blocks —
- * stroke width, sweep angles, start angles, and color order were preserved
- * verbatim.
+ * from the screen and concentrates the arc-drawing math (and #35 color-blind
+ * per-arc shape glyphs) in one place. Stroke width, sweep angles, start
+ * angles, and color order match the original inline blocks.
  *
  * Arc order (6-button mode, clockwise from the 0-degree axis which points
  * right): RED, BLUE, ORANGE, YELLOW, PURPLE, GREEN. Arc start angles
  * (4-button mode): GREEN 180, RED 270, BLUE 0, YELLOW 90.
  *
  * @param memoryLightsPlusEnabled when true, draws six arcs; otherwise four.
+ * @param colorBlindModeEnabled when true, draws a small shape glyph at each
+ *   arc midpoint so the disc rim mirrors the panel markers (#35).
  */
 @Composable
 fun CenterDiscCanvas(
     memoryLightsPlusEnabled: Boolean,
+    colorBlindModeEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
         val strokeWidth = 8.dp.toPx()
         val arcCount = if (memoryLightsPlusEnabled) 6 else 4
         val sweepAngle = 360f / arcCount
+        val center = Offset(size.width / 2f, size.height / 2f)
+        // Glyph sits just inside the stroke so it doesn't collide with the
+        // level text in the disc center.
+        val glyphRadius = (size.minDimension - strokeWidth) / 2f - strokeWidth * 0.6f
+        val glyphHalf = (strokeWidth * 0.85f).coerceAtLeast(4.dp.toPx())
 
         if (memoryLightsPlusEnabled) {
             // 6-button mode: 6 arcs (60 degrees each)
@@ -50,9 +57,10 @@ fun CenterDiscCanvas(
             )
 
             buttonOrder.forEachIndexed { index, button ->
+                val startAngle = index * sweepAngle
                 drawArc(
                     color = button.color,
-                    startAngle = index * sweepAngle,
+                    startAngle = startAngle,
                     sweepAngle = sweepAngle,
                     useCenter = false,
                     topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
@@ -65,77 +73,47 @@ fun CenterDiscCanvas(
                         cap = StrokeCap.Butt
                     )
                 )
+                if (colorBlindModeEnabled) {
+                    drawColorBlindShape(
+                        shape = ColorBlindShape.forButton(button),
+                        center = arcMidpoint(center, glyphRadius, startAngle, sweepAngle),
+                        halfSize = glyphHalf
+                    )
+                }
             }
         } else {
             // 4-button mode: Classic 4 arcs (90 degrees each)
-
-            // Draw green arc (top-left)
-            drawArc(
-                color = SimonButton.GREEN.color,
-                startAngle = 180f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                size = size.copy(
-                    width = size.width - strokeWidth,
-                    height = size.height - strokeWidth
-                ),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Butt
-                )
+            val classicArcs = listOf(
+                SimonButton.GREEN to 180f,
+                SimonButton.RED to 270f,
+                SimonButton.BLUE to 0f,
+                SimonButton.YELLOW to 90f
             )
 
-            // Draw red arc (top-right)
-            drawArc(
-                color = SimonButton.RED.color,
-                startAngle = 270f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                size = size.copy(
-                    width = size.width - strokeWidth,
-                    height = size.height - strokeWidth
-                ),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Butt
+            classicArcs.forEach { (button, startAngle) ->
+                drawArc(
+                    color = button.color,
+                    startAngle = startAngle,
+                    sweepAngle = 90f,
+                    useCenter = false,
+                    topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
+                    size = size.copy(
+                        width = size.width - strokeWidth,
+                        height = size.height - strokeWidth
+                    ),
+                    style = Stroke(
+                        width = strokeWidth,
+                        cap = StrokeCap.Butt
+                    )
                 )
-            )
-
-            // Draw blue arc (bottom-right)
-            drawArc(
-                color = SimonButton.BLUE.color,
-                startAngle = 0f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                size = size.copy(
-                    width = size.width - strokeWidth,
-                    height = size.height - strokeWidth
-                ),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Butt
-                )
-            )
-
-            // Draw yellow arc (bottom-left)
-            drawArc(
-                color = SimonButton.YELLOW.color,
-                startAngle = 90f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = Offset(strokeWidth / 2, strokeWidth / 2),
-                size = size.copy(
-                    width = size.width - strokeWidth,
-                    height = size.height - strokeWidth
-                ),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Butt
-                )
-            )
+                if (colorBlindModeEnabled) {
+                    drawColorBlindShape(
+                        shape = ColorBlindShape.forButton(button),
+                        center = arcMidpoint(center, glyphRadius, startAngle, 90f),
+                        halfSize = glyphHalf
+                    )
+                }
+            }
         }
     }
 }

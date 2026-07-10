@@ -155,7 +155,9 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
         composable<GameplayRoute> {
             GameplayScreen(
                 playerTimeoutSeconds = uiState.playerTimeoutSeconds,
+                colorBlindModeEnabled = uiState.colorBlindModeEnabled,
                 onPlayerTimeoutChanged = { viewModel.setPlayerTimeoutSeconds(it) },
+                onColorBlindModeToggled = { viewModel.setColorBlindModeEnabled(it) },
                 onBackPressed = { navController.popBackStack() }
             )
         }
@@ -400,6 +402,7 @@ fun SimonGameScreen(
                     litButton = displayLit,
                     allButtonsLit = uiState.allButtonsLit,
                     pressedButtons = localPressedButtons,
+                    colorBlindModeEnabled = uiState.colorBlindModeEnabled,
                     onButtonInteraction = handleButtonInteraction
                 )
 
@@ -453,7 +456,8 @@ fun SimonGameScreen(
                 ) {
                     // Colored arcs - Dynamic based on mode
                     CenterDiscCanvas(
-                        memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled
+                        memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                        colorBlindModeEnabled = uiState.colorBlindModeEnabled
                     )
 
                     // Sound pack chip + level / loading / game-over summary.

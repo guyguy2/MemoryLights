@@ -38,6 +38,8 @@ data class AppSettings(
     val practiceModeEnabled: Boolean = false,
     val reverseModeEnabled: Boolean = false,
     val audioOnlyModeEnabled: Boolean = false,
+    /** #35: geometric shape overlays on buttons/arcs. Default off preserves classic look. */
+    val colorBlindModeEnabled: Boolean = false,
     val gameMode: GameMode = GameMode.CLASSIC,
     val bestBlitzTime4ButtonMs: Long = 0L,
     val bestBlitzTime6ButtonMs: Long = 0L,
@@ -76,6 +78,7 @@ interface SettingsRepository {
     fun setPracticeModeEnabled(enabled: Boolean)
     fun setReverseModeEnabled(enabled: Boolean)
     fun setAudioOnlyModeEnabled(enabled: Boolean)
+    fun setColorBlindModeEnabled(enabled: Boolean)
     fun setGameMode(mode: GameMode)
     fun setBestBlitzTime4ButtonMs(ms: Long)
     fun setBestBlitzTime6ButtonMs(ms: Long)
@@ -138,6 +141,7 @@ class DataStoreSettingsRepository internal constructor(
         private val KEY_PRACTICE_MODE_ENABLED = booleanPreferencesKey("practice_mode_enabled")
         private val KEY_REVERSE_MODE_ENABLED = booleanPreferencesKey("reverse_mode_enabled")
         private val KEY_AUDIO_ONLY_MODE_ENABLED = booleanPreferencesKey("audio_only_mode_enabled")
+        private val KEY_COLOR_BLIND_MODE_ENABLED = booleanPreferencesKey("color_blind_mode_enabled")
         private val KEY_GAME_MODE = stringPreferencesKey("game_mode")
         private val KEY_BEST_BLITZ_TIME_4_BUTTON_MS = longPreferencesKey("best_blitz_time_4_button_ms")
         private val KEY_BEST_BLITZ_TIME_6_BUTTON_MS = longPreferencesKey("best_blitz_time_6_button_ms")
@@ -168,6 +172,7 @@ class DataStoreSettingsRepository internal constructor(
             practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false,
             reverseModeEnabled = prefs[KEY_REVERSE_MODE_ENABLED] ?: false,
             audioOnlyModeEnabled = prefs[KEY_AUDIO_ONLY_MODE_ENABLED] ?: false,
+            colorBlindModeEnabled = prefs[KEY_COLOR_BLIND_MODE_ENABLED] ?: false,
             gameMode = readGameMode(prefs),
             bestBlitzTime4ButtonMs = prefs[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] ?: 0L,
             bestBlitzTime6ButtonMs = prefs[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] ?: 0L,
@@ -220,6 +225,7 @@ class DataStoreSettingsRepository internal constructor(
     override fun setPracticeModeEnabled(enabled: Boolean) = write { it[KEY_PRACTICE_MODE_ENABLED] = enabled }
     override fun setReverseModeEnabled(enabled: Boolean) = write { it[KEY_REVERSE_MODE_ENABLED] = enabled }
     override fun setAudioOnlyModeEnabled(enabled: Boolean) = write { it[KEY_AUDIO_ONLY_MODE_ENABLED] = enabled }
+    override fun setColorBlindModeEnabled(enabled: Boolean) = write { it[KEY_COLOR_BLIND_MODE_ENABLED] = enabled }
     override fun setGameMode(mode: GameMode) = write { it[KEY_GAME_MODE] = mode.name }
     override fun setBestBlitzTime4ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_4_BUTTON_MS] = ms }
     override fun setBestBlitzTime6ButtonMs(ms: Long) = write { it[KEY_BEST_BLITZ_TIME_6_BUTTON_MS] = ms }

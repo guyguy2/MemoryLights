@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.happypuppy.memorylights.domain.enums.ColorBlindShape
 
 @Composable
 fun SimonPanel(
@@ -35,6 +36,8 @@ fun SimonPanel(
     colorName: String,
     isLit: Boolean = false,
     userPressed: Boolean = false,
+    /** When non-null, draws a high-contrast geometric marker for color-blind mode (#35). */
+    colorBlindShape: ColorBlindShape? = null,
     modifier: Modifier = Modifier,
     onTouchStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -203,7 +206,7 @@ fun SimonPanel(
                 }
         )
 
-        // Inner shadows and highlights
+        // Inner shadows, highlights, and optional color-blind shape overlay
         Canvas(modifier = Modifier.fillMaxSize()) {
             // Calculate inner shadow visibility (only when pressed)
             val shadowAlpha = pressAnimation * 0.8f
@@ -245,6 +248,22 @@ fun SimonPanel(
                     start = Offset(6f, 12f),
                     end = Offset(6f, size.height - 25f),
                     strokeWidth = 2f
+                )
+            }
+
+            // #35: geometric marker so panels are distinguishable without hue.
+            // Centered on the face (accounting for the press offset) and sized
+            // to ~22% of the shorter edge so it stays clear on 4- and 6-button layouts.
+            if (colorBlindShape != null) {
+                val faceCenter = Offset(
+                    x = size.width / 2f + offsetX * 0.5f,
+                    y = size.height / 2f + offsetY * 0.5f
+                )
+                val halfSize = minOf(size.width, size.height) * 0.22f
+                drawColorBlindShape(
+                    shape = colorBlindShape,
+                    center = faceCenter,
+                    halfSize = halfSize
                 )
             }
         }

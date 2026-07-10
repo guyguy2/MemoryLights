@@ -41,6 +41,7 @@ data class SimonGameUiState(
     val practiceModeEnabled: Boolean = false, // Practice mode (F15): wrong button replays sequence instead of ending game
     val reverseModeEnabled: Boolean = false, // Reverse mode (F1): player must repeat sequence in reverse order
     val audioOnlyModeEnabled: Boolean = false, // Audio-Only mode (F3): hide button colors during sequence playback
+    val colorBlindModeEnabled: Boolean = false, // #35: geometric shape overlays so the game is playable without hue discrimination
     val gameMode: GameMode = GameMode.CLASSIC, // Game mode (F4): Classic (open-ended) or Speed Blitz (sprint to BLITZ_TARGET_LEVEL)
     val blitzStartTimeMs: Long = 0L, // Wall-clock start of the current Speed Blitz run; 0 = not started
     val blitzElapsedMs: Long = 0L, // Final elapsed time when blitz run completes (won or lost); 0 while still in flight
