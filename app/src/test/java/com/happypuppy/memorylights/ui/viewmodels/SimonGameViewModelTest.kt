@@ -16,7 +16,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -719,5 +721,79 @@ class SimonGameViewModelTest {
 
             assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
             verify(exactly = 1) { soundManager.playErrorSound() }
+        }
+
+    @Test
+    fun `onResume while in settings does not restart the inactivity timer`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            val owner = mockk<LifecycleOwner>(relaxed = true)
+
+            vm.showSettings()
+            vm.onPause(owner)
+            vm.onResume(owner)
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+
+            // No timeout fired while the player was still on the Settings screen.
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+
+            // Landing back on the Game route restores the turn and arms the timer.
+            vm.onReturnToGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+        }
+
+    @Test
+    fun `mode switch while in settings defers the new run until return to game`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+
+            vm.showSettings()
+            vm.setMemoryLightsPlusEnabled(true)
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 5_000)
+            advanceUntilIdle()
+
+            // Nothing plays on the Settings screen: no sequence, no timeout, no game over.
+            assertEquals(GameState.WaitingToStart, vm.uiState.value.gameState)
+            assertTrue(vm.uiState.value.sequence.isEmpty())
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+
+            vm.onReturnToGame()
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            val state = vm.uiState.value
+            assertTrue(state.memoryLightsPlusEnabled)
+            assertEquals(GameState.PlayerRepeating, state.gameState)
+            assertEquals(1, state.sequence.size)
+        }
+
+    @Test
+    fun `onReturnToGame during startup does not start a game before settings load`() =
+        runTest(testDispatcher.scheduler) {
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(1_000)
+                emit(AppSettings())
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+
+            // The Game route composes immediately, so its LaunchedEffect fires
+            // this before DataStore has answered.
+            vm.onReturnToGame()
+            runCurrent()
+            assertEquals(GameState.WaitingToStart, vm.uiState.value.gameState)
+            assertTrue(vm.uiState.value.sequence.isEmpty())
+
+            // Settings land, the startup animation plays, the first game starts.
+            advanceTimeBy(6_000)
+            runCurrent()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(1, vm.uiState.value.sequence.size)
         }
 }

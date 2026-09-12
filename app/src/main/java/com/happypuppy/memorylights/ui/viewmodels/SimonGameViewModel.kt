@@ -183,6 +183,11 @@ class SimonGameViewModel(
     // Track previous game state before entering settings
     private var previousGameState: GameState = GameState.WaitingToStart
 
+    // True while navigation is away from the Game route (Settings and its
+    // sub-screens, Statistics). The game phase is frozen there: nothing may
+    // replay and no inactivity timer may arm until onReturnToGame.
+    private var isInSettings = false
+
     // Track active coroutine jobs that need to be paused/resumed
     private var activeSequenceJob: Job? = null
     private var gameOverTextAnimationJob: Job? = null
@@ -198,6 +203,7 @@ class SimonGameViewModel(
     fun showSettings() {
         Log.d(TAG, "Game pausing for settings navigation")
 
+        isInSettings = true
         previousGameState = _uiState.value.gameState
 
         cancelTimeoutTimer()
@@ -234,6 +240,17 @@ class SimonGameViewModel(
      */
     fun onReturnToGame() {
         Log.d(TAG, "Resuming game after navigation back")
+
+        isInSettings = false
+
+        // The Game route also fires this on initial composition, before the
+        // settings load + startup animation in init have started the first
+        // game. Starting one here would generate a sequence from default
+        // settings and race the startup path; let init own the first game.
+        if (!hasPlayedStartupAnimation) {
+            Log.d(TAG, "Startup still in progress, init will start the first game")
+            return
+        }
 
         // Only resume if app is in foreground
         if (!isAppInForeground) {
@@ -496,6 +513,26 @@ class SimonGameViewModel(
 
         settingsRepository.setDailyChallengeEnabled(enabled)
 
+        restartRunAfterModeChange()
+    }
+
+    /**
+     * Start the fresh run that follows a rules change ([setGameMode],
+     * [setMemoryLightsPlusEnabled], [setDailyChallengeEnabled]). Callers have
+     * already reset the run to WaitingToStart with an empty sequence.
+     *
+     * These setters are reached from Settings sub-screens, so the new run
+     * must not play there: the sequence would flash and sound on the wrong
+     * screen, and the inactivity timer would end it before the player is
+     * back. Instead, point [onReturnToGame] at its WaitingToStart branch,
+     * which calls [startNewGame] once the Game route is visible again.
+     */
+    private fun restartRunAfterModeChange() {
+        if (isInSettings) {
+            Log.d(TAG, "Mode changed on Settings, new run starts on return to game")
+            previousGameState = GameState.WaitingToStart
+            return
+        }
         if (isAppInForeground) {
             seedDailyRandomIfNeeded()
             generateNextSequence()
@@ -551,11 +588,7 @@ class SimonGameViewModel(
 
         settingsRepository.setGameMode(mode)
 
-        if (isAppInForeground) {
-            seedDailyRandomIfNeeded()
-            generateNextSequence()
-            showSequence()
-        }
+        restartRunAfterModeChange()
     }
 
     /**
@@ -610,12 +643,8 @@ class SimonGameViewModel(
             
             settingsRepository.setMemoryLightsPlusEnabled(enabled)
 
-            // Start a new game with the new mode if app is in foreground
-            if (isAppInForeground) {
-                seedDailyRandomIfNeeded()
-                generateNextSequence()
-                showSequence()
-            }
+            // Start a new game with the new mode (deferred while on Settings)
+            restartRunAfterModeChange()
         }
     }
     
@@ -1526,6 +1555,14 @@ class SimonGameViewModel(
         if (wasGameActiveBeforeBackground) {
             Log.d(TAG, "Resuming game from previous state: $gameStateBeforeBackground")
             wasGameActiveBeforeBackground = false
+
+            // Still on Settings: replaying the sequence or arming the timer
+            // here would end the run on the wrong screen. onReturnToGame
+            // restores the captured previousGameState instead.
+            if (isInSettings) {
+                Log.d(TAG, "Player is on Settings, deferring game resume to onReturnToGame")
+                return
+            }
 
             when (gameStateBeforeBackground) {
                 is GameState.ShowingSequence -> {
