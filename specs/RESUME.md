@@ -1,6 +1,32 @@
-# Resume note for next session (written 2026-07-10, Wave 11 — BlitzHud lift)
+# Resume note for next session (written 2026-09-12, Wave 12 - ViewModel lifecycle fixes)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-09-12, Wave 12 - three ViewModel bug fixes)
+
+- Branch `main`. Working tree clean after this wave's four commits. Local commits ahead of origin (no push during background-agent waves).
+- HEAD: `docs: next-session resume block after Wave 12` on top of `2e962fe fix(di)`, `c0f7be8 fix(vm)`, `6553732 fix(vm)`, then Wave 11 `8224fa6`.
+- 102/102 unit tests green (95 + 7 new `SimonGameViewModelTest` cases). `./gradlew assembleDebug testDebugUnitTest lintDebug` succeeds; lint 0 errors / 42 warnings (GradleDependency 13, UseKtx 11, UnusedResources 8, PluralsCandidate 3, ModifierParameter 2, AGP version 2, VectorPath, OldTargetApi, ObsoleteSdkInt).
+- No device used. All three fixes are ViewModel/DI logic with unit coverage.
+- **Build environment note:** Gradle 8.14.2 rejects the default Android Studio JBR (Java 25; the build fails with the bare message `25.0.2`). Run Gradle with `JAVA_HOME=~/.gradle/jdks/eclipse_adoptium-17-aarch64-os_x.2/jdk-17.0.19+10/Contents/Home` (JDK 21 under `~/.gradle/jdks` also works). Not committed to the repo; environment only.
+
+## What changed this session (Wave 12)
+
+Roadmap items were all UX/user/product-gated (#32, Phase 4, F13/F12/F11/F17), so this wave audited `SimonGameViewModel` for lifecycle bugs and fixed three, each with reproducing tests written first:
+
+1. `6553732` **Input lock after a miss/timeout.** `gameState` stays `PlayerRepeating` through the 300 ms error-tone delay and the 2 s game-over flash; presses there were still scored (level advance after a miss, double `recordGameResult`, double practice-mode replay). New private `isInputLocked`, set on miss/timeout, cleared in `showSequence` / `updateGameOverState`.
+2. `c0f7be8` **Game frozen while on Settings.** New private `isInSettings` (set in `showSettings`, cleared in `onReturnToGame`). `onResume` no longer re-arms the timer / replays the sequence on the Settings screen; the three rules-change setters share `restartRunAfterModeChange()` which defers the new run to `onReturnToGame`'s WaitingToStart branch while on Settings; `onReturnToGame` is a no-op until the startup animation has run (it used to call `startNewGame()` on cold start before DataStore answered).
+3. `2e962fe` **SoundManager release moved to Koin `onClose`.** `onCleared()` released the process-lifetime `SimonSoundManager` singleton, so reopening the app in a warm process had no audio.
+
+## Found but not fixed (candidates for Wave 13)
+
+See the P2 table rows #66-#69 in `specs/improvements.md`. Highest value: #66 (untracked delayed game-over coroutines can land on the next run if the player enters Settings / switches mode within ~2.3 s of a miss).
+
+## Recommended next batch
+1. #66 track the delayed game-over jobs (S) - closes the remaining hole behind Wave 12 items 1 and 2.
+2. #67 timeout double error tone (S) and #68 practice mode does not cover timeouts (product question: should a timeout replay in practice mode?).
+3. #69 `MainActivity.checkSoundResources` debug logging: only knows standard/funny packs, logs "Resource missing" for the other five in release too (S).
+4. Then the previously listed gated items: #32 onboarding (UX), Phase 4 Play Store (user), F13 / Light F12 / F11 / F17 (product).
 
 ## State at session end (2026-07-10, Wave 11 — BlitzHud extract)
 
@@ -68,5 +94,5 @@ F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 11 BlitzHud head on main with clean tree. 95 unit tests green. Game-screen private HUDs exhausted. Next: #32 onboarding (UX-blocked), Phase 4 Play Store (user-action only), or F13/F12 product work. Ask the user which path to take before starting.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 12 docs commit on main with clean tree. Run Gradle with JAVA_HOME set to the JDK 17 under ~/.gradle/jdks (the default JBR 25 breaks Gradle 8.14.2). 102 unit tests green, lint 0 errors. Next: P2 #66 (track delayed game-over jobs), #67/#68 timeout polish, #69 MainActivity debug logging; then the gated items (#32 onboarding, Phase 4 Play Store, F13/F12/F11/F17). Ask the user which path to take before starting product work.
 ```

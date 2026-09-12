@@ -99,6 +99,10 @@ Canonical audit + execution plan. Combines original 2025 best-practices audit, p
 | 61 | Timeout has no visible countdown — game ends "from nowhere" at 10s. Add a thin progress ring around the center disc that drains during the player's turn. | ✅ Phase 5 step 2 (`timeoutResetTick: Int` added to `SimonGameUiState`; ViewModel increments on every `startTimeoutTimer`; UI runs `Animatable(1f)` over `PLAYER_TIMEOUT_MS` keyed on tick, draws thin 124-dp ring around the disc with `lerp(red, green, fraction)` color shift) | M | `domain/model/SimonGameUiState.kt`, `viewmodels/SimonGameViewModel.kt`, `ui/screens/SimonGameScreen.kt` |
 | 62 | Difficulty speed-up invisible to player. When difficulty reduces timing, flash a "Speed Up!" text or attach a level-tier subtitle ("Level 5 - Fast"). Pairs with item #38. | ✅ Phase 5 step 4 (`showSpeedUpText` flag in `SimonGameUiState`; ViewModel sets true in `advanceToNextLevel` when difficulty enabled and `(newLevel - 1) % DIFFICULTY_INTERVAL == 0` and `newLevel >= 5`; `speedUpTextJob` auto-clears after `SPEED_UP_TEXT_DISPLAY_MS = 1200ms`; UI overlay `AnimatedVisibility` fade+scale) | S | `domain/model/SimonGameUiState.kt`, `domain/GameConstants.kt`, `viewmodels/SimonGameViewModel.kt`, `ui/screens/SimonGameScreen.kt` |
 | 63 | Sound pack preview always plays GREEN regardless of pack tapped. Cycle through all colors, or play a random color, so player auditions full pack character. | ✅ Phase 5 step 5 (`previewToneIndex` cursor in ViewModel cycles through `getAvailableButtons(memoryLightsPlusEnabled)` so the player hears each button's tone in turn) | S | `viewmodels/SimonGameViewModel.kt` |
+| 66 | Delayed game-over coroutines are untracked: `handleWrongButton` launches `delay(300) -> handleGameOver`, and `handleGameOver` launches `delay(2000) -> updateGameOverState`, neither stored in a Job. Entering Settings or switching mode inside that ~2.3 s window lets GameOver + `recordGameResult` land on the fresh run, and `onReturnToGame` then forces the stale `previousGameState` onto it. Track both in a `pendingGameOverJob` and cancel it in the reset paths (`setGameMode`, `setMemoryLightsPlusEnabled`, `setDailyChallengeEnabled`, `showSettings`, `onPause`, `onCleared`). Found Wave 12 while fixing input-lock and Settings-freeze bugs. | open | S | `viewmodels/SimonGameViewModel.kt` |
+| 67 | Timeout path plays the error tone twice (`startTimeoutTimer` then `handleGameOver`), while the wrong-press path plays it once. Pick one. | open | S | `viewmodels/SimonGameViewModel.kt` |
+| 68 | Practice mode (F15) does not cover timeouts: `startTimeoutTimer` calls `handleGameOver` directly, so an idle player in practice mode still gets GameOver + statistics. Product question: replay instead? | open (decision) | S | `viewmodels/SimonGameViewModel.kt` |
+| 69 | `MainActivity.checkSoundResources()` / `checkResource()` is startup debug logging that only knows the standard and funny packs; it logs "Resource missing" for the other five packs on every launch, including release. Either delete or gate on `BuildConfig.DEBUG` and use `SimonSoundManager`'s full mapping. Also dead: `SimonSoundManager.vibrate()` legacy `SDK_INT < O` branch (minSdk 31) and the no-arg `handleGameOver()` overload in the ViewModel. | open | S | `ui/MainActivity.kt`, `data/manager/SimonSoundManager.kt`, `viewmodels/SimonGameViewModel.kt` |
 | 64 | No sequence-progress "3 / 7" indicator during repeat — players lose count at high levels. Add `playerSequence.size / sequence.size` text below the center disc when `gameState == PlayerRepeating`. | ✅ Phase 5 step 4 (small "X / Y" Text rendered under the level number inside the center disc Column when `PlayerRepeating` and sequence non-empty; verified live: layout dump shows "0 / 1") | S | `ui/screens/SimonGameScreen.kt` |
 
 ### Done (verified — closing the loop on the original 2025 audit)
@@ -454,6 +458,20 @@ Cheap game-screen extraction seams are exhausted. Remaining open: #32 (UX), Phas
 
 ---
 
+## Session 2026-09-12 - Wave 12 (ViewModel lifecycle bug fixes)
+
+All roadmap items were UX/user/product-gated, so this wave audited `SimonGameViewModel` by reading and fixed three real bugs, test-first (7 new `SimonGameViewModelTest` cases, 95 -> 102 green):
+
+- `6553732` **fix(vm): lock input after a miss or timeout until the next turn.** `gameState` stays `PlayerRepeating` through the error-tone delay and the game-over flash, so a stray press could complete the sequence after a miss (level advanced, then GameOver at the wrong level) or run a second `handleGameOver` (statistics recorded twice; practice mode replayed and beeped twice). New private `isInputLocked` flag gates `onButtonClick`.
+- `c0f7be8` **fix(vm): freeze the game while navigation is on Settings.** New private `isInSettings` flag. `onResume` on the Settings screen no longer re-arms the inactivity timer or replays the sequence (which ended runs behind the settings UI). Rules-change setters (`setGameMode`, `setMemoryLightsPlusEnabled`, `setDailyChallengeEnabled`) now share `restartRunAfterModeChange()`, which defers the new run to `onReturnToGame` while on Settings. `onReturnToGame` is a no-op until the startup animation has run; it used to call `startNewGame()` on cold start before DataStore answered, racing init.
+- `2e962fe` **fix(di): release SimonSoundManager with Koin, not the ViewModel.** `onCleared()` released the process-lifetime Koin singleton, so Back-to-exit then relaunch in a warm process had no audio. Release now lives in the module's `onClose`, matching the repository scopes.
+
+New P2 rows #66-#69 record issues found but not fixed (untracked delayed game-over jobs, timeout double tone, practice mode vs timeout, `MainActivity` debug resource logging + small dead code).
+
+Build note: Gradle 8.14.2 fails under the default Android Studio JBR 25 with the bare message `25.0.2`; use `JAVA_HOME` = JDK 17 or 21 from `~/.gradle/jdks`. Lint re-run this wave: 0 errors, 42 warnings (mostly GradleDependency / UseKtx / UnusedResources).
+
+---
+
 ## Critical Files
 
 | Concern | File |
@@ -485,7 +503,7 @@ Resume the Memory Lights roadmap from specs/improvements.md.
 
 Decisions already locked: canonical doc = specs/improvements.md (root IMPROVEMENTS.md already deleted); sound production = synth-first (Python numpy for Musical, jsfxr for Sci-Fi, Freesound CC0 for Nature); milestone order = sound packs first, then Play Store launch.
 
-Status: Wave 11 BlitzHud extract closed; #35 color-blind shipped Wave 10 (shapes, default off). Game-screen private HUDs exhausted. Open audit: #32 onboarding (UX-blocked), #34 reduce-motion (previously cut). Open features: F11 GPGS (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12. Phase 4 Play Store prep mostly done — keystore + Play Console are user-action only. Read specs/RESUME.md for the latest wave pointer.
+Status: Wave 12 fixed three ViewModel lifecycle bugs (input lock after miss, game frozen while on Settings, SoundManager release moved to Koin); 102 unit tests green. Open audit: #66-#69 (found Wave 12, all S), #32 onboarding (UX-blocked), #34 reduce-motion (previously cut). Open features: F11 GPGS (post-launch v1.1), F13 per-button color picker, F17 IAP (decision pending), Light theme variant of F12. Phase 4 Play Store prep mostly done - keystore + Play Console are user-action only. Build needs JAVA_HOME = JDK 17/21 (see RESUME.md). Read specs/RESUME.md for the latest wave pointer.
 ```
 
 Tweak the last line if you want to push further per session — e.g., "go through all of Phase 2 and stop", or "run all the way through Phase 2 then start Phase 3 step 1".
