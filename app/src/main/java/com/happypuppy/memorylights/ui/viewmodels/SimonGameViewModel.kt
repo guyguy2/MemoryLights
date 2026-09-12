@@ -82,6 +82,13 @@ class SimonGameViewModel(
     // and viewModelScope launches default to Dispatchers.Main.immediate.
     private val activePresses = mutableSetOf<SimonButton>()
 
+    // True from the moment a turn ends in a miss or timeout until the next
+    // sequence display begins (or GameOver lands). gameState stays
+    // PlayerRepeating through the error-tone delay and the game-over flash,
+    // so without this gate a stray press in that window could advance the
+    // level or fire a second game-over (double statistics write).
+    private var isInputLocked = false
+
     // Cursor for the sound-pack preview tone. Advances each time the player
     // taps a pack so they audition multiple colors rather than only GREEN
     // every time (#63). Wraps around the available button list.
@@ -830,6 +837,9 @@ class SimonGameViewModel(
     private fun showSequence() {
         Log.d(TAG, "Showing sequence of length: ${_uiState.value.sequence.size}")
 
+        // A new turn is starting - lift any lock left by the previous miss
+        isInputLocked = false
+
         // Don't show sequence if app is in background
         if (!isAppInForeground) {
             Log.d(TAG, "App is in background, not showing sequence now")
@@ -925,6 +935,12 @@ class SimonGameViewModel(
             // Ignore new presses when not in player repeating state
             if (_uiState.value.gameState != GameState.PlayerRepeating) {
                 Log.d(TAG, "Button press ignored - not in PlayerRepeating state: ${_uiState.value.gameState}")
+                return
+            }
+
+            // Ignore presses once the turn has already ended (miss or timeout)
+            if (isInputLocked) {
+                Log.d(TAG, "Button press ignored - turn already ended, waiting for game over / replay")
                 return
             }
 
@@ -1082,13 +1098,19 @@ class SimonGameViewModel(
      * again without losing their level.
      */
     private fun handleWrongButton(reason: String) {
+        // The turn is over; further presses must not be scored (see isInputLocked)
+        isInputLocked = true
         if (_uiState.value.practiceModeEnabled) {
             Log.d(TAG, "Practice mode: $reason — replaying sequence instead of game over")
             cancelTimeoutTimer()
             soundManager.playErrorSound()
             viewModelScope.launch {
                 delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-                if (!isAppInForeground) return@launch
+                if (!isAppInForeground) {
+                    // No replay will run; do not leave the turn locked for onResume
+                    isInputLocked = false
+                    return@launch
+                }
                 _uiState.update { it.copy(
                     playerSequence = emptyList(),
                     currentlyLit = null,
@@ -1238,6 +1260,8 @@ class SimonGameViewModel(
 
             // Ensure we're still in PlayerRepeating state (could have changed during the delay)
             if (_uiState.value.gameState == GameState.PlayerRepeating) {
+                // The turn is over; presses during the game-over animation are ignored
+                isInputLocked = true
                 // Play timeout sound and end game
                 soundManager.playErrorSound()
                 viewModelScope.launch {
@@ -1316,6 +1340,8 @@ class SimonGameViewModel(
         isNewHighScore: Boolean,
         blitzElapsedMs: Long = 0L
     ) {
+        // GameOver gates input by state from here on; release the miss lock
+        isInputLocked = false
         _uiState.update { currentState ->
             if (currentState.memoryLightsPlusEnabled) {
                 currentState.copy(

@@ -648,5 +648,76 @@ class SimonGameViewModelTest {
             // Stats still record so play history isn't blank.
             verify { statisticsRepository.recordGameResult(1, any()) }
         }
-}
 
+    @Test
+    fun `press after a miss cannot advance the level`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+
+            // Grow to level 2 so a wrong-then-matching pair of presses exists.
+            vm.tap(vm.uiState.value.sequence[0])
+            advanceTimeBy(4_000)
+            runCurrent()
+            val seq = vm.uiState.value.sequence
+            assertEquals(2, seq.size)
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != seq[0] }
+            vm.tap(wrong)
+            // Still inside the error-tone delay: gameState is PlayerRepeating but
+            // the turn is over. This press matches seq[1] and must not complete
+            // the sequence.
+            vm.tap(seq[1])
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(2, vm.uiState.value.level)
+            verify(exactly = 1) { statisticsRepository.recordGameResult(2, any()) }
+        }
+
+    @Test
+    fun `press during game-over flash does not record a second game over`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val correct = vm.uiState.value.sequence[0]
+            val wrong = available.first { it != correct }
+            vm.tap(wrong)
+            // Past the error-tone delay (300) and into the 2s flash animation,
+            // during which gameState is still PlayerRepeating.
+            advanceTimeBy(600)
+            runCurrent()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            vm.tap(correct)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(1, vm.uiState.value.level)
+            verify(exactly = 1) { statisticsRepository.recordGameResult(any(), any()) }
+        }
+
+    @Test
+    fun `practice mode ignores presses until the sequence replays`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val correct = vm.uiState.value.sequence[0]
+            val wrong = available.first { it != correct }
+            vm.tap(wrong)
+            // Inside the error-tone delay; must not count as a second miss.
+            vm.tap(correct)
+            advanceTimeBy(2_500)
+            runCurrent()
+
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            verify(exactly = 1) { soundManager.playErrorSound() }
+        }
+}
