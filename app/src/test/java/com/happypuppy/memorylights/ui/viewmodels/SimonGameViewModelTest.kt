@@ -1,6 +1,7 @@
 package com.happypuppy.memorylights.ui.viewmodels
 
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelStore
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.data.repository.StatisticsRepository
 import com.happypuppy.memorylights.data.repository.AppSettings
@@ -796,4 +797,21 @@ class SimonGameViewModelTest {
             assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
             assertEquals(1, vm.uiState.value.sequence.size)
         }
+
+    @Test
+    fun `clearing the ViewModel does not release the shared sound manager`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+
+            // Drive onCleared the way the framework does: through a ViewModelStore.
+            // SimonSoundManager is a Koin singleton that outlives the Activity's
+            // ViewModel; releasing it here would leave the next Activity silent.
+            val store = ViewModelStore()
+            store.put("game", vm)
+            store.clear()
+
+            verify(exactly = 0) { soundManager.release() }
+        }
 }
+

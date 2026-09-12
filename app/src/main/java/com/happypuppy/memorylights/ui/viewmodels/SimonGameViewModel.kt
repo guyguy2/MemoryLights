@@ -1615,7 +1615,7 @@ class SimonGameViewModel(
 
     // Clean up resources when ViewModel is cleared
     override fun onCleared() {
-        Log.d(TAG, "ViewModel cleared, releasing sound resources")
+        Log.d(TAG, "ViewModel cleared")
         super.onCleared()
         cancelTimeoutTimer() // Make sure to cancel any timers
 
@@ -1633,6 +1633,9 @@ class SimonGameViewModel(
         // completes cleanly rather than leaking past the VM lifecycle.
         _unlockEvents.close()
 
-        soundManager.release()
+        // soundManager is a Koin singleton shared across Activity instances;
+        // the DI module releases it (onClose) when Koin shuts down. Releasing
+        // it here left the next Activity's ViewModel with a dead SoundPool
+        // after the app was closed and reopened in a warm process.
     }
 }

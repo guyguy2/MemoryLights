@@ -15,8 +15,13 @@ import org.koin.dsl.module
  * Main application module for Dependency Injection
  */
 val appModule = module {
-    // Single instance of SimonSoundManager using constructor reference
-    single { SimonSoundManager(androidContext()) }
+    // Single instance of SimonSoundManager using constructor reference.
+    // Process-lifetime singleton: the ViewModel must not release it (it is
+    // reused by the next Activity), so the SoundPool is released here when
+    // Koin shuts down, like the repository scopes below.
+    single { SimonSoundManager(androidContext()) }.withOptions {
+        onClose { it?.release() }
+    }
 
     // Single instance of StatisticsRepository using constructor reference.
     // `onClose` cancels the repo's owned IO scope when Koin releases the instance
