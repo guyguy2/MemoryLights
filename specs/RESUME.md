@@ -1,10 +1,19 @@
-# Resume note for next session (written 2026-11-25, Wave 14 - targetSdk 36)
+# Resume note for next session (written 2026-11-25, Wave 15 - game-over race fixes)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
 
+## State at session end (2026-11-25, Wave 15 - game-over race fixes)
+
+- Branch `main`. `f51afca fix(vm)` plus a docs commit on top of Wave 14. Local until the user approves a push.
+- #66 and #67 closed. Pending game-over steps are tracked; Settings/background finish a loss immediately, mode switches cancel it. One error tone per timeout. Details in `specs/improvements.md` "Wave 15".
+- 108/108 unit tests (6 new, all red before the fix). `./gradlew build` passes; lint 0 errors / 29 warnings.
+- Emulator-verified on Pixel_10 (Settings opened 0.6 s after a miss; timeout tone count).
+- New follow-up: #73 (practice-mode miss path has the same untracked delay; confirm-dialog snapshot ordering).
+- Next candidates: #73 (small, same pattern), #70 + #72 (game-screen emulator pass), #68/#69 (need your decision).
+
 ## State at session end (2026-11-25, Wave 14 - targetSdk 36)
 
-- Branch `main`. One build commit (`targetSdk = 36`) plus a docs commit on top of Wave 13 (which is pushed). Wave 14 commits are local until the user approves a push.
+- Branch `main`. One build commit (`targetSdk = 36`) plus a docs commit on top of Wave 13 (which is pushed). Wave 14 commits are pushed (origin/main at ddc81af).
 - Not verified: TalkBack (see #70 note), a real tablet AVD (only a `wm density 240` override), 6-button mode in landscape.
 - #71 closed: targetSdk 36, which Play requires for uploads. No code fixes were needed. Only predictive back applies, and NavHost already handles it. Details are in `specs/improvements.md` "Wave 14".
 - 102/102 unit tests green. `./gradlew build` passes; lint 0 errors / 29 warnings (`OldTargetApi` now means 37).
