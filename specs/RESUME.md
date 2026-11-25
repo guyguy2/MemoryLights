@@ -1,6 +1,16 @@
-# Resume note for next session (written 2026-11-25, Wave 13 - toolchain + dependency upgrade)
+# Resume note for next session (written 2026-11-25, Wave 14 - targetSdk 36)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-11-25, Wave 14 - targetSdk 36)
+
+- Branch `main`. One build commit (`targetSdk = 36`) plus a docs commit on top of Wave 13 (which is pushed). Wave 14 commits are local until the user approves a push.
+- Not verified: TalkBack (see #70 note), a real tablet AVD (only a `wm density 240` override), 6-button mode in landscape.
+- #71 closed: targetSdk 36, which Play requires for uploads. No code fixes were needed. Only predictive back applies, and NavHost already handles it. Details are in `specs/improvements.md` "Wave 14".
+- 102/102 unit tests green. `./gradlew build` passes; lint 0 errors / 29 warnings (`OldTargetApi` now means 37).
+- Verified on Pixel_10 (API 37, gesture nav) with debug and signed release builds. Back gestures were driven by `input motionevent` (cancelled and committed edge swipes), not `keyevent 4`.
+- New follow-up: #72 (center-disc text overlap in landscape / sw600dp+, pre-existing). Added a predictive-back note to #70.
+- Next candidates: #70 (Compose live regions, TalkBack pass), #72, #66-#69.
 
 ## State at session end (2026-11-25, Wave 13 - toolchain + dependency upgrade)
 
