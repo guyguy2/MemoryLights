@@ -1,7 +1,7 @@
 [versions]
-agp = "8.10.1"
+agp = "9.5.3"
 koin = "4.0.3"
-kotlin = "2.1.10"
+kotlin = "2.4.21"
 coreKtx = "1.16.0"
 datastore = "1.1.4"
 junit = "4.13.2"
@@ -44,7 +44,6 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
