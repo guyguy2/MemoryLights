@@ -11,7 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -34,7 +34,7 @@ fun GameplayScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val resources = LocalResources.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -117,7 +117,7 @@ fun GameplayScreen(
                                 onClick = {
                                     if (playerTimeoutSeconds != seconds) {
                                         onPlayerTimeoutChanged(seconds)
-                                        toast(context.getString(R.string.snack_timeout_seconds, seconds))
+                                        toast(resources.getString(R.string.snack_timeout_seconds, seconds))
                                     }
                                 },
                                 label = { Text(stringResource(R.string.gameplay_timeout_chip, seconds)) },
@@ -141,7 +141,7 @@ fun GameplayScreen(
                 val next = !colorBlindModeEnabled
                 onColorBlindModeToggled(next)
                 toast(
-                    context.getString(
+                    resources.getString(
                         if (next) R.string.snack_color_blind_on else R.string.snack_color_blind_off
                     )
                 )
@@ -179,7 +179,7 @@ fun GameplayScreen(
                         onCheckedChange = { value ->
                             onColorBlindModeToggled(value)
                             toast(
-                                context.getString(
+                                resources.getString(
                                     if (value) R.string.snack_color_blind_on else R.string.snack_color_blind_off
                                 )
                             )

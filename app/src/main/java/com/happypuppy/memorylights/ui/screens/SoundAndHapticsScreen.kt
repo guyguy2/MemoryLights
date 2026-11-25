@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,7 +41,7 @@ fun SoundAndHapticsScreen(
     val soundPackListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val resources = LocalResources.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -121,7 +121,7 @@ fun SoundAndHapticsScreen(
                             isSelected = soundPack == currentSoundPack,
                             onSelect = {
                                 onSoundPackSelected(soundPack)
-                                toast(context.getString(R.string.snack_sound_pack, context.getString(soundPack.displayNameRes)))
+                                toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
                             }
                         )
                     }

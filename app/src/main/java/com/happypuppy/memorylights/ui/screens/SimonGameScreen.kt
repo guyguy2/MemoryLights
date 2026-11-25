@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -204,12 +205,13 @@ fun SimonGameScreen(
     val view = LocalView.current
 
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // Announce level changes (skip initial level 1 on game start)
     var previousLevel by remember { mutableIntStateOf(0) }
     LaunchedEffect(uiState.level) {
         if (previousLevel > 0 && uiState.level > previousLevel) {
-            view.announceForAccessibility(context.getString(R.string.a11y_level_announce, uiState.level))
+            view.announceForAccessibility(resources.getString(R.string.a11y_level_announce, uiState.level))
         }
         previousLevel = uiState.level
     }
@@ -218,13 +220,13 @@ fun SimonGameScreen(
     LaunchedEffect(uiState.gameState) {
         when (uiState.gameState) {
             GameState.PlayerRepeating -> {
-                view.announceForAccessibility(context.getString(R.string.a11y_your_turn))
+                view.announceForAccessibility(resources.getString(R.string.a11y_your_turn))
             }
             GameState.GameOver -> {
-                view.announceForAccessibility(context.getString(R.string.a11y_game_over_level, uiState.level))
+                view.announceForAccessibility(resources.getString(R.string.a11y_game_over_level, uiState.level))
             }
             GameState.Paused -> {
-                view.announceForAccessibility(context.getString(R.string.a11y_paused))
+                view.announceForAccessibility(resources.getString(R.string.a11y_paused))
             }
             else -> { /* No announcement for other states */ }
         }
@@ -233,7 +235,7 @@ fun SimonGameScreen(
     // Announce new high score celebration
     LaunchedEffect(uiState.showHighScoreText) {
         if (uiState.showHighScoreText) {
-            view.announceForAccessibility(context.getString(R.string.a11y_high_score_celebrate, uiState.level))
+            view.announceForAccessibility(resources.getString(R.string.a11y_high_score_celebrate, uiState.level))
         }
     }
 
@@ -247,12 +249,12 @@ fun SimonGameScreen(
         unlockEvents.collect { newlyUnlocked ->
             if (newlyUnlocked.isEmpty()) return@collect
             val message = if (newlyUnlocked.size == 1) {
-                context.getString(
+                resources.getString(
                     R.string.achievement_unlocked_toast,
-                    context.getString(newlyUnlocked.first().titleRes)
+                    resources.getString(newlyUnlocked.first().titleRes)
                 )
             } else {
-                context.getString(
+                resources.getString(
                     R.string.achievement_unlocked_toast_multi,
                     newlyUnlocked.size
                 )

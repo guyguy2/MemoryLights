@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,6 +54,7 @@ fun SettingsScreen(
     unlockedAchievements: Set<String> = emptySet()
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     fun toast(message: String) {
@@ -126,7 +128,7 @@ fun SettingsScreen(
                 onThemeModeChange = { newMode ->
                     if (newMode != themeMode) {
                         onThemeModeChange(newMode)
-                        toast(context.getString(R.string.snack_theme, context.getString(newMode.displayNameRes)))
+                        toast(resources.getString(R.string.snack_theme, resources.getString(newMode.displayNameRes)))
                     }
                 }
             )

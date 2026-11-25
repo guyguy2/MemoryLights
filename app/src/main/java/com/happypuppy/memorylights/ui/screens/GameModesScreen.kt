@@ -10,7 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -55,7 +55,7 @@ fun GameModesScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val resources = LocalResources.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -106,14 +106,14 @@ fun GameModesScreen(
                         pendingGameModeChange = newMode
                     } else {
                         onGameModeSelected(newMode)
-                        toast(context.getString(R.string.snack_mode, context.getString(newMode.displayNameRes)))
+                        toast(resources.getString(R.string.snack_mode, resources.getString(newMode.displayNameRes)))
                     }
                 }
             )
 
             val toggleDifficulty: (Boolean) -> Unit = { value ->
                 onDifficultyToggled(value)
-                toast(context.getString(if (value) R.string.snack_difficulty_on else R.string.snack_difficulty_off))
+                toast(resources.getString(if (value) R.string.snack_difficulty_on else R.string.snack_difficulty_off))
             }
             ToggleCard(
                 title = stringResource(R.string.toggle_difficulty_title),
@@ -125,7 +125,7 @@ fun GameModesScreen(
 
             val toggleReverse: (Boolean) -> Unit = { value ->
                 onReverseModeToggled(value)
-                toast(context.getString(if (value) R.string.snack_reverse_on else R.string.snack_reverse_off))
+                toast(resources.getString(if (value) R.string.snack_reverse_on else R.string.snack_reverse_off))
             }
             ToggleCard(
                 title = stringResource(R.string.toggle_reverse_title),
@@ -137,7 +137,7 @@ fun GameModesScreen(
 
             val togglePractice: (Boolean) -> Unit = { value ->
                 onPracticeModeToggled(value)
-                toast(context.getString(if (value) R.string.snack_practice_on else R.string.snack_practice_off))
+                toast(resources.getString(if (value) R.string.snack_practice_on else R.string.snack_practice_off))
             }
             ToggleCard(
                 title = stringResource(R.string.toggle_practice_title),
@@ -149,7 +149,7 @@ fun GameModesScreen(
 
             val toggleAudioOnly: (Boolean) -> Unit = { value ->
                 onAudioOnlyModeToggled(value)
-                toast(context.getString(if (value) R.string.snack_audio_only_on else R.string.snack_audio_only_off))
+                toast(resources.getString(if (value) R.string.snack_audio_only_on else R.string.snack_audio_only_off))
             }
             ToggleCard(
                 title = stringResource(R.string.toggle_audio_only_title),
@@ -161,7 +161,7 @@ fun GameModesScreen(
 
             val toggleDaily: (Boolean) -> Unit = { value ->
                 onDailyChallengeToggled(value)
-                toast(context.getString(if (value) R.string.snack_daily_on else R.string.snack_daily_off))
+                toast(resources.getString(if (value) R.string.snack_daily_on else R.string.snack_daily_off))
             }
             // Subtitle: when on AND a run was already played today, lead with
             // "Today's best: level N" so the player can see their progress
@@ -185,7 +185,7 @@ fun GameModesScreen(
                     pendingMemoryLightsPlusToggle = newValue
                 } else {
                     onMemoryLightsPlusToggled(newValue)
-                    toast(context.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
+                    toast(resources.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
                 }
             }
             ToggleCard(
@@ -226,7 +226,7 @@ fun GameModesScreen(
                     onClick = {
                         onGameModeSelected(newMode)
                         snackbarHostState.currentSnackbarData?.dismiss()
-                        val msg = context.getString(R.string.snack_mode, context.getString(newMode.displayNameRes))
+                        val msg = resources.getString(R.string.snack_mode, resources.getString(newMode.displayNameRes))
                         coroutineScope.launch {
                             snackbarHostState.showSnackbar(
                                 message = msg,
@@ -279,7 +279,7 @@ fun GameModesScreen(
                 TextButton(
                     onClick = {
                         onMemoryLightsPlusToggled(newValue)
-                        toast(context.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
+                        toast(resources.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
                         pendingMemoryLightsPlusToggle = null
                     },
                     colors = ButtonDefaults.textButtonColors(
