@@ -41,10 +41,10 @@ Simon Says is an engaging memory game where players must repeat increasingly com
 ## Technical Stack
 
 ### Core Technologies
-- **Language**: Kotlin 2.1.10
-- **UI Framework**: Jetpack Compose (BOM 2025.03.01)
+- **Language**: Kotlin 2.4.21
+- **UI Framework**: Jetpack Compose (BOM 2026.11.01)
 - **Architecture**: MVVM with StateFlow
-- **Dependency Injection**: Koin 4.0.3
+- **Dependency Injection**: Koin 4.2.2
 - **Build System**: Gradle (Kotlin DSL)
 
 ### Android SDK
@@ -100,9 +100,9 @@ MyApplication2/
 
 ### Prerequisites
 - Android Studio Ladybug or later
-- JDK 11 or higher
+- JDK 17 or higher
 - Android SDK 31+
-- Gradle 8.9.1+
+- Gradle 9.6+ (the wrapper pins 9.9.2)
 
 ### Installation
 

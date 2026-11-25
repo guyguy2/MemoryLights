@@ -56,10 +56,11 @@ com.happypuppy.memorylights/
 
 ## Technical Stack
 
-- **Kotlin**: 2.1.10
-- **Compose BOM**: 2025.06.00
-- **Koin**: 4.0.3
-- **Target SDK**: 35, **Min SDK**: 31
+- **Kotlin**: 2.4.21 (built into AGP 9.5.3; no `kotlin-android` plugin)
+- **Compose BOM**: 2026.11.01
+- **Koin**: 4.2.2
+- **Gradle**: 9.9.2
+- **Compile SDK**: 37.1, **Target SDK**: 35, **Min SDK**: 31
 
 ## Code Style
 

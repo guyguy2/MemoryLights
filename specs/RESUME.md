@@ -1,6 +1,15 @@
-# Resume note for next session (written 2026-09-12, Wave 12 - ViewModel lifecycle fixes)
+# Resume note for next session (written 2026-11-25, Wave 13 - toolchain + dependency upgrade)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
+
+## State at session end (2026-11-25, Wave 13 - toolchain + dependency upgrade)
+
+- Branch `main`. Three build commits plus a docs commit, local only (not pushed).
+- Gradle 9.9.2, AGP 9.5.3 (built-in Kotlin, no `kotlin-android` plugin), Kotlin 2.4.21, compileSdk 37.1, Compose BOM 2026.11.01, Koin 4.2.2. Details in `specs/improvements.md` "Wave 13".
+- 102/102 unit tests green. `./gradlew build` passes; lint 0 errors / 29 warnings.
+- **Build environment:** the default Android Studio JBR 25 now works. The JDK 17 `JAVA_HOME` workaround below (Wave 12) is obsolete.
+- **Emulator:** `Pixel_8_API_34` no longer exists. Use `Pixel_10` (API 37). Debug and signed release were smoke-tested on it this wave.
+- New follow-ups: #70 (`announceForAccessibility` deprecated at API 37), #71 (targetSdk 36 needed for Play upload).
 
 ## State at session end (2026-09-12, Wave 12 - three ViewModel bug fixes)
 
@@ -94,5 +103,5 @@ F11 GPGS (L, post-launch v1.1), F13 per-button color (L), F17 IAP (XL, decision-
 Paste in next session:
 
 ```
-Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 12 docs commit on main with clean tree. Run Gradle with JAVA_HOME set to the JDK 17 under ~/.gradle/jdks (the default JBR 25 breaks Gradle 8.14.2). 102 unit tests green, lint 0 errors. Next: P2 #66 (track delayed game-over jobs), #67/#68 timeout polish, #69 MainActivity debug logging; then the gated items (#32 onboarding, Phase 4 Play Store, F13/F12/F11/F17). Ask the user which path to take before starting product work.
+Read specs/RESUME.md and specs/improvements.md. Confirm git is at the Wave 13 docs commit on main with clean tree. Gradle 9.9.2 runs on the default Android Studio JBR; verify on the Pixel_10 AVD. 102 unit tests green, lint 0 errors. Next: #71 targetSdk 36 (blocks Play upload), P2 #66 (track delayed game-over jobs), #67/#68 timeout polish, #69 MainActivity debug logging; then the gated items (#32 onboarding, Phase 4 Play Store, F13/F12/F11/F17). Ask the user which path to take before starting product work.
 ```
