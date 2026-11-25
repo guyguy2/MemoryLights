@@ -1,15 +1,15 @@
-# Resume note for next session (written 2026-11-25, Wave 15 - game-over race fixes)
+# Resume note for next session (written 2026-11-25, Wave 15 - game-over and practice-replay race fixes)
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
 
 ## State at session end (2026-11-25, Wave 15 - game-over race fixes)
 
-- Branch `main`. `f51afca fix(vm)` plus a docs commit on top of Wave 14. Local until the user approves a push.
-- #66 and #67 closed. Pending game-over steps are tracked; Settings/background finish a loss immediately, mode switches cancel it. One error tone per timeout. Details in `specs/improvements.md` "Wave 15".
-- 108/108 unit tests (6 new, all red before the fix). `./gradlew build` passes; lint 0 errors / 29 warnings.
+- Branch `main`. Wave 15 commits: `f51afca` (#66/#67), `6145766` (docs), `c71e301` (#73), plus a docs commit. Check `git status -sb` for push state.
+- #66, #67 and #73 closed. The practice-mode replay uses the same tracked turn-end step; the Settings-entry snapshot is taken after `showSettings()`.
+- #66 and #67: Pending game-over steps are tracked; Settings/background finish a loss immediately, mode switches cancel it. One error tone per timeout. Details in `specs/improvements.md` "Wave 15".
+- 111/111 unit tests (9 new this wave, all red before the fixes). `./gradlew build` passes; lint 0 errors / 29 warnings.
 - Emulator-verified on Pixel_10 (Settings opened 0.6 s after a miss; timeout tone count).
-- New follow-up: #73 (practice-mode miss path has the same untracked delay; confirm-dialog snapshot ordering).
-- Next candidates: #73 (small, same pattern), #70 + #72 (game-screen emulator pass), #68/#69 (need your decision).
+- Next candidates: #70 + #72 (game-screen emulator pass), #68/#69 (need a product decision).
 
 ## State at session end (2026-11-25, Wave 14 - targetSdk 36)
 
