@@ -926,4 +926,67 @@ class SimonGameViewModelTest {
             assertEquals(GameState.GameOver, vm.uiState.value.gameState)
             verify(exactly = 1) { soundManager.playErrorSound() }
         }
+
+    // #73: the practice-mode miss path has the same 300 ms delay as #66.
+
+    @Test
+    fun `practice miss then opening settings replays only after return`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 0)
+
+            vm.showSettings()
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 5_000)
+            advanceUntilIdle()
+
+            // Nothing replayed or timed out on the Settings screen.
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+            assertTrue(vm.uiState.value.gameState != GameState.GameOver)
+
+            vm.onReturnToGame()
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            val state = vm.uiState.value
+            assertEquals(GameState.PlayerRepeating, state.gameState)
+            assertEquals(1, state.level)
+            assertTrue(state.playerSequence.isEmpty())
+        }
+
+    @Test
+    fun `practice miss then pause is ignored`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 0)
+
+            vm.pauseGame()
+            assertTrue(vm.uiState.value.gameState != GameState.Paused)
+        }
+
+    @Test
+    fun `practice miss then backgrounding replays the sequence on resume`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+            val owner = mockk<LifecycleOwner>(relaxed = true)
+            missAndAdvance(vm, 0)
+
+            vm.onPause(owner)
+            advanceTimeBy(1_000)
+            runCurrent()
+            vm.onResume(owner)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            // A fresh attempt at the same level: the correct press advances.
+            val state = vm.uiState.value
+            assertEquals(GameState.PlayerRepeating, state.gameState)
+            assertTrue(state.playerSequence.isEmpty())
+            vm.tap(state.sequence[0])
+            advanceTimeBy(4_000)
+            runCurrent()
+            assertEquals(2, vm.uiState.value.level)
+        }
 }

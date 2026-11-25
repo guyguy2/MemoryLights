@@ -194,12 +194,14 @@ class SimonGameViewModel(
     private var highScoreTextAnimationJob: Job? = null
     private var speedUpTextJob: Job? = null
 
-    // The delayed step of a game over in flight: the error-tone wait before
-    // handleGameOver, then the flash wait before updateGameOverState. Tracked
-    // so a mode switch can cancel it and Settings / backgrounding can finish
-    // it at once, instead of letting it land on a changed run or screen.
-    private var pendingGameOverJob: Job? = null
-    private var finishPendingGameOverNow: (() -> Unit)? = null
+    // The delayed step that ends the current turn after a miss or timeout:
+    // the error-tone wait before handleGameOver, then the flash wait before
+    // updateGameOverState, or the practice-mode wait before the replay.
+    // Tracked so a mode switch can cancel it and Settings / backgrounding
+    // can finish it at once, instead of letting it land on a changed run or
+    // screen.
+    private var pendingTurnEndJob: Job? = null
+    private var finishPendingTurnEndNow: (() -> Unit)? = null
 
     /**
      * Called by the UI right before navigating to the Settings route.
@@ -210,9 +212,9 @@ class SimonGameViewModel(
     fun showSettings() {
         Log.d(TAG, "Game pausing for settings navigation")
 
-        // A loss in progress is final: land GameOver now so previousGameState
+        // A miss in progress is final: land its outcome now so previousGameState
         // captures it, rather than restoring a dead turn on return.
-        completePendingGameOverNow()
+        completePendingTurnEndNow()
 
         isInSettings = true
         previousGameState = _uiState.value.gameState
@@ -379,8 +381,8 @@ class SimonGameViewModel(
             Log.d(TAG, "pauseGame called outside PlayerRepeating (state=${_uiState.value.gameState}) — ignoring")
             return
         }
-        if (pendingGameOverJob != null) {
-            Log.d(TAG, "pauseGame called while a game over is pending - ignoring")
+        if (pendingTurnEndJob != null) {
+            Log.d(TAG, "pauseGame called while the turn is ending - ignoring")
             return
         }
         Log.d(TAG, "Pausing game")
@@ -496,7 +498,7 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting daily challenge enabled: $enabled")
 
         cancelTimeoutTimer()
-        cancelPendingGameOver()
+        cancelPendingTurnEnd()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
         gameOverTextAnimationJob?.cancel()
@@ -574,7 +576,7 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting game mode: $mode")
 
         cancelTimeoutTimer()
-        cancelPendingGameOver()
+        cancelPendingTurnEnd()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
         gameOverTextAnimationJob?.cancel()
@@ -629,7 +631,7 @@ class SimonGameViewModel(
             
             // Cancel any active timers and animations
             cancelTimeoutTimer()
-            cancelPendingGameOver()
+            cancelPendingTurnEnd()
             activeSequenceJob?.cancel()
             activeSequenceJob = null
             gameOverTextAnimationJob?.cancel()
@@ -1151,23 +1153,29 @@ class SimonGameViewModel(
             Log.d(TAG, "Practice mode: $reason — replaying sequence instead of game over")
             cancelTimeoutTimer()
             soundManager.playErrorSound()
-            viewModelScope.launch {
-                delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-                if (!isAppInForeground) {
-                    // No replay will run; do not leave the turn locked for onResume
-                    isInputLocked = false
-                    return@launch
+            schedulePendingTurnEnd(
+                delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
+                animated = {
+                    _uiState.update { it.copy(
+                        playerSequence = emptyList(),
+                        currentlyLit = null,
+                        showYourTurnText = false
+                    )}
+                    showSequence()
+                },
+                // Left the Game screen before the replay: mark the turn as a
+                // pending replay so onReturnToGame / onResume run showSequence.
+                immediate = {
+                    _uiState.update { it.copy(
+                        gameState = GameState.ShowingSequence,
+                        playerSequence = emptyList(),
+                        showYourTurnText = false
+                    )}
                 }
-                _uiState.update { it.copy(
-                    playerSequence = emptyList(),
-                    currentlyLit = null,
-                    showYourTurnText = false
-                )}
-                showSequence()
-            }
+            )
             return
         }
-        schedulePendingGameOver(
+        schedulePendingTurnEnd(
             delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
             animated = { handleGameOver(reason) },
             immediate = { handleGameOver(reason, animate = false) }
@@ -1312,7 +1320,7 @@ class SimonGameViewModel(
                 isInputLocked = true
                 // End the game; handleGameOver plays the error tone (once)
                 val reason = "Timeout - no button pressed for ${timeoutMs / 1000} seconds"
-                schedulePendingGameOver(
+                schedulePendingTurnEnd(
                     delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
                     animated = { handleGameOver(reason) },
                     immediate = { handleGameOver(reason, animate = false) }
@@ -1338,35 +1346,35 @@ class SimonGameViewModel(
     }
 
     /**
-     * Runs [animated] after [delayMs] as the tracked pending game-over step.
-     * [immediate] is what [completePendingGameOverNow] runs instead when the
+     * Runs [animated] after [delayMs] as the tracked pending turn-end step.
+     * [immediate] is what [completePendingTurnEndNow] runs instead when the
      * player leaves the Game screen before the delay ends.
      */
-    private fun schedulePendingGameOver(delayMs: Long, animated: () -> Unit, immediate: () -> Unit) {
-        pendingGameOverJob?.cancel()
-        finishPendingGameOverNow = immediate
-        pendingGameOverJob = viewModelScope.launch {
+    private fun schedulePendingTurnEnd(delayMs: Long, animated: () -> Unit, immediate: () -> Unit) {
+        pendingTurnEndJob?.cancel()
+        finishPendingTurnEndNow = immediate
+        pendingTurnEndJob = viewModelScope.launch {
             delay(delayMs)
             // Clear before running: the first step schedules the second one
             // into these same fields, and clearing afterwards would drop it.
-            pendingGameOverJob = null
-            finishPendingGameOverNow = null
+            pendingTurnEndJob = null
+            finishPendingTurnEndNow = null
             animated()
         }
     }
 
-    // The run is being discarded (mode switch, ViewModel cleared): drop the loss.
-    private fun cancelPendingGameOver() {
-        pendingGameOverJob?.cancel()
-        pendingGameOverJob = null
-        finishPendingGameOverNow = null
+    // The run is being discarded (mode switch, ViewModel cleared): drop the step.
+    private fun cancelPendingTurnEnd() {
+        pendingTurnEndJob?.cancel()
+        pendingTurnEndJob = null
+        finishPendingTurnEndNow = null
     }
 
-    // Land a pending game over at once, without the flash or error tone.
-    private fun completePendingGameOverNow() {
-        val finish = finishPendingGameOverNow ?: return
-        Log.d(TAG, "Completing pending game over immediately")
-        cancelPendingGameOver()
+    // Land a pending turn end at once, without the flash or error tone.
+    private fun completePendingTurnEndNow() {
+        val finish = finishPendingTurnEndNow ?: return
+        Log.d(TAG, "Completing pending turn end immediately")
+        cancelPendingTurnEnd()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
         _uiState.update { it.copy(currentlyLit = null, allButtonsLit = false) }
@@ -1411,7 +1419,7 @@ class SimonGameViewModel(
 
         // Update game state after the flashing animation (in flashAllButtons)
         val finish = { updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs) }
-        schedulePendingGameOver(
+        schedulePendingTurnEnd(
             delayMs = GameConstants.GAME_OVER_ANIMATION_WAIT_MS,
             animated = finish,
             immediate = finish
@@ -1643,9 +1651,9 @@ class SimonGameViewModel(
         Log.d(TAG, "onPause - App going to background")
         isAppInForeground = false
 
-        // A loss in progress is final: land GameOver before the state below
-        // is captured, so onResume does not restore a dead turn.
-        completePendingGameOverNow()
+        // A miss in progress is final: land its outcome before the state
+        // below is captured, so onResume does not restore a dead turn.
+        completePendingTurnEndNow()
 
         // Save current game state to restore later
         gameStateBeforeBackground = _uiState.value.gameState
@@ -1678,7 +1686,7 @@ class SimonGameViewModel(
         Log.d(TAG, "ViewModel cleared")
         super.onCleared()
         cancelTimeoutTimer() // Make sure to cancel any timers
-        cancelPendingGameOver()
+        cancelPendingTurnEnd()
 
         // Cancel any active animations or sequences
         activeSequenceJob?.cancel()

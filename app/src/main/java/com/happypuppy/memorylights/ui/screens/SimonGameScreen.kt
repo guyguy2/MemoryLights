@@ -97,8 +97,10 @@ fun MemoryLightsGame(viewModel: SimonGameViewModel) {
                 uiState = uiState,
                 onButtonClick = { button, isPress -> viewModel.onButtonClick(button, isPress) },
                 onSettingsClick = {
-                    gameStateAtSettingsEntry = uiState.gameState
+                    // showSettings may land a pending game over first, so read
+                    // the state after it (and from the VM, not the composed snapshot).
                     viewModel.showSettings()
+                    gameStateAtSettingsEntry = viewModel.uiState.value.gameState
                     navController.navigate(SettingsRoute)
                 },
                 onStartNewGame = { viewModel.startNewGame() },
