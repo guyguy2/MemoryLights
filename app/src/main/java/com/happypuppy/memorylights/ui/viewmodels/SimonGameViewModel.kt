@@ -194,6 +194,13 @@ class SimonGameViewModel(
     private var highScoreTextAnimationJob: Job? = null
     private var speedUpTextJob: Job? = null
 
+    // The delayed step of a game over in flight: the error-tone wait before
+    // handleGameOver, then the flash wait before updateGameOverState. Tracked
+    // so a mode switch can cancel it and Settings / backgrounding can finish
+    // it at once, instead of letting it land on a changed run or screen.
+    private var pendingGameOverJob: Job? = null
+    private var finishPendingGameOverNow: (() -> Unit)? = null
+
     /**
      * Called by the UI right before navigating to the Settings route.
      * Captures the current game state so [onReturnToGame] can restore it,
@@ -202,6 +209,10 @@ class SimonGameViewModel(
      */
     fun showSettings() {
         Log.d(TAG, "Game pausing for settings navigation")
+
+        // A loss in progress is final: land GameOver now so previousGameState
+        // captures it, rather than restoring a dead turn on return.
+        completePendingGameOverNow()
 
         isInSettings = true
         previousGameState = _uiState.value.gameState
@@ -368,6 +379,10 @@ class SimonGameViewModel(
             Log.d(TAG, "pauseGame called outside PlayerRepeating (state=${_uiState.value.gameState}) — ignoring")
             return
         }
+        if (pendingGameOverJob != null) {
+            Log.d(TAG, "pauseGame called while a game over is pending - ignoring")
+            return
+        }
         Log.d(TAG, "Pausing game")
         cancelTimeoutTimer()
         _uiState.update { it.copy(
@@ -481,6 +496,7 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting daily challenge enabled: $enabled")
 
         cancelTimeoutTimer()
+        cancelPendingGameOver()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
         gameOverTextAnimationJob?.cancel()
@@ -558,6 +574,7 @@ class SimonGameViewModel(
         Log.d(TAG, "Setting game mode: $mode")
 
         cancelTimeoutTimer()
+        cancelPendingGameOver()
         activeSequenceJob?.cancel()
         activeSequenceJob = null
         gameOverTextAnimationJob?.cancel()
@@ -612,6 +629,7 @@ class SimonGameViewModel(
             
             // Cancel any active timers and animations
             cancelTimeoutTimer()
+            cancelPendingGameOver()
             activeSequenceJob?.cancel()
             activeSequenceJob = null
             gameOverTextAnimationJob?.cancel()
@@ -1149,10 +1167,11 @@ class SimonGameViewModel(
             }
             return
         }
-        viewModelScope.launch {
-            delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-            handleGameOver(reason)
-        }
+        schedulePendingGameOver(
+            delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
+            animated = { handleGameOver(reason) },
+            immediate = { handleGameOver(reason, animate = false) }
+        )
     }
 
     // Flash all buttons to indicate game over
@@ -1291,13 +1310,13 @@ class SimonGameViewModel(
             if (_uiState.value.gameState == GameState.PlayerRepeating) {
                 // The turn is over; presses during the game-over animation are ignored
                 isInputLocked = true
-                // Play timeout sound and end game
-                soundManager.playErrorSound()
-                viewModelScope.launch {
-                    delay(GameConstants.BUTTON_SOUND_DURATION_MS)
-                    // Handle game over due to timeout
-                    handleGameOver("Timeout - no button pressed for ${timeoutMs / 1000} seconds")
-                }
+                // End the game; handleGameOver plays the error tone (once)
+                val reason = "Timeout - no button pressed for ${timeoutMs / 1000} seconds"
+                schedulePendingGameOver(
+                    delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
+                    animated = { handleGameOver(reason) },
+                    immediate = { handleGameOver(reason, animate = false) }
+                )
             }
         }
     }
@@ -1318,8 +1337,45 @@ class SimonGameViewModel(
         timeoutJob = null
     }
 
-    // Handle game over state with an optional reason
-    private fun handleGameOver(reason: String = "Game over") {
+    /**
+     * Runs [animated] after [delayMs] as the tracked pending game-over step.
+     * [immediate] is what [completePendingGameOverNow] runs instead when the
+     * player leaves the Game screen before the delay ends.
+     */
+    private fun schedulePendingGameOver(delayMs: Long, animated: () -> Unit, immediate: () -> Unit) {
+        pendingGameOverJob?.cancel()
+        finishPendingGameOverNow = immediate
+        pendingGameOverJob = viewModelScope.launch {
+            delay(delayMs)
+            // Clear before running: the first step schedules the second one
+            // into these same fields, and clearing afterwards would drop it.
+            pendingGameOverJob = null
+            finishPendingGameOverNow = null
+            animated()
+        }
+    }
+
+    // The run is being discarded (mode switch, ViewModel cleared): drop the loss.
+    private fun cancelPendingGameOver() {
+        pendingGameOverJob?.cancel()
+        pendingGameOverJob = null
+        finishPendingGameOverNow = null
+    }
+
+    // Land a pending game over at once, without the flash or error tone.
+    private fun completePendingGameOverNow() {
+        val finish = finishPendingGameOverNow ?: return
+        Log.d(TAG, "Completing pending game over immediately")
+        cancelPendingGameOver()
+        activeSequenceJob?.cancel()
+        activeSequenceJob = null
+        _uiState.update { it.copy(currentlyLit = null, allButtonsLit = false) }
+        finish()
+    }
+
+    // Handle game over state with an optional reason. With animate = false
+    // (or in the background) it lands GameOver immediately: no tone, no flash.
+    private fun handleGameOver(reason: String = "Game over", animate: Boolean = true) {
         // Cancel any running timeout timer
         cancelTimeoutTimer()
         val state = _uiState.value
@@ -1339,9 +1395,9 @@ class SimonGameViewModel(
 
         Log.d(TAG, "$reason at level $currentLevel (mode: ${state.gameMode}, high score: $currentHighScore for ${if (state.memoryLightsPlusEnabled) "6-button" else "4-button"} mode${if (isBlitz) ", blitz elapsed ${blitzElapsedMs}ms" else ""})")
 
-        // Don't do game over animation if app is in background
-        if (!isAppInForeground) {
-            Log.d(TAG, "App is in background, skipping game over animation")
+        // Don't do game over animation if app is in background or the player left the Game screen
+        if (!isAppInForeground || !animate) {
+            Log.d(TAG, "Skipping game over animation (foreground=$isAppInForeground, animate=$animate)")
             // Just update the game state immediately
             updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs)
             return
@@ -1353,13 +1409,13 @@ class SimonGameViewModel(
         // Flash all buttons sequence to indicate game over
         flashAllButtons()
 
-        // Update game state after the flashing animation
-        viewModelScope.launch {
-            // Wait for flash animation to complete (in flashAllButtons)
-            delay(GameConstants.GAME_OVER_ANIMATION_WAIT_MS)
-
-            updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs)
-        }
+        // Update game state after the flashing animation (in flashAllButtons)
+        val finish = { updateGameOverState(currentLevel, newHighScore, isNewHighScore, blitzElapsedMs) }
+        schedulePendingGameOver(
+            delayMs = GameConstants.GAME_OVER_ANIMATION_WAIT_MS,
+            animated = finish,
+            immediate = finish
+        )
     }
 
     // Helper function to update the game state after game over
@@ -1587,6 +1643,10 @@ class SimonGameViewModel(
         Log.d(TAG, "onPause - App going to background")
         isAppInForeground = false
 
+        // A loss in progress is final: land GameOver before the state below
+        // is captured, so onResume does not restore a dead turn.
+        completePendingGameOverNow()
+
         // Save current game state to restore later
         gameStateBeforeBackground = _uiState.value.gameState
         wasGameActiveBeforeBackground = _uiState.value.gameState is GameState.ShowingSequence ||
@@ -1618,6 +1678,7 @@ class SimonGameViewModel(
         Log.d(TAG, "ViewModel cleared")
         super.onCleared()
         cancelTimeoutTimer() // Make sure to cancel any timers
+        cancelPendingGameOver()
 
         // Cancel any active animations or sequences
         activeSequenceJob?.cancel()

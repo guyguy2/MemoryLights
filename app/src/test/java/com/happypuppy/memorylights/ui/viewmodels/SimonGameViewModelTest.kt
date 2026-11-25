@@ -813,5 +813,117 @@ class SimonGameViewModelTest {
 
             verify(exactly = 0) { soundManager.release() }
         }
-}
 
+    // #66: the delayed game-over steps (300 ms error-tone wait, 2 s flash wait)
+    // must not land on a run or screen that changed in the meantime.
+
+    private fun kotlinx.coroutines.test.TestScope.missAndAdvance(vm: SimonGameViewModel, ms: Long) {
+        val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+        val correct = vm.uiState.value.sequence[0]
+        vm.tap(available.first { it != correct })
+        if (ms > 0) advanceTimeBy(ms)
+        runCurrent()
+    }
+
+    @Test
+    fun `opening settings during the game-over flash keeps the loss on return`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 600)
+
+            vm.showSettings()
+            advanceTimeBy(3_000)
+            runCurrent()
+            vm.onReturnToGame()
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(false, vm.uiState.value.allButtonsLit)
+            verify(exactly = 1) { statisticsRepository.recordGameResult(any(), any()) }
+        }
+
+    @Test
+    fun `opening settings during the error-tone delay keeps the loss on return`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 0)
+
+            vm.showSettings()
+            advanceTimeBy(3_000)
+            runCurrent()
+            vm.onReturnToGame()
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            verify(exactly = 1) { statisticsRepository.recordGameResult(any(), any()) }
+        }
+
+    @Test
+    fun `backgrounding during the game-over flash keeps the loss on resume`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            val owner = mockk<LifecycleOwner>(relaxed = true)
+            missAndAdvance(vm, 600)
+
+            vm.onPause(owner)
+            advanceTimeBy(3_000)
+            runCurrent()
+            vm.onResume(owner)
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            verify(exactly = 1) { statisticsRepository.recordGameResult(any(), any()) }
+        }
+
+    @Test
+    fun `mode switch during the game-over flash does not end the new run`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 600)
+
+            vm.setGameMode(GameMode.SPEED_BLITZ)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            // The fresh blitz run is live; the old run's loss did not land on it.
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(1, vm.uiState.value.level)
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+        }
+
+    @Test
+    fun `pause during the game-over flash is ignored`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            missAndAdvance(vm, 600)
+
+            vm.pauseGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            advanceTimeBy(3_000)
+            runCurrent()
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+        }
+
+    // #67: the timeout path used to play the error tone twice.
+    @Test
+    fun `inactivity timeout plays the error tone once`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_000)
+            advanceUntilIdle()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            verify(exactly = 1) { soundManager.playErrorSound() }
+        }
+}
