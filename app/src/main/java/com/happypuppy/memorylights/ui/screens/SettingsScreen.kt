@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,12 +26,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.Achievement
+import com.happypuppy.memorylights.util.AppVersionInfo
 import kotlinx.coroutines.launch
 
 /**
@@ -64,8 +67,9 @@ fun SettingsScreen(
         }
     }
 
-    var showAboutDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by rememberSaveable { mutableStateOf(false) }
     var showResetHighScoreDialog by remember { mutableStateOf(false) }
+    val versionInfo = remember(context) { AppVersionInfo.getFullVersionInfo(context) }
 
     Scaffold(
         topBar = {
@@ -293,7 +297,7 @@ fun SettingsScreen(
                         )
 
                         Text(
-                            text = stringResource(R.string.settings_about_summary),
+                            text = stringResource(R.string.settings_about_summary, versionInfo),
                             color = Color.Gray,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -306,57 +310,9 @@ fun SettingsScreen(
     }
 
     if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.about_dialog_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
-                )
-            },
-            text = {
-                Column {
-                    Text(
-                        text = stringResource(R.string.about_dialog_body_1),
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringResource(R.string.about_dialog_body_2),
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = stringResource(R.string.about_dialog_version),
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Text(
-                        text = stringResource(R.string.about_dialog_copyright),
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text(
-                        text = stringResource(R.string.action_close),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
+        AboutDialog(
+            versionInfo = versionInfo,
+            onDismiss = { showAboutDialog = false }
         )
     }
 
@@ -405,6 +361,73 @@ fun SettingsScreen(
             textContentColor = Color.White
         )
     }
+}
+
+@Composable
+fun AboutDialog(
+    versionInfo: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.about_dialog_title),
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = stringResource(R.string.about_dialog_description),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row {
+                    Text(
+                        text = stringResource(R.string.about_dialog_version),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = versionInfo,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(R.string.about_dialog_copyright),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = stringResource(R.string.about_dialog_rights),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.action_ok),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = Color.White,
+        textContentColor = Color.White
+    )
 }
 
 /**

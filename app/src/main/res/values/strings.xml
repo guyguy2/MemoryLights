@@ -3,7 +3,7 @@
 
     <!-- Common actions -->
     <string name="action_back">Back</string>
-    <string name="action_close">Close</string>
+    <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_reset">Reset</string>
     <string name="action_switch">Switch</string>
@@ -72,15 +72,15 @@
     <string name="settings_rate_summary">Enjoying Memory Lights? Let us know!</string>
     <string name="settings_rate_cd">Rate App</string>
     <string name="settings_about_title">About</string>
-    <string name="settings_about_summary">Version 1.0.0 • © 2025</string>
+    <string name="settings_about_summary">Version %1$s</string>
     <string name="settings_about_cd">About</string>
 
     <!-- About dialog -->
     <string name="about_dialog_title">About Memory Lights</string>
-    <string name="about_dialog_body_1">Memory Lights is a classic electronic memory game that challenges players to repeat sequences of lights and sounds.</string>
-    <string name="about_dialog_body_2">Each round adds a new step to the sequence, testing your memory limits as you progress through increasingly difficult patterns.</string>
-    <string name="about_dialog_version">Version: 1.0.0</string>
-    <string name="about_dialog_copyright">© 2025 Memory Lights Game</string>
+    <string name="about_dialog_description">Challenge your memory by repeating increasingly complex sequences of lights and sounds.</string>
+    <string name="about_dialog_version">Version:</string>
+    <string name="about_dialog_copyright">&#169;2025&#8211;2026 Memory Lights</string>
+    <string name="about_dialog_rights">All rights reserved</string>
 
     <!-- Reset dialog (Settings) -->
     <string name="reset_high_score_title">Reset High Score</string>
