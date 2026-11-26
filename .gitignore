@@ -28,7 +28,11 @@ render.experimental.xml
 # Keystore files and signing config
 *.jks
 *.keystore
+*.p12
 keystore.properties
+
+# CI-generated Play release notes
+app/src/main/play/release-notes/
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json

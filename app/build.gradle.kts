@@ -1,9 +1,11 @@
+import com.github.triplet.gradle.androidpublisher.ReleaseStatus
 import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.play.publisher)
 }
 
 val keystoreProps = Properties().apply {
@@ -60,6 +62,10 @@ android {
             if (releaseKeystorePath != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            ndk {
+                // Include native symbol tables for .so libs from AndroidX dependencies.
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
         }
     }
     compileOptions {
@@ -73,6 +79,25 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+}
+
+// Local / CI policy gate: Google Play requires targetSdk >= 36 for phone/tablet releases (2026 floor).
+val minPlayTargetSdk = 36
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        val target = variant.targetSdk.apiLevel
+        check(target >= minPlayTargetSdk) {
+            "targetSdk $target < $minPlayTargetSdk required by Google Play"
+        }
+    }
+}
+
+play {
+    // Keyless auth via Application Default Credentials (local gcloud ADC impersonation or WIF).
+    useApplicationDefaultCredentials.set(true)
+    track.set("internal")
+    releaseStatus.set(ReleaseStatus.COMPLETED)
+    defaultToAppBundles.set(true)
 }
 
 dependencies {
