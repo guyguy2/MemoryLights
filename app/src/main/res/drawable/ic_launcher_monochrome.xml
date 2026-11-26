@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Four buttons -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46.50,30.00a7.5,7.5 0 1 1 15.0,0a7.5,7.5 0 1 1 -15.0,0zM70.50,54.00a7.5,7.5 0 1 1 15.0,0a7.5,7.5 0 1 1 -15.0,0zM46.50,78.00a7.5,7.5 0 1 1 15.0,0a7.5,7.5 0 1 1 -15.0,0zM22.50,54.00a7.5,7.5 0 1 1 15.0,0a7.5,7.5 0 1 1 -15.0,0z" />
+
+    <!-- Sequence arrows between the buttons -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:pathData="M63.76,32.07A24,24 0 0 1 74.77,41.98M75.93,63.76A24,24 0 0 1 66.02,74.77M44.24,75.93A24,24 0 0 1 33.23,66.02M32.07,44.24A24,24 0 0 1 41.98,33.23" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineJoin="round"
+        android:pathData="M75.93,44.24L77.43,37.60L69.89,42.87zM63.76,75.93L70.40,77.43L65.13,69.89zM32.07,63.76L30.57,70.40L38.11,65.13zM44.24,32.07L37.60,30.57L42.87,38.11z" />
+
+    <!-- Center sparkle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,45.5Q54.8,53.2 62.5,54Q54.8,54.8 54,62.5Q53.2,54.8 45.5,54Q53.2,53.2 54,45.5z" />
+</vector>
