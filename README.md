@@ -1,286 +1,120 @@
-# Simon Says - Classic Memory Game
+<p align="center">
+  <img src="playstore/icon_512.png" alt="Memory Lights app icon" width="128" height="128">
+</p>
 
-A modern Android implementation of the classic Simon Says electronic memory game, built with Jetpack Compose and Material Design 3.
+<h1 align="center">Memory Lights</h1>
 
-## Overview
+<p align="center">
+  A memory game for Android. Watch the lights flash a pattern, then repeat it.<br>
+  Built with Kotlin, Jetpack Compose and Material 3.
+</p>
 
-Simon Says is an engaging memory game where players must repeat increasingly complex sequences of colored lights and sounds. Each round adds a new random element to the sequence, progressively challenging the player's memory and concentration.
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <img alt="Min SDK 31" src="https://img.shields.io/badge/minSdk-31-3DDC84.svg">
+  <img alt="Kotlin 2.4" src="https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg">
+  <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4.svg">
+</p>
+
+<p align="center">
+  <img src="playstore/screenshots/01_player_repeating.png" alt="Gameplay" width="200">
+  <img src="playstore/screenshots/02_six_button_gameplay.png" alt="Six-button mode" width="200">
+  <img src="playstore/screenshots/06_game_modes.png" alt="Game modes" width="200">
+  <img src="playstore/screenshots/03_game_over_share.png" alt="Game over and share card" width="200">
+</p>
+
+## About
+
+Memory Lights is a modern take on the classic handheld memory game. The game plays a sequence of colored lights and sounds, and you repeat it. Every round adds one more step. It works fully offline, has no accounts, no ads and no tracking, and keeps all scores on the device.
 
 ## Features
 
-### Core Gameplay
-- **Classic Simon Mechanics**: Four colored buttons (Green, Red, Yellow, Blue) arranged in a 2x2 grid
-- **Progressive Difficulty**: Each successful round adds a new element to the sequence
-- **Time-Limited Gameplay**: 10-second timeout for player responses
-- **High Score Tracking**: Persistent high score across game sessions
-- **Visual Feedback**: 3D button animations with spring physics and gradient effects
+**Game modes**
+- **Classic**: the sequence grows until you miss.
+- **Speed Blitz**: race to a fixed target level; your best time is saved.
+- **4 or 6 buttons**: the standard four colors, or the six-color Memory Lights+ board.
+- **Modifiers**: Reverse (repeat the sequence backward), Practice (a wrong tap replays the sequence), Audio-Only, and a difficulty setting that speeds the game up as you climb.
 
-### Sound System
-- **Multiple Sound Packs**: Choose from 7 different sound themes:
-  - Standard (classic Simon tones)
-  - Funny
-  - Electronic
-  - Retro
-  - Musical
-  - Nature
-  - Sci-Fi
-- **Sound Control**: Mute/unmute toggle in top bar
-- **Error Feedback**: Distinct error tone for incorrect sequences
+**Sound and feel**
+- Seven sound packs: Standard, Funny, Electronic, Retro, Musical, Nature and Sci-Fi.
+- Vibration toggle and a master mute button.
 
-### Customization
-- **Vibration Toggle**: Optional haptic feedback (100ms) on button presses
-- **Settings Screen**: Easy access to all game preferences
-- **Dark Theme**: Material Design 3 dark theme support
+**Polish and accessibility**
+- Adjustable turn timeout with a visible countdown ring.
+- Pause, replay the last sequence, and share a 1080x1080 score card.
+- High score, full statistics and achievements.
+- Optional shapes on the buttons for color-blind players.
+- AMOLED black and dark themes, edge-to-edge layout, 48dp touch targets and content descriptions.
+- Screen-reader announcements for level, your turn and game over.
 
-### Technical Features
-- **Lifecycle-Aware**: Proper handling of app pause/resume states
-- **State Preservation**: Game state maintained during background transitions
-- **Responsive Layout**: Adapts to different screen sizes and orientations
-- **Modern UI**: Jetpack Compose with Material Design 3 components
+## Getting started
 
-## Technical Stack
+**Requirements:** Android Studio (recent stable), JDK 17 or newer, and an Android 12+ (API 31) device or emulator. The Gradle wrapper downloads the right Gradle version.
 
-### Core Technologies
-- **Language**: Kotlin 2.4.21
-- **UI Framework**: Jetpack Compose (BOM 2026.11.01)
-- **Architecture**: MVVM with StateFlow
-- **Dependency Injection**: Koin 4.2.2
-- **Build System**: Gradle (Kotlin DSL)
-
-### Android SDK
-- **Minimum SDK**: 31 (Android 12)
-- **Target SDK**: 35 (Android 15)
-- **Compile SDK**: 35
-
-### Key Libraries
-- `androidx.core:core-ktx` - Android KTX extensions
-- `androidx.activity:activity-compose` - Compose activity integration
-- `androidx.lifecycle:lifecycle-runtime-ktx` - Lifecycle components
-- `androidx.compose.material3:material3` - Material Design 3
-- `io.insert-koin:koin-android` - Dependency injection
-
-## Project Structure
-
-```
-MyApplication2/
-├── app/src/main/
-│   ├── java/com/guy/myapplication/
-│   │   ├── SimonApp.kt              # Application class with DI setup
-│   │   ├── ui/
-│   │   │   ├── MainActivity.kt      # Main activity entry point
-│   │   │   ├── screens/
-│   │   │   │   ├── SimonGameScreen.kt    # Main game UI
-│   │   │   │   └── SettingsScreen.kt     # Settings UI
-│   │   │   ├── components/
-│   │   │   │   └── SimonPanel.kt         # Colored button component
-│   │   │   ├── viewmodels/
-│   │   │   │   └── SimonGameViewModel.kt # Game logic controller
-│   │   │   └── theme/                     # Material 3 theme
-│   │   ├── domain/
-│   │   │   ├── model/
-│   │   │   │   ├── SimonGameState.kt     # Game state sealed class
-│   │   │   │   └── SimonGameUiState.kt   # UI state data class
-│   │   │   └── enums/
-│   │   │       ├── SimonButton.kt        # Button enum
-│   │   │       └── SoundPack.kt          # Sound pack enum
-│   │   ├── data/
-│   │   │   └── manager/
-│   │   │       └── SimonSoundManager.kt  # Audio & vibration
-│   │   └── di/
-│   │       └── AppModule.kt              # Koin DI module
-│   └── res/
-│       ├── raw/                           # Audio files
-│       ├── drawable/                      # Icons & graphics
-│       └── values/                        # Resources
-└── gradle/
-    └── libs.versions.toml                 # Version catalog
-```
-
-## Getting Started
-
-### Prerequisites
-- Android Studio Ladybug or later
-- JDK 17 or higher
-- Android SDK 31+
-- Gradle 9.6+ (the wrapper pins 9.9.2)
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd MyApplication2
-```
-
-2. Open the project in Android Studio
-
-3. Sync Gradle dependencies
-
-4. Run the application:
-```bash
+git clone https://github.com/guyguy2/MemoryLights.git
+cd MemoryLights
 ./gradlew installDebug
 ```
 
-## Build Commands
+Or open the folder in Android Studio and press Run.
 
-### Development
-```bash
-# Build the project
-./gradlew build
+### Common commands
 
-# Install debug APK
-./gradlew installDebug
+| Task | Command |
+|---|---|
+| Build everything | `./gradlew build` |
+| Install the debug app | `./gradlew installDebug` |
+| Unit tests | `./gradlew test` |
+| One test class | `./gradlew test --tests "com.happypuppy.memorylights.SimonGameViewModelTest"` |
+| Instrumented tests (device needed) | `./gradlew connectedAndroidTest` |
+| Lint | `./gradlew lint` |
 
-# Clean build artifacts
-./gradlew clean
-```
+## Tech stack
 
-### Testing
-```bash
-# Run unit tests
-./gradlew test
+| Area | Choice |
+|---|---|
+| Language | Kotlin 2.4 (built into AGP 9, no separate Kotlin plugin) |
+| UI | Jetpack Compose, Material 3 |
+| Architecture | MVVM, `StateFlow`, one `ViewModel` for the game |
+| Dependency injection | Koin |
+| Persistence | Jetpack DataStore |
+| Audio | `SoundPool`, plus the vibrator service |
+| SDK | min 31, target 36, compile 37.1 |
+| Tests | JUnit 4, MockK, Turbine, kotlinx-coroutines-test |
 
-# Run specific test
-./gradlew test --tests "com.guy.myapplication.ExampleUnitTest"
-
-# Run instrumented tests (requires connected device/emulator)
-./gradlew connectedAndroidTest
-
-# Run lint checks
-./gradlew lint
-```
-
-### Release
-```bash
-# Build release APK
-./gradlew assembleRelease
-
-# Build signed release bundle
-./gradlew bundleRelease
-```
-
-## Architecture
-
-### MVVM Pattern
-
-The application follows the Model-View-ViewModel pattern with Jetpack Compose:
-
-- **View Layer**: Composable functions (`SimonGameScreen`, `SettingsScreen`, `SimonPanel`)
-- **ViewModel Layer**: `SimonGameViewModel` manages game logic and UI state
-- **Data Layer**: `SimonSoundManager` handles audio/vibration, SharedPreferences for persistence
-- **Domain Layer**: Models and enums defining business logic
-
-### State Management
-
-- **Centralized State**: `SimonGameUiState` data class holds complete UI state
-- **Reactive Updates**: StateFlow exposes state to UI layer
-- **Immutable State**: State updates using `.update { it.copy() }` pattern
-- **Lifecycle-Aware**: `viewModelScope` ensures coroutines respect lifecycle
-
-### Game States
-
-The game operates in five distinct states:
-
-1. **WaitingToStart**: Initial state, ready to begin
-2. **ShowingSequence**: Computer displays the sequence
-3. **PlayerRepeating**: Waiting for player input with timeout
-4. **GameOver**: Game ended, show play again button
-5. **Settings**: Settings screen active
-
-## Game Logic Flow
+## Project structure
 
 ```
-WaitingToStart
-    ↓ (tap center button)
-ShowingSequence (play sequence with animations/sounds)
-    ↓
-PlayerRepeating (10-second timeout)
-    ↓ (correct sequence)
-Generate new button → ShowingSequence
-    ↓ (wrong button or timeout)
-GameOver (flash buttons, update high score)
-    ↓ (tap play again)
-StartNewGame → WaitingToStart
+app/src/main/java/com/happypuppy/memorylights/
+├── data/          # sound manager, settings and statistics repositories
+├── di/            # Koin module
+├── domain/        # game state, enums (buttons, modes, sound packs), models
+└── ui/            # screens, components, navigation, theme, game ViewModel
+tools/sounds/      # scripts that synthesize the Musical, Nature and Sci-Fi packs
+playstore/         # store listing copy, graphics and release checklist
+docs/              # GitHub Pages site (privacy policy)
+specs/             # roadmap and per-session engineering notes
 ```
 
-## Configuration
+The game logic lives in `SimonGameViewModel`. It moves through five states (`WaitingToStart`, `ShowingSequence`, `PlayerRepeating`, `GameOver`, `Settings`) and exposes one immutable UI state that the Compose screens render. State changes use `.update { it.copy(...) }`, and all coroutines run on `viewModelScope`, so the game pauses and resumes with the app lifecycle.
 
-### Permissions
+## Sound packs
 
-The app requires the following permission:
-- `android.permission.VIBRATE` - For haptic feedback
+The Standard and Funny packs are original recordings. The Musical, Nature and Sci-Fi packs are synthesized by deterministic Python scripts in [`tools/sounds`](tools/sounds), so re-running a script reproduces the same files. There are no third-party samples; see [`SOUND_LICENSES.md`](tools/sounds/SOUND_LICENSES.md).
 
-### Audio Configuration
+## Privacy
 
-- Audio stream: `STREAM_MUSIC`
-- SoundPool max streams: 10
-- Optimized for short game sounds
-
-### Theme
-
-- Material Design 3 with dark theme
-- Edge-to-edge display
-- Gradient effects on buttons
-- Spring-based animations
-
-## Code Style Guidelines
-
-Following the project's CLAUDE.md guidelines:
-
-- **Architecture**: MVVM with ViewModels and StateFlow
-- **Naming**: PascalCase for classes, camelCase for functions, SCREAMING_SNAKE_CASE for constants
-- **Documentation**: KDoc comments for public APIs
-- **Error Handling**: Try/catch with detailed logging
-- **Asynchronous**: Kotlin Coroutines with viewModelScope
-- **State Management**: Immutable state with StateFlow
-- **Logging**: TAG constant with Log.d/e/w
-
-## Features in Development
-
-Currently implemented sound packs:
-- Standard (complete)
-- Funny (complete)
-
-Planned sound packs:
-- Electronic
-- Retro
-- Musical
-- Nature
-- Sci-Fi
+The app makes no network calls and collects no data. Its only permission is `VIBRATE`. Read the [privacy policy](https://guyguy2.github.io/MemoryLights/privacy.html).
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Follow the code style guidelines in CLAUDE.md
-4. Write unit tests for new features
-5. Commit your changes: `git commit -m 'Add some feature'`
-6. Push to the branch: `git push origin feature/your-feature-name`
-7. Submit a pull request
-
-## Testing
-
-The project includes:
-- Unit tests with JUnit 4
-- Instrumented tests with Espresso
-- Compose UI tests
-
-Run tests before submitting changes:
-```bash
-./gradlew test lint
-```
+Issues and pull requests are welcome. Before opening a pull request, please run `./gradlew test lint` and add tests alongside any behavior change. The project conventions are in [`CLAUDE.md`](CLAUDE.md).
 
 ## License
 
-This project is available under the MIT License (or your chosen license).
+Released under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-- Inspired by the classic Simon electronic game by Ralph H. Baer and Howard J. Morrison
-- Built with modern Android development best practices
-- Uses Material Design 3 components
-
----
-
-**Version**: 1.0.0
-**Build**: See `app/build.gradle.kts` for current version details
+Inspired by the classic Simon electronic game created by Ralph Baer and Howard Morrison. Memory Lights is an independent project and is not affiliated with or endorsed by the makers of Simon. Simon is a trademark of its respective owner.
