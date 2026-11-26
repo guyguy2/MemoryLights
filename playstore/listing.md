@@ -13,12 +13,12 @@ Memory Lights
 ## Short description (max 80 chars)
 
 ```
-A memory game with seven sound packs, share-able scores, and reverse mode.
+Watch the lights, repeat the pattern. Speed Blitz, 7 sound packs, no ads.
 ```
 
 Alt phrasings if you want a different angle:
-- `Watch the lights, repeat the pattern. Seven sound packs and reverse mode.`
-- `A modern Simon. Tap colors in order, level up, share your best.`
+- `Watch the lights flash, then repeat the pattern. Seven sound packs and reverse mode.`
+- `Tap colors in order, level up, and share your best. No ads, works offline.`
 
 ---
 
@@ -28,14 +28,16 @@ Alt phrasings if you want a different angle:
 Memory Lights is a polished take on the classic memory game. Watch the lights flash a pattern, then repeat it. Each round adds one more step. How far can you go?
 
 GAME MODES
-- Standard: 4 colors, classic gameplay
-- Memory Lights+: 6 colors for a tougher challenge
+- Classic: the sequence grows until you miss
+- Speed Blitz: race to level 20 and beat your best time
+- 4 or 6 buttons: standard colors, or Memory Lights+ with purple and orange for a tougher challenge
 - Reverse Mode: watch the sequence forward, repeat it backward
-- Practice Mode: wrong taps replay the sequence so you can drill tough patterns
-- Difficulty: speeds up as you climb
+- Practice Mode: wrong taps replay the sequence so you can drill tough patterns (high scores are not recorded)
+- Audio-Only Mode: colors are hidden during playback, so you recognize the pattern by sound alone
+- Difficulty: the game speeds up as you climb
 
 SEVEN SOUND PACKS
-- Standard: classic Simon tones
+- Standard: classic tones
 - Funny: humorous sound effects
 - Electronic: modern synth tones
 - Retro Gaming: 8-bit chiptune
@@ -43,25 +45,27 @@ SEVEN SOUND PACKS
 - Nature: birds, water, chimes, and rumble
 - Sci-Fi: chiptune bleeps and zaps
 
-POLISH AND ACCESSIBILITY
-- Adjustable player timeout (5, 10, 15, or 30 seconds)
-- Visible countdown ring around the center disc
-- Pause button mid-run
-- Replay last sequence after game over
-- Share a 1080x1080 score card to any messaging app
-- Persistent high score and full game statistics
-- Distinct screen-reader announcements for level, your turn, and game over
-- All-black AMOLED-friendly theme
+PLAYABLE BY EVERYONE
+- Color-blind mode: a distinct shape on every button
+- Adjustable player timeout (5, 10, 15, or 30 seconds) with a visible countdown ring
+- AMOLED black and dark themes
+- Screen-reader announcements for level, your turn, and game over
 - 48dp minimum touch targets and content descriptions throughout
+
+PROGRESS AND SHARING
+- Persistent high score and full game statistics
+- Achievements to unlock
+- Pause mid-run, and replay the last sequence after game over
+- Share a 1080x1080 score card to any messaging app
 - Vibration toggle and master mute button
 
 OFFLINE FIRST
 No accounts. No ads. No tracking. No network calls. Your scores live on your device.
 
-If you grew up on the original handheld memory toys, Memory Lights is built for the same itch — quick to play, easy to come back to, and just hard enough to keep you trying one more time.
+If you grew up on the original handheld memory toys, Memory Lights is built for the same itch: quick to play, easy to come back to, and just hard enough to keep you trying one more time.
 ```
 
-Character count: ~1500 (well under 4000 limit).
+Character count: 1801 (limit 4000).
 
 ---
 
@@ -69,12 +73,13 @@ Character count: ~1500 (well under 4000 limit).
 
 ```
 First release of Memory Lights.
-- Standard 4-button and Memory Lights+ 6-button modes
-- Reverse Mode and Practice Mode
+- Classic and Speed Blitz modes, with 4-button and 6-button boards
+- Reverse, Practice and Audio-Only modes
 - Seven sound packs
+- Color-blind mode, AMOLED black and dark themes
 - Adjustable player timeout
-- Pause / replay / share score card
-- Statistics screen with high score, average, total, and best streak
+- Pause, replay and share a score card
+- Statistics and achievements
 ```
 
 ---
@@ -82,7 +87,7 @@ First release of Memory Lights.
 ## Categorization
 
 - **Category:** Games > Puzzle (alt: Games > Casual or Games > Brain)
-- **Tags:** memory, simon, brain training, puzzle, casual, single-player, offline
+- **Tags (as set in Play Console):** Memory, Brain training, Casual. Play has no tag for offline, single-player or Simon.
 
 ## Content rating
 
@@ -97,8 +102,7 @@ First release of Memory Lights.
 
 ## Target audience and content
 
-- **Target age range:** 6+ (puzzle / brain training)
-- **Appeals to children:** mark as "no" to avoid Designed for Families compliance unless you want it; if you do want DFF, the app already qualifies (no ads, no data collection)
+- **Target age range (as set in Play Console):** 13-15, 16-17, 18 and over. Under-13 groups are left out on purpose to avoid the Families policy; the app itself is suitable for all ages.
 
 ---
 
