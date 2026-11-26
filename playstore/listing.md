@@ -121,7 +121,7 @@ First release of Memory Lights.
 
 | Asset | Spec | Status |
 |---|---|---|
-| App icon | 512x512 PNG, 32-bit, no alpha | Pull from `app/src/main/res/mipmap-xxxhdpi/ic_launcher.png` and upscale, or commission a fresh one |
+| App icon | 512x512 PNG, 32-bit, no alpha | Ready: `playstore/icon_512.png` (downscaled from `playstore/icon_master.png`) |
 | Feature graphic | 1024x500 PNG/JPG | Not done — see `feature_graphic.md` |
 | Phone screenshots | min 2, max 8, 16:9 to 9:16, min 320px | 7 screenshots in `screenshots/` |
 | 7-inch tablet screenshots | optional | not done |

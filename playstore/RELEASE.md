@@ -146,7 +146,7 @@ If you hit a release-only crash (R8 stripping, ProGuard rules), check `proguard-
 6. Fill in **Store listing**:
    - App title, short description, full description from `listing.md`
    - Upload 7 screenshots from `playstore/screenshots/`
-   - Upload 512x512 app icon (extract or upscale from existing launcher)
+   - Upload `playstore/icon_512.png` (512x512 app icon)
    - Upload 1024x500 feature graphic (still TODO — see `feature_graphic.md`)
 7. Fill in **App content** declarations (from `listing.md` → Content rating section)
 8. Submit IARC questionnaire for content rating

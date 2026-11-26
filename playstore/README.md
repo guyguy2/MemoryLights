@@ -19,7 +19,7 @@ Everything Play Console asks for, in one folder. Treat it as a paste-buffer — 
 - [x] Listing copy drafted
 - [x] Privacy policy drafted
 - [x] Release/signing guide written
-- [ ] App icon 512x512 (extract or upscale from launcher)
+- [x] App icon 512x512 (`playstore/icon_512.png`)
 - [ ] Feature graphic 1024x500 (design + render)
 - [ ] Keystore generated (`RELEASE.md` step 1)
 - [ ] Signing config wired into `app/build.gradle.kts` (`RELEASE.md` step 2)
