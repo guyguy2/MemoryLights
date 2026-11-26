@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "path": "../.agents/skills"
+    },
+    {
+      "path": "../.claude/skills"
+    },
+    {
+      "path": "../cicd/.agents/skills"
+    }
+  ]
+}
