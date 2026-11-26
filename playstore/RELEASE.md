@@ -35,7 +35,7 @@ The current `app/build.gradle.kts` does not have a signing config. Two ways to a
 Create `keystore.properties` at the repo root (already gitignored if you add the line below):
 
 ```properties
-storeFile=/Users/guy/keystores/memory-lights-upload.jks
+storeFile=/path/to/keystores/memory-lights-upload.jks
 storePassword=YOUR_KEYSTORE_PASSWORD
 keyAlias=memory-lights
 keyPassword=YOUR_KEY_PASSWORD

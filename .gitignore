@@ -13,6 +13,7 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+.kotlin/
 *.aab
 *.apk
 output-metadata.json
@@ -24,9 +25,10 @@ misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
 
-# Keystore files
+# Keystore files and signing config
 *.jks
 *.keystore
+keystore.properties
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
