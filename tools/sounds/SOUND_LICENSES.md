@@ -8,34 +8,34 @@ upstream license terms to comply with.
 
 | Pack       | Source                          |
 |------------|----------------------------------|
-| Standard   | Original recordings              |
 | Funny      | Original recordings              |
 | Electronic | Original recordings              |
 | Retro      | Original recordings              |
 
-## Synthesized packs (added 2026-05-03, this commit)
+## Synthesized packs
 
-Generated from the Python scripts under `tools/sounds/{musical,scifi,nature}/`.
+Generated from the Python scripts under `tools/sounds/{standard,musical,scifi,nature}/`.
 Output WAVs live in `app/src/main/res/raw/`. Re-running the scripts is
 deterministic — same inputs yield identical bytes.
 
-| Pack    | Generator                        | Method                                                              |
-|---------|----------------------------------|---------------------------------------------------------------------|
-| Musical | `tools/sounds/musical/generate.py` | sine + 2 harmonics + ADSR; pentatonic piano-style tones            |
-| Sci-Fi  | `tools/sounds/scifi/generate.py`   | chiptune square / saw with frequency sweeps; klaxon error          |
-| Nature  | `tools/sounds/nature/generate.py`  | nature-flavored synthesis: chirp / drop / chime / ribbit / cricket  |
+| Pack     | Generator                            | Method                                                                      |
+|----------|--------------------------------------|-----------------------------------------------------------------------------|
+| Standard | `tools/sounds/standard/generate.py`  | warm classic 1978 Simon square waves (209/252/310/415/494/622 Hz) + buzzer  |
+| Musical  | `tools/sounds/musical/generate.py`   | sine + 2 harmonics + ADSR; pentatonic piano-style tones                     |
+| Sci-Fi   | `tools/sounds/scifi/generate.py`     | chiptune square / saw with frequency sweeps; klaxon error                   |
+| Nature   | `tools/sounds/nature/generate.py`    | nature-flavored synthesis: chirp / drop / chime / ribbit / cricket          |
 
 ## Notes
 
 - Nature is a synth approximation rather than field recordings. Real CC0
   samples (Pixabay / Freesound) require account-gated downloads and per-file
   license auditing, so we kept the pack license-clean and reproducible.
-- All output is 44100 Hz mono 16-bit PCM, peak-normalized to −1 dBFS,
-  matching the existing `standard_*` pack format.
-- Regenerate with the venv at `/tmp/mlsynth` or any Python with `numpy` +
-  `scipy` installed:
+- All synthesized output is 44100 Hz mono 16-bit PCM, peak-normalized to −1 dBFS.
+- `standard` uses Python standard library only; `musical`, `scifi`, and `nature`
+  require `numpy` + `scipy`:
   ```
-  python3 tools/sounds/musical/generate.py app/src/main/res/raw
-  python3 tools/sounds/scifi/generate.py   app/src/main/res/raw
-  python3 tools/sounds/nature/generate.py  app/src/main/res/raw
+  python3 tools/sounds/standard/generate.py app/src/main/res/raw
+  python3 tools/sounds/musical/generate.py  app/src/main/res/raw
+  python3 tools/sounds/scifi/generate.py    app/src/main/res/raw
+  python3 tools/sounds/nature/generate.py   app/src/main/res/raw
   ```
