@@ -1,8 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
+
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties") // local only, git-ignored
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun signingValue(env: String, prop: String): String? =
+    System.getenv(env)?.takeIf { it.isNotBlank() } ?: keystoreProps.getProperty(prop)?.takeIf { it.isNotBlank() }
 
 android {
     namespace = "com.happypuppy.memorylights"
@@ -16,10 +26,27 @@ android {
         applicationId = "com.happypuppy.memorylights"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // Release builds pass -PversionCode=NNN / -PversionName=... (or VERSION_CODE / VERSION_NAME env).
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt()
+            ?: System.getenv("VERSION_CODE")?.toInt()
+            ?: 1
+        versionName = (project.findProperty("versionName") as String?)
+            ?: System.getenv("VERSION_NAME")
+            ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    val releaseKeystorePath = signingValue("ANDROID_KEYSTORE_PATH", "storeFile")
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = signingValue("ANDROID_KEYSTORE_PASSWORD", "storePassword")
+                keyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
+                keyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -30,6 +57,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
