@@ -11,6 +11,7 @@ Memory Lights 1.0.0 (versionCode 1) was submitted to Google Play production on 2
 
 ### Post-approval polish (needs a new store-listing submission, so wait for approval)
 
+- Change the Play Store listing title to **"Memory Lights: Sequence Game"** (28/30 chars; update Play Console main store listing and `playstore/listing.md`).
 - Restyle `playstore/feature_graphic.png` (still the old plain black design) to match the new icon, then re-upload.
 - The 7 phone screenshots uploaded in a shuffled order (statistics first); drag gameplay shots to the front.
 - Add the Play Store link to the README and the GitHub About section. Upload a GitHub social preview image (web UI only).
