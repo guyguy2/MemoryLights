@@ -2,6 +2,12 @@
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
 
+## State at session end (2026-11-26, Wave 16 - new app icon)
+
+- New adaptive launcher icon, monochrome layer and `playstore/icon_512.png`. Details in `specs/improvements.md` "Wave 16". No code changes; `./gradlew assembleDebug lintDebug` passes (0 errors).
+- Verified in the Pixel_10 app drawer. The themed-icon silhouette is unverified on a device.
+- Dependency check the same day: AGP 9.5.3, Kotlin 2.4.21, Gradle 9.9.2 and every other library are on their latest stable release.
+
 ## State at session end (2026-11-25, Wave 15 - game-over race fixes)
 
 - Branch `main`. Wave 15 commits: `f51afca` (#66/#67), `6145766` (docs), `c71e301` (#73), plus a docs commit. Check `git status -sb` for push state.

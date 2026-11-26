@@ -519,6 +519,14 @@ Follow-ups recorded: #72 (center-disc text overlap in landscape and at sw720dp, 
 - Pixel_10: miss, open Settings within 0.6 s, back -> Game Over screen, nothing lit, one error tone, no later timeout. A turn timeout logs one error tone.
 - `c71e301` **#73** (found while fixing #66): the practice-mode replay had the same untracked 300 ms delay. It now uses the same tracked step (renamed "pending turn end"); leaving the Game screen parks the turn in `ShowingSequence` so it replays on return. `MemoryLightsGame` reads `gameStateAtSettingsEntry` after `showSettings()`, so the mode-switch confirmation no longer appears right after a loss. 3 more tests (111/111). Pixel_10: practice miss + Settings ~120 ms later stays quiet for 12 s and replays on return; after a classic loss, switching to Speed Blitz asks no confirmation.
 
+## Session 2026-11-26 - Wave 16 (new app icon)
+
+- Replaced the placeholder Simon wheel with a generated "glowing button loop" icon (four glossy buttons, sequence arrows, center sparkle). Source art is `playstore/icon_master.png` (1254 px, made in an image model).
+- Adaptive icon: raster `mipmap-*/ic_launcher_bg.webp` + `ic_launcher_fg.webp` (108 dp canvas, artwork scaled to 84 dp so it sits inside the 66 dp safe zone, edges feathered into a rebuilt navy background). Monochrome layer is a hand-drawn vector, `drawable/ic_launcher_monochrome.xml`. `ic_simon_launcher.xml` removed.
+- `playstore/icon_512.png` is the Play Store icon (512 px, opaque, no pre-rounded corners).
+- Verified on Pixel_10: icon renders correctly in the app drawer. The themed-icon (monochrome) layer was only previewed as a render; the emulator did not apply themed icons to any app, so it is unverified on a device.
+- Not touched: `ic_launcher_background.xml`, `ic_launcher_foreground.xml` and the robot `mipmap-*/ic_launcher*.webp` files are pre-existing dead resources (lint UnusedResources).
+
 ---
 
 ## Critical Files
