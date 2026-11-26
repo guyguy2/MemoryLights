@@ -527,6 +527,14 @@ Follow-ups recorded: #72 (center-disc text overlap in landscape and at sw720dp, 
 - Verified on Pixel_10: icon renders correctly in the app drawer. The themed-icon (monochrome) layer was only previewed as a render; the emulator did not apply themed icons to any app, so it is unverified on a device.
 - Not touched: `ic_launcher_background.xml`, `ic_launcher_foreground.xml` and the robot `mipmap-*/ic_launcher*.webp` files are pre-existing dead resources (lint UnusedResources).
 
+## Session 2026-11-26 - Wave 17 (GitHub cleanup, signing, first Play submission)
+
+- **Repo (public, `guyguy2/MemoryLights`):** README rewritten to match the shipped app (the old one was template leftovers: "Simon Says", `MyApplication2`, wrong package, targetSdk 35). MIT `LICENSE` added and detected by GitHub. About section, website (Pages) and 8 topics set. `.gitignore` now covers `keystore.properties` and `.kotlin/`. Full-history scan found no secrets.
+- **Signing:** `app/build.gradle.kts` signs release from `ANDROID_KEYSTORE_*` env or a git-ignored `keystore.properties`, and takes `-PversionCode` / `-PversionName` (same pattern as SimpleDayCounter and SpeechTimer_Jetpack). One upload key per app, per `../cicd/02-signing-and-secrets.md`: `~/.config/android-cicd/keystores/key_memoryLights.p12`, alias `upload`, RSA 4096, backed up to Dropbox.
+- **Release checks:** signed AAB 1.0.0 (code 1), target SDK 36, fingerprint matches the key, all 8 native libs 16 KB aligned (zip + ELF), signed release APK smoke-tested on Pixel_10 (full game cycle, no crash).
+- **Play Console:** draft app created, listing copy refreshed (removed the "Simon" trademark wording, added Speed Blitz, Audio-Only, color-blind mode, themes, achievements; Daily Challenge deliberately omitted because it has no UI), contact email, 13+ audience, IARC rating, data safety, 178 countries, PC opt-out. Production track was open with no closed-test lock, so the user chose to skip internal testing and submit straight to production at 100%.
+- **Submitted:** 11 changes sent for review on 2026-11-26; the result is unknown at the time of writing. See the top block of `specs/RESUME.md` for the review checklist and open follow-ups.
+
 ---
 
 ## Critical Files

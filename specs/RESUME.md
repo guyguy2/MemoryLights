@@ -1,4 +1,43 @@
-# Resume note for next session (written 2026-11-25, Wave 15 - game-over and practice-replay race fixes)
+# Resume note for next session (written 2026-11-26, Wave 17 - GitHub cleanup and first Play submission)
+
+## START HERE next session: review the Play submission with the user
+
+Memory Lights 1.0.0 (versionCode 1) was submitted to Google Play production on 2026-11-26. Nothing about the result is known yet. Check these together, in order:
+
+1. **Review status.** Play Console > Memory Lights > Publishing overview (app id `4975069422447709768`, account `HappyPuppyApps`). Console URL: `https://play.google.com/console/u/0/developers/8893200196755101944/app/4975069422447709768/publishing`. States: "Changes in review", approved and live, or rejected (the rejection email carries the policy reason; fix the declarations first).
+2. **If live:** install it from the Play listing on a real phone and play a round. Then do the post-approval polish below.
+3. **Trader status** is still undeclared (account-level, legal declaration, required by Feb 2027). The user does this; do not do it for them.
+4. **Keystore password** must be in the user's password manager. The `.p12` is backed up in Dropbox (`Dev/Android/Android Dev/keystore/key_memoryLights.p12`); the password is not stored anywhere I can see.
+
+### Post-approval polish (needs a new store-listing submission, so wait for approval)
+
+- Restyle `playstore/feature_graphic.png` (still the old plain black design) to match the new icon, then re-upload.
+- The 7 phone screenshots uploaded in a shuffled order (statistics first); drag gameplay shots to the front.
+- Add the Play Store link to the README and the GitHub About section. Upload a GitHub social preview image (web UI only).
+
+### Open follow-ups
+
+- In-app link to the privacy policy (`https://guyguy2.github.io/MemoryLights/privacy.html`); Play expects one.
+- Add `debugSymbolLevel = "SYMBOL_TABLE"` to the release build type (Play warned about missing native debug symbols from AndroidX libs; harmless but easy).
+- Register Memory Lights in `../cicd/apps.json` (alias `upload`, keystore `~/.config/android-cicd/keystores/key_memoryLights.p12`, package `com.happypuppy.memorylights`, base version `1.0.0`) so future releases use the shared local pipeline.
+- Verify the Android 13+ themed (monochrome) icon on a device that actually applies themed icons; the Pixel_10 emulator did not.
+- `CLAUDE.md` mentions a test class `ExampleUnitTest` that does not exist; it still lists stale SharedPreferences/StatisticsManager wording.
+- Pre-existing dead resources: `drawable/ic_launcher_background.xml`, `drawable/ic_launcher_foreground.xml`, and the robot `mipmap-*/ic_launcher*.webp`.
+
+### How to ship the next version
+
+`keystore.properties` (git-ignored, repo root) holds the signing config. Bump the code every upload:
+`./gradlew bundleRelease assembleRelease -PversionCode=2 -PversionName=1.0.1` then upload `app/build/outputs/bundle/release/app-release.aab` to Play Console > Production > Create new release. Keep `versionName` a clean semver (see `../cicd/AGENTS.md`). R8 is on: always smoke-test the signed release APK on Pixel_10 before uploading. Upload key SHA-256 (public): `72:48:18:1B:B3:5B:AC:F0:F6:12:FF:C3:85:4E:C6:9E:28:77:D0:C8:23:72:61:B7:A3:88:BE:62:FE:5F:B7:B8`.
+
+### Declarations made on the user's behalf (revisit if the app changes)
+
+- Content rating (IARC, category Game): every question answered "No". Two judgment calls: user interaction "No" (the Share button only hands a score image to the Android share sheet), and Language/Crude Humor "No" (the user confirmed the Funny sound pack has nothing crude or spoken). Re-run the questionnaire if a feature changes either.
+- Target age 13-15, 16-17, 18+ (under-13 groups left out on purpose to avoid the Families policy). Data safety: no data collected or shared. Ads: none.
+- Distribution: 178 countries/regions, 100% rollout, Google-generated app signing key. Google Play Games on PC: opted out (before submitting). Android XR: left active (the console default).
+- Store listing copy lives in `playstore/listing.md` and matches the Console. Release name `1.0.0`.
+
+---
+
 
 Canonical roadmap: `specs/improvements.md`. This file is a tactical pointer; if it disagrees with `specs/improvements.md`, trust the spec.
 
