@@ -1,6 +1,16 @@
-# Resume note for next session (written 2026-11-27, Wave 18 - UX, Audio & Settings Polish)
+# Resume note for next session (written 2026-11-27, Wave 19 - Option A Layout Redesign)
 
-## State at session end (2026-11-27, Wave 18 - `1.0.2 / 3`)
+## State at session end (2026-11-27, Wave 19 - `1.0.3 / 4`)
+
+- Branch `main`. Wave 19 (`1.0.3 / versionCode 4`) Option A layout redesign, closing `#72`:
+  - **4-Tile Classic Mode:** Added `SlimMetadataStrip` (`★ Best N` + `♪ <Sound Pack>`, plus integrated Speed Blitz HUD without stacked bars), decluttered `104.dp` center disc (`CenterDiscContent`), unified reactive/countdown ring (`CenterDiscRing`, green → amber → red `countdownProgressColor`), circular touch absorption during active play (`consumeCircularTouch`), and clamped inner disc font scaling (`#72`).
+  - **6-Tile Memory Lights+ Mode:** Removed center circle completely; added `FullTopHudStrip` (`ROUND` / `BLITZ`, center status/step pill, `★ Best`, `♪ <Sound Pack>`, bottom horizontal countdown bar), accessible `"Start Game"` CTA, `soundLoadError` pill, and `SixTileGameOverSummary` stacked cleanly above Wave 18 `"New Game"` + `Replay` / `Share`.
+  - **Headline Overlays & Preserved Behaviors:** Replaced `OverlayBias*` with layout-aware non-overlapping `HeadlineOverlay` slots; preserved Color-Blind Mode (`#35`), stationary leftmost `Pause`, Speed Blitz pause-clock accuracy, Difficulty default ON, 7 sound packs, and all `Wave18UiTest` contracts.
+- **Checks:** `129/129` JVM unit tests (`CountdownProgressColorTest` + existing 123), `13/13` instrumented tests on `Pixel_10` (`Wave18UiTest` + `Wave19UiTest` + `ExampleInstrumentedTest`), `lintDebug` / `lintRelease` `0` errors, R8 release APK smoke test + 16 KB alignment + `gplay preflight` passed.
+
+---
+
+## Previous session (written 2026-11-27, Wave 18 - UX, Audio & Settings Polish)
 
 - Branch `main`. Wave 18 changes (`1.0.2 / versionCode 3`) + `#69` cleanup:
   - **Settings & Sound Packs:** Renamed Classic sound description to `"Classic game sounds"` (removed `"Simon"` from user-facing string); synthesized 18 color tones + standardized ~0.5 s `-1 dBFS` error tones across `Electronic`, `Retro Gaming`, and `Funny` (`tools/sounds/{electronic,retro,funny}/generate.py`, `SOUND_LICENSES.md`); added `"Coming soon"` infrastructure (`SoundPack.isAvailable`, visible disabled badge row, auto-fallback to `Standard`).
