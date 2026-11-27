@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,11 +42,13 @@ import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.util.AppVersionInfo
 import kotlinx.coroutines.launch
 
+internal const val PRIVACY_POLICY_URL = "https://guyguy2.github.io/MemoryLights/privacy.html"
+
 /**
  * Top-level Settings screen — a navigation hub since F18. Three chevron
  * rows lead to focused sub-screens (Game Modes / Gameplay / Sound &
- * Haptics); the global utilities (Statistics, Reset, Rate, About) live
- * directly here so they remain one tap away.
+ * Haptics); the global utilities (Statistics, Reset, Rate, Privacy Policy,
+ * About) live directly here so they remain one tap away.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +62,8 @@ fun SettingsScreen(
     onStatisticsClicked: () -> Unit,
     onResetHighScore: () -> Unit,
     onBackPressed: () -> Unit,
-    unlockedAchievements: Set<String> = emptySet()
+    unlockedAchievements: Set<String> = emptySet(),
+    onPrivacyPolicyClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -278,6 +282,54 @@ fun SettingsScreen(
 
                             Text(
                                 text = stringResource(R.string.settings_rate_summary),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+
+                SettingsCard(
+                    onClick = {
+                        if (onPrivacyPolicyClick != null) {
+                            onPrivacyPolicyClick()
+                        } else {
+                            val privacyIntent = Intent(
+                                Intent.ACTION_VIEW,
+                                PRIVACY_POLICY_URL.toUri()
+                            )
+                            try {
+                                context.startActivity(privacyIntent)
+                            } catch (_: ActivityNotFoundException) {
+                                toast(resources.getString(R.string.privacy_policy_unavailable))
+                            }
+                        }
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_privacy_policy_title),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = stringResource(R.string.settings_privacy_policy_summary),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium
                             )

@@ -2,6 +2,7 @@ package com.happypuppy.memorylights.ui
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -9,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.happypuppy.memorylights.BuildConfig
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.domain.enums.SimonButton
@@ -23,13 +25,22 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val SPLASH_MAX_HOLD_MS = 2_000L
     }
 
     // Use Koin to inject ViewModel
     private val viewModel: SimonGameViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Must run before super.onCreate. Keeps the system splash on screen until
+        // initial persisted settings (including themeMode) resolve or the 2s cap fires.
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        val splashDeadlineMs = SystemClock.elapsedRealtime() + SPLASH_MAX_HOLD_MS
+        splashScreen.setKeepOnScreenCondition {
+            !viewModel.uiState.value.settingsLoaded &&
+                SystemClock.elapsedRealtime() < splashDeadlineMs
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)

@@ -28,10 +28,12 @@ import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.GameStatistics
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
+import com.happypuppy.memorylights.ui.MainActivity
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.screens.AboutDialog
 import com.happypuppy.memorylights.ui.screens.GameModesScreen
 import com.happypuppy.memorylights.ui.screens.GameplayScreen
+import com.happypuppy.memorylights.ui.screens.PRIVACY_POLICY_URL
 import com.happypuppy.memorylights.ui.screens.ResetStatisticsDialog
 import com.happypuppy.memorylights.ui.screens.SettingsScreen
 import com.happypuppy.memorylights.ui.screens.SimonGameScreen
@@ -166,6 +168,7 @@ class ScreenAccessibilityTest {
 
     @Test
     fun settingsScreen_andDialogs_passAccessibilityChecks() {
+        var privacyPolicyClicks = 0
         rule.setContent {
             MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
                 SettingsScreen(
@@ -178,7 +181,8 @@ class ScreenAccessibilityTest {
                     onStatisticsClicked = {},
                     onResetHighScore = {},
                     onBackPressed = {},
-                    unlockedAchievements = setOf(Achievement.FirstWin.name, Achievement.Level10.name)
+                    unlockedAchievements = setOf(Achievement.FirstWin.name, Achievement.Level10.name),
+                    onPrivacyPolicyClick = { privacyPolicyClicks++ }
                 )
             }
         }
@@ -189,6 +193,11 @@ class ScreenAccessibilityTest {
         rule.onNodeWithText("Reset High Score").assertIsDisplayed()
         checkAllWindows()
         rule.onNodeWithText("Cancel").performClick()
+
+        // Verify Privacy Policy row is visible, accessible, and clickable
+        rule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed().performClick()
+        assertEquals(1, privacyPolicyClicks)
+        assertTrue(PRIVACY_POLICY_URL.startsWith("https://"))
 
         // Open About dialog and verify dialog window
         rule.onNodeWithText("About").performScrollTo().performClick()
@@ -424,5 +433,22 @@ class AdaptiveScreenAccessibilityTest {
             cardWidth <= 840.dp
         )
         rule.onAllNodes(isRoot()).tryPerformAccessibilityChecks()
+    }
+}
+
+/**
+ * Cold-start verification that MainActivity installs Jetpack core-splashscreen
+ * and transitions cleanly from Theme.MemoryLights.Starting into the Compose UI.
+ */
+@RunWith(AndroidJUnit4::class)
+class StartupSplashInstrumentedTest {
+
+    @get:Rule
+    val rule = createAndroidComposeRule<MainActivity>()
+
+    @Test
+    fun coldStart_transitionsPastSplashScreenToGameUi() {
+        rule.waitForIdle()
+        rule.onNodeWithText("Memory Lights").assertIsDisplayed()
     }
 }

@@ -2,11 +2,17 @@
 <resources>
 
     <!--
-      Window background is black so the activity-load flash matches the
-      all-black Compose UI. Without this, the default Material.Light theme
-      paints the window white for a frame on cold start.
+      Window background is black so the post-splash surface matches the
+      dark/AMOLED Compose UI without any light frame flash.
     -->
     <style name="Theme.MemoryLights" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <!-- System splash screen theme (Jetpack core-splashscreen). -->
+    <style name="Theme.MemoryLights.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.MemoryLights</item>
     </style>
 </resources>

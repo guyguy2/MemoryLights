@@ -89,6 +89,9 @@
     <string name="settings_reset_summary">Clears high score, games played, and all statistics</string>
     <string name="settings_rate_title">Rate this App</string>
     <string name="settings_rate_summary">Enjoying Memory Lights? Let us know!</string>
+    <string name="settings_privacy_policy_title">Privacy Policy</string>
+    <string name="settings_privacy_policy_summary">View our privacy policy online</string>
+    <string name="privacy_policy_unavailable">Unable to open privacy policy link</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_summary">Version %1$s</string>
 
@@ -113,7 +116,7 @@
     <string name="toggle_reverse_title">Reverse Mode</string>
     <string name="toggle_reverse_summary">Watch the sequence forward, then repeat it in reverse</string>
     <string name="toggle_practice_title">Practice Mode</string>
-    <string name="toggle_practice_summary">Wrong buttons replay the sequence instead of ending the run. High scores are not recorded while enabled.</string>
+    <string name="toggle_practice_summary">Wrong buttons and timeouts replay the sequence instead of ending the run. High scores are not recorded while enabled.</string>
     <string name="toggle_audio_only_title">Audio-Only Mode</string>
     <string name="toggle_audio_only_summary">Hide button colors during playback — recognize the sequence by sound alone</string>
     <string name="toggle_daily_challenge_title">Daily Challenge</string>

@@ -10,6 +10,7 @@ import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.GameStatistics
@@ -1211,5 +1212,111 @@ class SimonGameViewModelTest {
             assertEquals(GameState.GameOver, vm.uiState.value.gameState)
             assertEquals(3_000L, vm.uiState.value.blitzElapsedMs)
             assertEquals(0L, vm.uiState.value.bestBlitzTime4ButtonMs)
+        }
+
+    // Wave 21 (#68): Practice Mode inactivity timeout replays sequence + settingsLoaded splash gate
+
+    @Test
+    fun `practice mode inactivity timeout replays sequence instead of game over`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true, highScore4Button = 0))
+            advanceToPlayerTurn()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Advance to level 2 so we can verify partial progress clears while level is preserved
+            vm.tap(vm.uiState.value.sequence[0])
+            advanceTimeBy(4_000)
+            runCurrent()
+            assertEquals(2, vm.uiState.value.level)
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Enter 1 of 2 steps, then let the player timeout expire
+            vm.tap(vm.uiState.value.sequence[0])
+            assertEquals(1, vm.uiState.value.playerSequence.size)
+
+            // Timeout (10s) + BUTTON_SOUND_DURATION_MS (300ms) + sequence replay (~2.5s)
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 3_500)
+            runCurrent()
+
+            // Sequence replayed cleanly without ending the run or recording stats/high score
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(2, vm.uiState.value.level)
+            assertTrue(vm.uiState.value.playerSequence.isEmpty())
+            assertEquals(0, vm.uiState.value.highScore4Button)
+            verify(exactly = 1) { soundManager.playErrorSound() }
+            verify(exactly = 0) { settingsRepository.setHighScore4Button(any()) }
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+
+            // Player can now complete level 2 normally
+            vm.uiState.value.sequence.forEach { vm.tap(it) }
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertEquals(3, vm.uiState.value.level)
+        }
+
+    @Test
+    fun `practice mode timeout then opening settings replays only after return`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Reset timer so advancing exactly PLAYER_TIMEOUT_MS lands inside the 300ms replay delay
+            vm.resetTimeoutTimer()
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS)
+            runCurrent()
+            vm.showSettings()
+            advanceTimeBy(GameConstants.PLAYER_TIMEOUT_MS + 5_000)
+            advanceUntilIdle()
+
+            // Nothing replayed or ended while on Settings
+            assertTrue(vm.uiState.value.gameState != GameState.GameOver)
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+
+            // Returning to Game replays the sequence and lands back in PlayerRepeating
+            vm.onReturnToGame()
+            advanceTimeBy(3_000)
+            runCurrent()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+            assertEquals(1, vm.uiState.value.level)
+            assertTrue(vm.uiState.value.playerSequence.isEmpty())
+        }
+
+    @Test
+    fun `practice mode consecutive idle timeout pauses instead of looping forever`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel(AppSettings(practiceModeEnabled = true))
+            advanceToPlayerTurn()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // First timeout replays; second consecutive idle timeout pauses cleanly
+            advanceUntilIdle()
+
+            assertEquals(GameState.Paused, vm.uiState.value.gameState)
+            assertEquals(1, vm.uiState.value.level)
+            verify(exactly = 1) { soundManager.playErrorSound() }
+            verify(exactly = 0) { statisticsRepository.recordGameResult(any(), any()) }
+
+            // Resuming returns to PlayerRepeating with the sequence intact
+            vm.resumeGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+        }
+
+    @Test
+    fun `settingsLoaded stays false until initial settings emit then becomes true`() =
+        runTest(testDispatcher.scheduler) {
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(250)
+                emit(AppSettings(themeMode = ThemeMode.DARK))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+
+            assertEquals(false, vm.uiState.value.settingsLoaded)
+
+            advanceTimeBy(250)
+            runCurrent()
+
+            assertEquals(true, vm.uiState.value.settingsLoaded)
+            assertEquals(ThemeMode.DARK, vm.uiState.value.themeMode)
         }
 }

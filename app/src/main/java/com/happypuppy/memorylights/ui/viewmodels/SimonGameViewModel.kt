@@ -89,6 +89,11 @@ class SimonGameViewModel(
     // level or fire a second game-over (double statistics write).
     private var isInputLocked = false
 
+    // Counts consecutive inactivity timeouts in Practice Mode without player input.
+    // First timeout replays the sequence so the player gets another look; a second
+    // consecutive idle timeout pauses the game instead of looping audio forever.
+    private var consecutivePracticeTimeouts = 0
+
     // Cursor for the sound-pack preview tone. Advances each time the player
     // taps a pack so they audition multiple colors rather than only GREEN
     // every time (#63). Wraps around the available button list.
@@ -188,7 +193,8 @@ class SimonGameViewModel(
             dailyCompletedEpochDay = settings.dailyCompletedEpochDay,
             dailyBestLevel = settings.dailyBestLevel,
             themeMode = settings.themeMode,
-            unlockedAchievements = settings.unlockedAchievements
+            unlockedAchievements = settings.unlockedAchievements,
+            settingsLoaded = true
         )}
     }
 
@@ -270,6 +276,7 @@ class SimonGameViewModel(
         Log.d(TAG, "Resuming game after navigation back")
 
         isInSettings = false
+        consecutivePracticeTimeouts = 0
 
         // The Game route also fires this on initial composition, before the
         // settings load + startup animation in init have started the first
@@ -433,6 +440,7 @@ class SimonGameViewModel(
             return
         }
         Log.d(TAG, "Resuming game")
+        consecutivePracticeTimeouts = 0
         resumeBlitzClock()
         _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
         startTimeoutTimer()
@@ -453,13 +461,14 @@ class SimonGameViewModel(
     }
 
     /**
-     * Toggle Practice Mode (F15). When enabled, a wrong button does not end
-     * the game — the sequence replays from the start so the player can try
-     * again. High scores never advance in practice mode because the game-
-     * over → recordGameResult path is never taken.
+     * Toggle Practice Mode (F15, #68). When enabled, a wrong button or timeout
+     * does not end the game — the sequence replays from the start so the player
+     * can try again. High scores never advance in practice mode because the
+     * game-over → recordGameResult path is never taken.
      */
     fun setPracticeModeEnabled(enabled: Boolean) {
         Log.d(TAG, "Setting practice mode enabled: $enabled")
+        consecutivePracticeTimeouts = 0
         _uiState.update { it.copy(practiceModeEnabled = enabled) }
         settingsRepository.setPracticeModeEnabled(enabled)
     }
@@ -743,6 +752,7 @@ class SimonGameViewModel(
 
         // Cancel any active timers to prevent unexpected behavior
         cancelTimeoutTimer()
+        consecutivePracticeTimeouts = 0
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -1035,6 +1045,7 @@ class SimonGameViewModel(
 
             // Only process game logic and play sound for the first button press
             if (isFirstButtonPressed) {
+                consecutivePracticeTimeouts = 0
                 // Reset the timeout timer since the player has acted
                 resetTimeoutTimer()
 
@@ -1076,7 +1087,7 @@ class SimonGameViewModel(
         // Safety check: make sure index is valid for both sequences
         if (index < 0 || index >= sequence.size) {
             Log.e(TAG, "Invalid index $index: player sequence=${playerSequence.size}, game sequence=${sequence.size}")
-            handleWrongButton("Game over - player entered too many buttons")
+            handleTurnFailed("Game over - player entered too many buttons")
             return
         }
 
@@ -1091,7 +1102,7 @@ class SimonGameViewModel(
 
         if (playerSequence[index] != expected) {
             Log.d(TAG, "Wrong button selected! Expected: $expected, Got: ${playerSequence[index]}")
-            handleWrongButton("Wrong button pressed")
+            handleTurnFailed("Wrong button pressed")
             return
         }
 
@@ -1171,13 +1182,14 @@ class SimonGameViewModel(
     }
 
     /**
-     * Wrong-button branch shared by [checkSequenceMatch]'s "out of bounds" and
-     * "mismatch" paths. In normal play this routes to [handleGameOver]; in
-     * practice mode (F15) it plays the error tone, briefly waits, clears the
-     * player's progress, and replays the same sequence so the player can try
-     * again without losing their level.
+     * Turn-failure branch shared by [checkSequenceMatch]'s "out of bounds" and
+     * "mismatch" paths as well as [startTimeoutTimer]'s inactivity timeout (#68).
+     * In normal play this routes to [handleGameOver]; in practice mode (F15) it
+     * plays the error tone once, briefly waits, clears the player's progress,
+     * and replays the same sequence so the player can try again without losing
+     * their level.
      */
-    private fun handleWrongButton(reason: String) {
+    private fun handleTurnFailed(reason: String) {
         // The turn is over; further presses must not be scored (see isInputLocked)
         isInputLocked = true
         if (_uiState.value.practiceModeEnabled) {
@@ -1347,15 +1359,19 @@ class SimonGameViewModel(
 
             // Ensure we're still in PlayerRepeating state (could have changed during the delay)
             if (_uiState.value.gameState == GameState.PlayerRepeating) {
-                // The turn is over; presses during the game-over animation are ignored
-                isInputLocked = true
-                // End the game; handleGameOver plays the error tone (once)
+                // Timer has fired; clear the handle before delegating so
+                // cancelTimeoutTimer() inside handleTurnFailed/pauseGame doesn't self-cancel.
+                timeoutJob = null
+                if (_uiState.value.practiceModeEnabled) {
+                    consecutivePracticeTimeouts++
+                    if (consecutivePracticeTimeouts >= 2) {
+                        Log.d(TAG, "Practice mode: consecutive idle timeout — pausing game")
+                        pauseGame()
+                        return@launch
+                    }
+                }
                 val reason = "Timeout - no button pressed for ${timeoutMs / 1000} seconds"
-                schedulePendingTurnEnd(
-                    delayMs = GameConstants.BUTTON_SOUND_DURATION_MS,
-                    animated = { handleGameOver(reason) },
-                    immediate = { handleGameOver(reason, animate = false) }
-                )
+                handleTurnFailed(reason)
             }
         }
     }

@@ -38,7 +38,7 @@ data class SimonGameUiState(
     val soundLoadError: String? = null, // Error message if sound loading failed
     val timeoutResetTick: Int = 0, // Increments each time the inactivity timer (re)starts; UI uses this to drive a countdown ring
     val playerTimeoutSeconds: Int = 10, // Configurable inactivity timeout (5/10/15/30 sec). Drives both the timer and ring drain duration
-    val practiceModeEnabled: Boolean = false, // Practice mode (F15): wrong button replays sequence instead of ending game
+    val practiceModeEnabled: Boolean = false, // Practice mode (F15, #68): wrong buttons and timeouts replay sequence instead of ending game
     val reverseModeEnabled: Boolean = false, // Reverse mode (F1): player must repeat sequence in reverse order
     val audioOnlyModeEnabled: Boolean = false, // Audio-Only mode (F3): hide button colors during sequence playback
     val colorBlindModeEnabled: Boolean = false, // #35: geometric shape overlays so the game is playable without hue discrimination
@@ -53,7 +53,8 @@ data class SimonGameUiState(
     val dailyCompletedEpochDay: Long = 0L, // Epoch day of the last daily run played
     val dailyBestLevel: Int = 0, // Best level on dailyCompletedEpochDay; resets when day rolls over
     val themeMode: ThemeMode = ThemeMode.AMOLED, // Surface palette mode (F12): AMOLED black or Material dark
-    val unlockedAchievements: Set<String> = emptySet() // F8: ids of unlocked achievements (Achievement.name)
+    val unlockedAchievements: Set<String> = emptySet(), // F8: ids of unlocked achievements (Achievement.name)
+    val settingsLoaded: Boolean = false // True once initial persisted settings snapshot has resolved (used by SplashScreen)
 ) {
     // Computed property to get the current high score based on the mode
     val currentHighScore: Int
