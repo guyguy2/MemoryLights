@@ -56,7 +56,7 @@ When multiple agents or sessions share the `Pixel_10` AVD, start each instance w
 - **Audio & sound packs (`data/manager/SimonSoundManager.kt`, `app/src/main/res/raw/`, `tools/sounds/`):**
   - Resource naming: `{soundpack}_{color}_tone.wav` + `{soundpack}_error_tone.wav` (44.1 kHz mono 16-bit PCM, peak-normalized to `-1.0 dBFS`).
   - `SimonSoundManager` lazy-loads the active pack into `SoundPool`, manages `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`, and degrades gracefully to haptic feedback if sound playback fails.
-  - Reproducible Python generators live in `tools/sounds/{standard,musical,scifi,nature}/generate.py` (see `tools/sounds/SOUND_LICENSES.md`). `standard` uses Python stdlib only and synthesizes warm classic 1978 Simon pitches (209/252/310/415/494/622 Hz) + low dissonant buzzer.
+  - Reproducible Python generators live in `tools/sounds/{standard,electronic,retro,funny,musical,scifi,nature}/generate.py` (see `tools/sounds/SOUND_LICENSES.md`). `standard`, `electronic`, `retro`, and `funny` use Python stdlib only.
 - **Utilities & UI:**
   - `util/AppVersionInfo.kt` reads `versionName` and `longVersionCode` dynamically from `PackageManager` for the Settings About card and `AboutDialog` (matching sibling apps).
   - `ui/share/ScoreShareHelper.kt` renders and shares score cards via `FileProvider` (`res/xml/file_paths.xml`).
@@ -101,6 +101,5 @@ rex do /Users/guy/dev/android/cicd/rex/pipeline.lua app=memorylights mode=verify
 
 ## Known gaps
 
-- `retro`, `electronic`, and `funny` color button tones (`app/src/main/res/raw/`) still use the original placeholder WAV (only `standard`, `musical`, `nature`, and `scifi` have synthesized per-color tones).
 - `SimonGameScreen.kt` still has deprecated `announceForAccessibility` calls (tracked in `specs/improvements.md` #70).
 - Post-approval Play Store polish and roadmap items live in `specs/RESUME.md` and `specs/improvements.md`.

@@ -1,4 +1,17 @@
-# Resume note for next session (written 2026-11-26, Wave 17 - GitHub cleanup and first Play submission)
+# Resume note for next session (written 2026-11-27, Wave 18 - UX, Audio & Settings Polish)
+
+## State at session end (2026-11-27, Wave 18 - `1.0.2 / 3`)
+
+- Branch `main`. Wave 18 changes (`1.0.2 / versionCode 3`) + `#69` cleanup:
+  - **Settings & Sound Packs:** Renamed Classic sound description to `"Classic game sounds"` (removed `"Simon"` from user-facing string); synthesized 18 color tones + standardized ~0.5 s `-1 dBFS` error tones across `Electronic`, `Retro Gaming`, and `Funny` (`tools/sounds/{electronic,retro,funny}/generate.py`, `SOUND_LICENSES.md`); added `"Coming soon"` infrastructure (`SoundPack.isAvailable`, visible disabled badge row, auto-fallback to `Standard`).
+  - **Pause & Speed Blitz Clock:** Moved `Pause` to leftmost in `TopAppBar.actions` (always rendered, enabled during `PlayerRepeating`, dimmed otherwise); fixed Speed Blitz elapsed clock to exclude paused time (`BlitzHud` + `SimonGameViewModel`); hid `Replay` on Speed Blitz `GameOver`.
+  - **Game Over CTA & Difficulty Default:** Added prominent filled `"New Game"` CTA above `Replay`/`Share` (responsive compact landscape `FlowRow`, center disc kept tappable with `24.dp` icon + `Role.Button`); flipped `difficultyEnabled` default to `true` (speed-up starts at level 5).
+  - **Cleanup (`#69`):** Gated `MainActivity.checkSoundResources()` on `BuildConfig.DEBUG` using `SimonSoundManager.getResourceId()` across available packs; removed dead `SDK_INT < O` branch in `SimonSoundManager.vibrate()` and dead no-arg `handleGameOver()`.
+- **Checks:** `123/123` JVM unit tests (`SoundPackTest` + existing suites), `7/7` instrumented tests on `Pixel_10` (`Wave18UiTest` + `ExampleInstrumentedTest`), `lintDebug` / `lintRelease` `0` errors. Play tracking lives in `../cicd/app-state.md` and `../cicd/release-log.md`.
+
+---
+
+## Previous session (written 2026-11-26, Wave 17 - GitHub cleanup and first Play submission)
 
 ## START HERE next session: review the Play submission with the user
 
