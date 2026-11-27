@@ -1,6 +1,17 @@
-# Resume note for next session (written 2026-11-27, Wave 19 - Option A Layout Redesign)
+# Resume note for next session (written 2026-11-27, Wave 21 - Polish, Compliance & Cleanup)
 
-## State at session end (2026-11-27, Wave 19 - `1.0.3 / 4`)
+## State at session end (2026-11-27, Wave 21 - `ux/wave-21-polish-compliance`)
+
+- **Wave 21 changes (closes `#68`):**
+  - **In-app Privacy Policy link:** Added `Privacy Policy` card in `SettingsScreen.kt` opening `https://guyguy2.github.io/MemoryLights/privacy.html` with `ActivityNotFoundException` snackbar fallback.
+  - **Practice Mode timeout replay (`#68`):** `startTimeoutTimer` delegates to shared `handleTurnFailed`, so the first inactivity timeout in Practice Mode plays one error tone, clears `playerSequence`, keeps level/stats/high score intact, and replays the sequence; a second consecutive idle timeout cleanly pauses the game (`PAUSED`) instead of looping forever. Updated `toggle_practice_summary` copy.
+  - **Jetpack `core-splashscreen 1.2.0`:** Added `Theme.MemoryLights.Starting` with 4-button vector `drawable/ic_splash.xml` on black background and wired `installSplashScreen()` in `MainActivity.kt` held until `settingsLoaded` (2s safety cap).
+  - **Asset & docs hygiene:** Removed 12 dead legacy launcher files (`drawable/ic_launcher_{background,foreground}.xml` and `mipmap-*/ic_launcher*.webp`), synced `specs/improvements.md`, `specs/RESUME.md`, and `AGENTS.md`.
+- **Wave 20 (`1.0.4 / 5`, shipped to Play Production):** Implemented all 15 items of `specs/ux-polish-plan.md` (closes `#34`, `#70`): `@Immutable GameAccentColors`, M3 token cleanup, localized TalkBack strings, removed nested clickable traps, `tnum` tabular numerals, reduced motion, AMOLED `surfaceContainerHigh` dialogs, `rememberSaveable` dialogs, `840.dp` tablet width cap, `LiveRegionMode.Polite`, plus `BrandColorSchemeTest`, `ThemeContrastTest`, `StringLiteralGuardTest`, 62 multipreviews, and Compose ATF tests.
+
+---
+
+## Previous session (written 2026-11-27, Wave 19 - Option A Layout Redesign)
 
 - Branch `main`. Wave 19 (`1.0.3 / versionCode 4`) Option A layout redesign, closing `#72`:
   - **4-Tile Classic Mode:** Added `SlimMetadataStrip` (`★ Best N` + `♪ <Sound Pack>`, plus integrated Speed Blitz HUD without stacked bars), decluttered `104.dp` center disc (`CenterDiscContent`), unified reactive/countdown ring (`CenterDiscRing`, green → amber → red `countdownProgressColor`), circular touch absorption during active play (`consumeCircularTouch`), and clamped inner disc font scaling (`#72`).
@@ -41,12 +52,8 @@ Memory Lights 1.0.0 (versionCode 1) was submitted to Google Play production on 2
 
 ### Open follow-ups
 
-- In-app link to the privacy policy (`https://guyguy2.github.io/MemoryLights/privacy.html`); Play expects one.
-- Add `debugSymbolLevel = "SYMBOL_TABLE"` to the release build type (Play warned about missing native debug symbols from AndroidX libs; harmless but easy).
-- Register Memory Lights in `../cicd/apps.json` (alias `upload`, keystore `~/.config/android-cicd/keystores/key_memoryLights.p12`, package `com.happypuppy.memorylights`, base version `1.0.0`) so future releases use the shared local pipeline.
 - Verify the Android 13+ themed (monochrome) icon on a device that actually applies themed icons; the Pixel_10 emulator did not.
-- `CLAUDE.md` mentions a test class `ExampleUnitTest` that does not exist; it still lists stale SharedPreferences/StatisticsManager wording.
-- Pre-existing dead resources: `drawable/ic_launcher_background.xml`, `drawable/ic_launcher_foreground.xml`, and the robot `mipmap-*/ic_launcher*.webp`.
+- Optional v1.1+ features: Light theme variant of `F12`, first-run onboarding (`#32`), GPGS leaderboards (`F11`).
 
 ### How to ship the next version
 

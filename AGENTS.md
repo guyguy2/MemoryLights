@@ -46,7 +46,7 @@ When multiple agents or sessions share the `Pixel_10` AVD, start each instance w
 ## Architecture
 
 - **DI (`di/AppModule.kt`):** Koin 4.x started in `SimonApp`. Singletons: `SimonSoundManager` (process-lifetime `SoundPool` + `AudioFocus` + `VibratorManager`, released via Koin `onClose` rather than `ViewModel.onCleared()`), `StatisticsRepository`, and `SettingsRepository` (`DataStoreSettingsRepository`), each closing its owned IO scope via Koin `onClose`. ViewModel: `viewModelOf(::SimonGameViewModel)`. `app/proguard-rules.pro` keeps `di.**` and Activity classes for R8.
-- **Navigation (`ui/navigation/Routes.kt` & `ui/MainActivity.kt`):** Type-safe `@Serializable` route objects (`GameRoute`, `SettingsRoute`, `StatisticsRoute`, `GameModesRoute`, `GameplayRoute`, `SoundAndHapticsRoute`) wired in `NavHost` with edge-to-edge support and default predictive back handling.
+- **Navigation (`ui/navigation/Routes.kt` & `ui/MainActivity.kt`):** Type-safe `@Serializable` route objects (`GameRoute`, `SettingsRoute`, `StatisticsRoute`, `GameModesRoute`, `GameplayRoute`, `SoundAndHapticsRoute`) wired in `NavHost` with edge-to-edge support, Jetpack `core-splashscreen 1.2.0` (`Theme.MemoryLights.Starting` + `drawable/ic_splash.xml` held until `settingsLoaded` or 2s cap), and default predictive back handling.
 - **State & game engine (`ui/viewmodels/SimonGameViewModel.kt`, `domain/`):**
   - `SimonGameViewModel` manages immutable `StateFlow<SimonGameUiState>` via `.update { it.copy(...) }`, lifecycle-aware via `DefaultLifecycleObserver`.
   - Pure domain logic: `calculateSequenceTiming` (`domain/SequenceTiming.kt`), `GameConstants`, `SimonButton` (4-button `GREEN/RED/YELLOW/BLUE`, 6-button adds `PURPLE/ORANGE`), `GameMode` (`CLASSIC`, `SPEED_BLITZ`), `SoundPack` (7 packs), `ColorBlindShape`, `ThemeMode` (`AMOLED`, `DARK`), and `Achievement`.
@@ -64,8 +64,8 @@ When multiple agents or sessions share the `Pixel_10` AVD, start each instance w
 
 ## Testing
 
-- **JVM unit tests (`app/src/test`, `./gradlew testDebugUnitTest`, 140 tests):** `SimonGameViewModelTest`, `DataStoreSettingsRepositoryTest`, `StatisticsRepositoryTest`, `SequenceTimingTest`, `GameConstantsTest`, `SimonButtonTest`, `ColorBlindShapeTest`, `SoundPackTest`, `SimonGameUiStateTest`, `GameStateTest`, `AchievementTest`, `FormatBlitzTimeTest`, `CountdownProgressColorTest`, `AppVersionInfoTest`, `BrandColorSchemeTest`, `ThemeContrastTest`, and `StringLiteralGuardTest`.
-- **Instrumented & ATF accessibility tests (`app/src/androidTest`, 27 tests):** `ExampleInstrumentedTest`, `Wave18UiTest`, `Wave19UiTest`, `ScreenAccessibilityTest`, and `AdaptiveScreenAccessibilityTest` (run on `Pixel_10` emulator via explicit `-s emulator-5558`).
+- **JVM unit tests (`app/src/test`, `./gradlew testDebugUnitTest`, 144 tests):** `SimonGameViewModelTest`, `DataStoreSettingsRepositoryTest`, `StatisticsRepositoryTest`, `SequenceTimingTest`, `GameConstantsTest`, `SimonButtonTest`, `ColorBlindShapeTest`, `SoundPackTest`, `SimonGameUiStateTest`, `GameStateTest`, `AchievementTest`, `FormatBlitzTimeTest`, `CountdownProgressColorTest`, `AppVersionInfoTest`, `BrandColorSchemeTest`, `ThemeContrastTest`, and `StringLiteralGuardTest`.
+- **Instrumented & ATF accessibility tests (`app/src/androidTest`, 28 tests):** `ExampleInstrumentedTest`, `Wave18UiTest`, `Wave19UiTest`, `ScreenAccessibilityTest`, `AdaptiveScreenAccessibilityTest`, and `StartupSplashInstrumentedTest` (run on `Pixel_10` emulator via explicit `-s emulator-5558`).
 
 ## Build, versioning and release
 
