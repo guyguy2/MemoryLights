@@ -4,8 +4,10 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
@@ -276,6 +278,71 @@ class ScreenAccessibilityTest {
                 )
             }
         }
+        rule.onNodeWithText("Sound Packs").assert(isHeading())
+        checkAllWindows()
+    }
+
+    @Test
+    fun lightTheme_gameScreen_passesAccessibilityChecks() {
+        rule.setContent {
+            MyApplicationTheme(themeMode = ThemeMode.LIGHT) {
+                SimonGameScreen(
+                    uiState = SimonGameUiState(
+                        gameState = GameState.GameOver,
+                        soundsLoaded = true,
+                        level = 8,
+                        highScore4Button = 15,
+                        sequence = listOf(SimonButton.GREEN, SimonButton.RED, SimonButton.YELLOW),
+                        showGameOverText = true,
+                        themeMode = ThemeMode.LIGHT
+                    ),
+                    onButtonClick = { _, _ -> },
+                    onSettingsClick = {},
+                    onStartNewGame = {},
+                    onToggleSound = {},
+                    onToggleVibration = {}
+                )
+            }
+        }
+        checkAllWindows()
+    }
+
+    @Test
+    fun lightTheme_settingsScreen_passesAccessibilityChecks() {
+        var selectedTheme = ThemeMode.DARK
+        rule.setContent {
+            MyApplicationTheme(themeMode = ThemeMode.LIGHT) {
+                SettingsScreen(
+                    currentSoundPack = SoundPack.STANDARD,
+                    themeMode = selectedTheme,
+                    onThemeModeChange = { selectedTheme = it },
+                    onGameModesClick = {},
+                    onGameplayClick = {},
+                    onSoundAndHapticsClick = {},
+                    onStatisticsClicked = {},
+                    onResetHighScore = {},
+                    onBackPressed = {}
+                )
+            }
+        }
+        rule.onNodeWithText("Light").assertIsDisplayed().performClick()
+        assertEquals(ThemeMode.LIGHT, selectedTheme)
+        checkAllWindows()
+    }
+
+    @Test
+    fun lightTheme_statisticsAndHeadings_passAccessibilityChecks() {
+        rule.setContent {
+            MyApplicationTheme(themeMode = ThemeMode.LIGHT) {
+                StatisticsScreen(
+                    statistics = GameStatistics(gamesPlayed = 10, totalScore = 88, bestStreak = 4),
+                    currentHighScore = 14,
+                    unlockedAchievements = setOf(Achievement.FirstWin.name, Achievement.Level10.name),
+                    onBackPressed = {}
+                )
+            }
+        }
+        rule.onNodeWithText("Game Statistics").assert(isHeading())
         checkAllWindows()
     }
 

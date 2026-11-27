@@ -1,6 +1,16 @@
-# Resume note for next session (written 2026-11-27, Wave 21 - Polish, Compliance & Cleanup)
+# Resume note for next session (written 2026-11-27, Wave 22 - Custom Typography, Light Theme & Tactile Craft)
 
-## State at session end (2026-11-27, Wave 21 - `ux/wave-21-polish-compliance`)
+## State at session end (2026-11-27, Wave 22 - `ux/wave-22-fonts-light-craft`)
+
+- **Wave 22 changes (completes `F12` Light theme + `android-ux-design` typography/shapes/motion/haptics):**
+  - **Bundled OFL variable typography (`ui/theme/Type.kt`, `res/font/`):** Bundled `space_grotesk_variable.ttf` (`DisplayFontFamily` for big scores, headlines, HUD round, top bars) and `plus_jakarta_sans_variable.ttf` (`BodyFontFamily` for section headers, cards, subtitles, badges) — 100% offline with zero network permissions, native `tnum` support, and explicit M3 `letterSpacing` tracking across all 13 text styles.
+  - **Light Theme + System-Bar Polarity (`F12`, `ui/theme/{Color,Theme}.kt`, `MainActivity.kt`):** Added `ThemeMode.LIGHT` alongside `AMOLED` and `DARK` (3 chips in a responsive `FlowRow` in `SettingsScreen`), pinned `LightMaterialColorScheme` + deepened `LightGameAccentColors` + `LightCelebrationParticleColors`, dynamically switched `SystemBarStyle.light`/`dark` via `DisposableEffect`, and updated every game-board surface (`SimonGameScreen`, `CenterDiscRing`, `HeadlineOverlay`, `PausedOverlay`, `ReplayShareButtons`, `CountdownProgressColor`) to be fully legible in Light mode.
+  - **Shapes, Headings, Spring Motion, Haptics & `TextAutoSize`:** Added `AppShapes` (`ui/theme/Shape.kt`) and replaced all 16 hardcoded `RoundedCornerShape` callsites (with concentric `large`/`medium` radii in `SimonPanel`), added `semantics { heading() }` on section headers (`StatisticsScreen`, `SoundAndHapticsScreen`), centralized `LocalReducedMotion` & `LocalHapticsEnabled` in `Theme.kt`, upgraded overlays and level counters to spatial `spring(...)` transitions + `TextAutoSize.StepBased` in `CenterDiscContent`, gated idle `ctaScale` pulse on `isIdleTappable`, and added vibration-gated `HapticFeedbackType.Confirm` on Settings/Mode/Gameplay/Sound controls.
+  - **Permanent guards:** Extended `BrandColorSchemeTest` (all 3 themes + custom font family/tracking assertions), `ThemeContrastTest` (Light WCAG AA contrast matrix), and `ScreenAccessibilityTest` (Light Game/Settings/Statistics ATF + heading checks).
+
+---
+
+## Previous session (written 2026-11-27, Wave 21 - `1.0.5 / 6` shipped)
 
 - **Wave 21 changes (closes `#68`):**
   - **In-app Privacy Policy link:** Added `Privacy Policy` card in `SettingsScreen.kt` opening `https://guyguy2.github.io/MemoryLights/privacy.html` with `ActivityNotFoundException` snackbar fallback.

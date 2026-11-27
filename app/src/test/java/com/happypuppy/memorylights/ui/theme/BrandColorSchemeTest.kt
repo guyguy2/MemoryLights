@@ -3,8 +3,10 @@ package com.happypuppy.memorylights.ui.theme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -132,6 +134,45 @@ class BrandColorSchemeTest {
         "surfaceContainerLowest" to 0xFF0F0D13.toInt(),
     )
 
+    private val expectedLight = mapOf(
+        "primary" to 0xFF5B3F98.toInt(),
+        "onPrimary" to 0xFFFFFFFF.toInt(),
+        "primaryContainer" to 0xFFEADDFF.toInt(),
+        "onPrimaryContainer" to 0xFF21005D.toInt(),
+        "inversePrimary" to 0xFFD0BCFF.toInt(),
+        "secondary" to 0xFF625B71.toInt(),
+        "onSecondary" to 0xFFFFFFFF.toInt(),
+        "secondaryContainer" to 0xFFE8DEF8.toInt(),
+        "onSecondaryContainer" to 0xFF1D192B.toInt(),
+        "tertiary" to 0xFF7D5260.toInt(),
+        "onTertiary" to 0xFFFFFFFF.toInt(),
+        "tertiaryContainer" to 0xFFFFD8E4.toInt(),
+        "onTertiaryContainer" to 0xFF31111D.toInt(),
+        "background" to 0xFFFDF8FF.toInt(),
+        "onBackground" to 0xFF1D1B20.toInt(),
+        "surface" to 0xFFFDF8FF.toInt(),
+        "onSurface" to 0xFF1D1B20.toInt(),
+        "surfaceVariant" to 0xFFE7E0EC.toInt(),
+        "onSurfaceVariant" to 0xFF49454F.toInt(),
+        "surfaceTint" to 0xFF5B3F98.toInt(),
+        "inverseSurface" to 0xFF322F35.toInt(),
+        "inverseOnSurface" to 0xFFF5EFF7.toInt(),
+        "error" to 0xFFB3261E.toInt(),
+        "onError" to 0xFFFFFFFF.toInt(),
+        "errorContainer" to 0xFFF9DEDC.toInt(),
+        "onErrorContainer" to 0xFF410E0B.toInt(),
+        "outline" to 0xFF676170.toInt(),
+        "outlineVariant" to 0xFFCAC4D0.toInt(),
+        "scrim" to 0xFF000000.toInt(),
+        "surfaceBright" to 0xFFFEF7FF.toInt(),
+        "surfaceDim" to 0xFFDED8E1.toInt(),
+        "surfaceContainer" to 0xFFF3EDF7.toInt(),
+        "surfaceContainerHigh" to 0xFFECE6F0.toInt(),
+        "surfaceContainerHighest" to 0xFFE6E0E9.toInt(),
+        "surfaceContainerLow" to 0xFFF7F2FA.toInt(),
+        "surfaceContainerLowest" to 0xFFFFFFFF.toInt(),
+    )
+
     private fun assertScheme(expected: Map<String, Int>, actual: Map<String, Int>) {
         assertEquals(expected.keys, actual.keys)
         for ((role, argb) in expected) {
@@ -150,7 +191,10 @@ class BrandColorSchemeTest {
     fun `dark scheme keeps every role`() = assertScheme(expectedDark, roles(DarkMaterialColorScheme))
 
     @Test
-    fun `surface containers step up monotonically in luminance`() {
+    fun `light scheme keeps every role`() = assertScheme(expectedLight, roles(LightMaterialColorScheme))
+
+    @Test
+    fun `surface containers step monotonically in luminance across all themes`() {
         listOf(
             "AMOLED" to AmoledColorScheme,
             "Dark" to DarkMaterialColorScheme
@@ -171,16 +215,34 @@ class BrandColorSchemeTest {
                 scheme.surfaceContainerHigh.luminance() > scheme.surface.luminance()
             )
         }
+
+        val lightLadder = listOf(
+            LightMaterialColorScheme.surfaceContainerLowest,
+            LightMaterialColorScheme.surfaceContainerLow,
+            LightMaterialColorScheme.surfaceContainer,
+            LightMaterialColorScheme.surfaceContainerHigh,
+            LightMaterialColorScheme.surfaceContainerHighest,
+        ).map { it.luminance() }
+        assertTrue(
+            "Light surface containers must step down monotonically in luminance: $lightLadder",
+            lightLadder.zipWithNext().all { (a, b) -> b < a }
+        )
+        assertTrue(
+            "Light dialog container (surfaceContainerHigh) must separate from surface",
+            LightMaterialColorScheme.surfaceContainerHigh.luminance() < LightMaterialColorScheme.surface.luminance()
+        )
     }
 
     @Test
-    fun `typography defines valid line heights and readable dark-mode weights`() {
-        val styles = listOf(
+    fun `typography defines custom fonts, valid line heights, tracking, and readable weights`() {
+        val displayStyles = listOf(
             "displaySmall" to Typography.displaySmall,
             "headlineLarge" to Typography.headlineLarge,
             "headlineMedium" to Typography.headlineMedium,
             "headlineSmall" to Typography.headlineSmall,
             "titleLarge" to Typography.titleLarge,
+        )
+        val bodyStyles = listOf(
             "titleMedium" to Typography.titleMedium,
             "titleSmall" to Typography.titleSmall,
             "bodyLarge" to Typography.bodyLarge,
@@ -190,8 +252,17 @@ class BrandColorSchemeTest {
             "labelMedium" to Typography.labelMedium,
             "labelSmall" to Typography.labelSmall,
         )
-        styles.forEach { (name, style) ->
+        displayStyles.forEach { (name, style) ->
+            assertEquals("$name should use DisplayFontFamily", DisplayFontFamily, style.fontFamily)
+            assertNotEquals("$name should not fall back to FontFamily.Default", FontFamily.Default, style.fontFamily)
+        }
+        bodyStyles.forEach { (name, style) ->
+            assertEquals("$name should use BodyFontFamily", BodyFontFamily, style.fontFamily)
+            assertNotEquals("$name should not fall back to FontFamily.Default", FontFamily.Default, style.fontFamily)
+        }
+        (displayStyles + bodyStyles).forEach { (name, style) ->
             assertTrue("$name must define explicit lineHeight in sp", style.lineHeight.isSp)
+            assertTrue("$name must define explicit letterSpacing in sp", style.letterSpacing.isSp)
             assertTrue(
                 "$name lineHeight (${style.lineHeight}) should be >= 1.15x fontSize (${style.fontSize})",
                 style.lineHeight.value >= style.fontSize.value * 1.15f

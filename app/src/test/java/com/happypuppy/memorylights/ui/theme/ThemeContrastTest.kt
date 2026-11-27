@@ -91,13 +91,13 @@ class ThemeContrastTest {
             }
         }
 
-        // Countdown urgency stops on dark game-board track & HUD
+        // Countdown urgency stops on theme surface & HUD track
         listOf(
             "countdownGreen" to accents.countdownGreen,
             "countdownAmber" to accents.countdownAmber,
             "countdownRed" to accents.countdownRed,
         ).forEach { (stopName, fg) ->
-            assertNonTextOrLargeContrast("$name $stopName/GameBoardBackdrop", fg, GameBoardBackdrop)
+            assertNonTextOrLargeContrast("$name $stopName/surface", fg, s.surface)
             assertNonTextOrLargeContrast("$name $stopName/surfaceContainerLow", fg, s.surfaceContainerLow)
         }
     }
@@ -112,5 +112,11 @@ class ThemeContrastTest {
     fun `dark scheme meets WCAG 2_1 contrast`() {
         verifyScheme("Dark", DarkMaterialColorScheme)
         verifyGameAccents("Dark", DarkMaterialColorScheme, DefaultGameAccentColors)
+    }
+
+    @Test
+    fun `light scheme meets WCAG 2_1 contrast`() {
+        verifyScheme("Light", LightMaterialColorScheme)
+        verifyGameAccents("Light", LightMaterialColorScheme, LightGameAccentColors)
     }
 }

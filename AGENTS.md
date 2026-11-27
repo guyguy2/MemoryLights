@@ -64,8 +64,8 @@ When multiple agents or sessions share the `Pixel_10` AVD, start each instance w
 
 ## Testing
 
-- **JVM unit tests (`app/src/test`, `./gradlew testDebugUnitTest`, 144 tests):** `SimonGameViewModelTest`, `DataStoreSettingsRepositoryTest`, `StatisticsRepositoryTest`, `SequenceTimingTest`, `GameConstantsTest`, `SimonButtonTest`, `ColorBlindShapeTest`, `SoundPackTest`, `SimonGameUiStateTest`, `GameStateTest`, `AchievementTest`, `FormatBlitzTimeTest`, `CountdownProgressColorTest`, `AppVersionInfoTest`, `BrandColorSchemeTest`, `ThemeContrastTest`, and `StringLiteralGuardTest`.
-- **Instrumented & ATF accessibility tests (`app/src/androidTest`, 28 tests):** `ExampleInstrumentedTest`, `Wave18UiTest`, `Wave19UiTest`, `ScreenAccessibilityTest`, `AdaptiveScreenAccessibilityTest`, and `StartupSplashInstrumentedTest` (run on `Pixel_10` emulator via explicit `-s emulator-5558`).
+- **JVM unit tests (`app/src/test`, `./gradlew testDebugUnitTest`, 146 tests):** `SimonGameViewModelTest`, `DataStoreSettingsRepositoryTest`, `StatisticsRepositoryTest`, `SequenceTimingTest`, `GameConstantsTest`, `SimonButtonTest`, `ColorBlindShapeTest`, `SoundPackTest`, `SimonGameUiStateTest`, `GameStateTest`, `AchievementTest`, `FormatBlitzTimeTest`, `CountdownProgressColorTest`, `AppVersionInfoTest`, `BrandColorSchemeTest`, `ThemeContrastTest`, and `StringLiteralGuardTest`.
+- **Instrumented & ATF accessibility tests (`app/src/androidTest`, 31 tests):** `ExampleInstrumentedTest`, `Wave18UiTest`, `Wave19UiTest`, `ScreenAccessibilityTest`, `AdaptiveScreenAccessibilityTest`, and `StartupSplashInstrumentedTest` (run on `Pixel_10` emulator via explicit `-s emulator-5558`).
 
 ## Build, versioning and release
 
