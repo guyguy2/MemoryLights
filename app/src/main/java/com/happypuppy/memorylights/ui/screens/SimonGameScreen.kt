@@ -10,9 +10,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -69,7 +69,6 @@ import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.components.SlimMetadataStrip
 import com.happypuppy.memorylights.ui.components.consumeCircularTouch
 import com.happypuppy.memorylights.ui.components.formatBlitzTime
-import com.happypuppy.memorylights.ui.components.isReducedMotionEnabled
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
@@ -77,8 +76,8 @@ import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.share.ScoreShareHelper
-import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
 import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 import kotlinx.coroutines.flow.Flow
@@ -224,7 +223,7 @@ fun SimonGameScreen(
     val resources = LocalResources.current
     val onSurface = MaterialTheme.colorScheme.onSurface
     val accents = LocalGameAccentColors.current
-    val reducedMotion = remember(context) { isReducedMotionEnabled(context) }
+    val reducedMotion = LocalReducedMotion.current
 
     // Polite live-region text for TalkBack announcements (replaces deprecated announceForAccessibility, #70).
     var liveAnnouncement by remember { mutableStateOf("") }
@@ -303,7 +302,7 @@ fun SimonGameScreen(
 
     val isIdleTappable = uiState.gameState == GameState.GameOver ||
         uiState.gameState == GameState.WaitingToStart
-    val ctaScale = if (reducedMotion) {
+    val ctaScale = if (reducedMotion || !isIdleTappable) {
         1f
     } else {
         val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
@@ -469,7 +468,7 @@ fun SimonGameScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(GameBoardBackdrop),
+                        .background(MaterialTheme.colorScheme.background),
                     contentAlignment = Alignment.Center
                 ) {
                     SimonButtonGrid(
@@ -483,8 +482,9 @@ fun SimonGameScreen(
                     )
 
                     if (!uiState.memoryLightsPlusEnabled) {
-                        // 4-tile decluttered focal disc (~104.dp) with crisp dark inset gutter,
+                        // 4-tile decluttered focal disc (~104.dp) with themed inset gutter,
                         // unified reactive ring, and active-play circular touch absorption.
+                        val discSurface = MaterialTheme.colorScheme.surfaceContainerLow
                         val canTapDiscToStart = isIdleTappable &&
                             (uiState.soundsLoaded || uiState.soundLoadError != null)
                         Box(
@@ -505,7 +505,7 @@ fun SimonGameScreen(
                                                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                             )
                                             .clip(CircleShape)
-                                            .background(GameBoardBackdrop)
+                                            .background(discSurface)
                                             .clickable(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = ripple(),
@@ -519,7 +519,7 @@ fun SimonGameScreen(
                                     } else {
                                         Modifier
                                             .clip(CircleShape)
-                                            .background(GameBoardBackdrop)
+                                            .background(discSurface)
                                             .consumeCircularTouch()
                                     }
                                 ),
@@ -718,8 +718,8 @@ private fun SixTileWaitingAffordance(
     ) {
         if (soundLoadError != null) {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = GameBoardBackdrop.copy(alpha = 0.85f),
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
                 border = BorderStroke(1.dp, accents.countdownAmber.copy(alpha = 0.6f))
             ) {
                 Row(
@@ -755,9 +755,9 @@ private fun SixTileWaitingAffordance(
 
         if (!soundsLoaded && soundLoadError == null) {
             Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = GameBoardBackdrop.copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, onSurface.copy(alpha = 0.18f))
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -779,7 +779,7 @@ private fun SixTileWaitingAffordance(
         } else {
             Button(
                 onClick = onStartNewGame,
-                shape = RoundedCornerShape(28.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
                 modifier = Modifier
                     .defaultMinSize(minWidth = 148.dp, minHeight = 52.dp)
@@ -829,9 +829,9 @@ private fun SixTileGameOverSummary(
     }
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = GameBoardBackdrop.copy(alpha = 0.85f),
-        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.16f)),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.testTag(GameScreenTags.SIX_TILE_GAME_OVER_SUMMARY)
     ) {
         Row(
@@ -875,7 +875,9 @@ private fun SixTileGameOverSummary(
 @PreviewScreenSizes
 @Composable
 private fun SimonGameScreenFourTilePreview() {
-    MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
+    MyApplicationTheme(
+        themeMode = if (isSystemInDarkTheme()) ThemeMode.AMOLED else ThemeMode.LIGHT
+    ) {
         SimonGameScreen(
             uiState = SimonGameUiState(
                 gameState = GameState.PlayerRepeating,
@@ -906,7 +908,9 @@ private fun SimonGameScreenFourTilePreview() {
 @PreviewScreenSizes
 @Composable
 private fun SimonGameScreenSixTilePreview() {
-    MyApplicationTheme(themeMode = ThemeMode.DARK) {
+    MyApplicationTheme(
+        themeMode = if (isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT
+    ) {
         SimonGameScreen(
             uiState = SimonGameUiState(
                 memoryLightsPlusEnabled = true,

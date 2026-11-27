@@ -148,6 +148,7 @@
     <!-- Theme toggle (F12) -->
     <string name="theme_mode_amoled">AMOLED Black</string>
     <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_light">Light</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_summary">Surface colors used across menus and dialogs</string>
 

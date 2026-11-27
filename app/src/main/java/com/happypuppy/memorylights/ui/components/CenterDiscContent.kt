@@ -1,6 +1,12 @@
 package com.happypuppy.memorylights.ui.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -9,9 +15,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,11 +37,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 
 /**
  * Format Speed Blitz elapsed time as `M:SS.s` — minutes, seconds, tenths.
@@ -88,6 +99,7 @@ fun CenterDiscContent(
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val accents = LocalGameAccentColors.current
+    val reducedMotion = LocalReducedMotion.current
 
     CompositionLocalProvider(LocalDensity provides clampedDensity) {
         Box(
@@ -145,9 +157,16 @@ fun CenterDiscContent(
                                     fontWeight = FontWeight.Bold,
                                     fontFeatureSettings = "tnum"
                                 ),
+                                autoSize = TextAutoSize.StepBased(
+                                    minFontSize = 12.sp,
+                                    maxFontSize = 18.sp,
+                                    stepSize = 1.sp
+                                ),
+                                textAlign = TextAlign.Center,
                                 maxLines = 1,
                                 softWrap = false,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
                             )
                             if (currentBestBlitzTimeMs > 0L) {
                                 Text(
@@ -218,11 +237,16 @@ fun CenterDiscContent(
                         AnimatedContent(
                             targetState = level,
                             transitionSpec = {
-                                slideInVertically(
-                                    initialOffsetY = { height -> height }
-                                ) togetherWith slideOutVertically(
-                                    targetOffsetY = { height -> -height }
-                                )
+                                if (reducedMotion) {
+                                    EnterTransition.None togetherWith ExitTransition.None
+                                } else {
+                                    val slideSpring = spring<IntOffset>(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                    (slideInVertically(animationSpec = slideSpring) { height -> height } + fadeIn()) togetherWith
+                                        (slideOutVertically(animationSpec = slideSpring) { height -> -height } + fadeOut())
+                                }
                             },
                             label = "level_animation"
                         ) { animatedLevel ->
@@ -232,8 +256,15 @@ fun CenterDiscContent(
                                 style = MaterialTheme.typography.headlineLarge.copy(
                                     fontFeatureSettings = "tnum"
                                 ),
+                                autoSize = TextAutoSize.StepBased(
+                                    minFontSize = 14.sp,
+                                    maxFontSize = 32.sp,
+                                    stepSize = 1.sp
+                                ),
+                                textAlign = TextAlign.Center,
                                 maxLines = 1,
-                                softWrap = false
+                                softWrap = false,
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                         if (gameState == GameState.PlayerRepeating && sequenceSize > 0) {

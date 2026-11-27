@@ -1,6 +1,8 @@
 package com.happypuppy.memorylights.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -26,7 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.happypuppy.memorylights.R
-import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 
 /**
  * Full-screen paused overlay (F14). Dims the play area, shows a centered
@@ -51,10 +53,11 @@ fun PausedOverlay(
     modifier: Modifier = Modifier
 ) {
     val pauseOverlayCd = stringResource(R.string.a11y_pause_overlay)
+    val reducedMotion = LocalReducedMotion.current
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = if (reducedMotion) EnterTransition.None else fadeIn(),
+        exit = if (reducedMotion) ExitTransition.None else fadeOut(),
         modifier = modifier
             .fillMaxSize()
             .zIndex(10f)
@@ -62,7 +65,7 @@ fun PausedOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(GameBoardBackdrop.copy(alpha = 0.7f))
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import com.happypuppy.memorylights.ui.theme.DefaultGameAccentColors
+import com.happypuppy.memorylights.ui.theme.GameAccentColors
 
 val CountdownGreen = DefaultGameAccentColors.countdownGreen
 val CountdownAmber = DefaultGameAccentColors.countdownAmber
@@ -16,17 +17,21 @@ val CountdownRed = DefaultGameAccentColors.countdownRed
 
 /**
  * Smooth 3-stop countdown urgency color:
- * - `1.0f -> 0.5f`: green (`0xFF4CAF50`) -> amber (`0xFFFFB300`)
- * - `0.5f -> 0.0f`: amber (`0xFFFFB300`) -> red (`0xFFE53935`)
+ * - `1.0f -> 0.5f`: green -> amber
+ * - `0.5f -> 0.0f`: amber -> red
  *
- * Inputs outside `[0f, 1f]` are clamped.
+ * Uses theme-matched [accents] so both dark/AMOLED and light surfaces meet
+ * WCAG non-text contrast (>= 3.0:1). Inputs outside `[0f, 1f]` are clamped.
  */
-fun countdownProgressColor(fraction: Float): Color {
+fun countdownProgressColor(
+    fraction: Float,
+    accents: GameAccentColors = DefaultGameAccentColors
+): Color {
     val clamped = fraction.coerceIn(0f, 1f)
     return if (clamped >= 0.5f) {
-        lerp(CountdownAmber, CountdownGreen, (clamped - 0.5f) * 2f)
+        lerp(accents.countdownAmber, accents.countdownGreen, (clamped - 0.5f) * 2f)
     } else {
-        lerp(CountdownRed, CountdownAmber, clamped * 2f)
+        lerp(accents.countdownRed, accents.countdownAmber, clamped * 2f)
     }
 }
 

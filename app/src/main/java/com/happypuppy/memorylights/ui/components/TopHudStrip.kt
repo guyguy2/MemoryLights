@@ -102,9 +102,9 @@ fun SlimMetadataStrip(
             modifier = modifier
                 .fillMaxWidth()
                 .testTag(GameScreenTags.SLIM_METADATA_STRIP),
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            border = BorderStroke(1.dp, onSurface.copy(alpha = 0.10f))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
         ) {
             FlowRow(
                 modifier = Modifier
@@ -254,9 +254,9 @@ fun FullTopHudStrip(
         modifier = modifier
             .fillMaxWidth()
             .testTag(GameScreenTags.FULL_TOP_HUD_STRIP),
-        shape = RoundedCornerShape(14.dp),
+        shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             BoxWithConstraints(
@@ -372,10 +372,21 @@ private fun HudRoundBlock(
                 maxLines = 1
             )
         } else {
+            val reducedMotion = com.happypuppy.memorylights.ui.theme.LocalReducedMotion.current
             AnimatedContent(
                 targetState = level,
                 transitionSpec = {
-                    slideInVertically { it } togetherWith slideOutVertically { -it }
+                    if (reducedMotion) {
+                        androidx.compose.animation.EnterTransition.None togetherWith
+                            androidx.compose.animation.ExitTransition.None
+                    } else {
+                        val slideSpring = androidx.compose.animation.core.spring<androidx.compose.ui.unit.IntOffset>(
+                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                        )
+                        (slideInVertically(animationSpec = slideSpring) { it } + androidx.compose.animation.fadeIn()) togetherWith
+                            (slideOutVertically(animationSpec = slideSpring) { -it } + androidx.compose.animation.fadeOut())
+                    }
                 },
                 label = "hud_round_animation"
             ) { animatedLevel ->
@@ -406,13 +417,13 @@ private fun HudStatusPill(
 ) {
     val onSurface = MaterialTheme.colorScheme.onSurface
     val accents = LocalGameAccentColors.current
-    val pillShape = RoundedCornerShape(50)
+    val pillShape = androidx.compose.foundation.shape.CircleShape
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .background(onSurface.copy(alpha = 0.08f), pillShape)
-            .border(1.dp, onSurface.copy(alpha = 0.14f), pillShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, pillShape)
             .padding(horizontal = 12.dp, vertical = 5.dp)
     ) {
         when {
@@ -671,11 +682,12 @@ private fun HudCountdownBar(
             )
     ) {
         if (isPlayerTurn) {
+            val accents = LocalGameAccentColors.current
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val fraction = timeoutFraction.value.coerceIn(0f, 1f)
                 if (fraction > 0f) {
                     drawRect(
-                        color = countdownProgressColor(fraction),
+                        color = countdownProgressColor(fraction, accents),
                         size = Size(width = size.width * fraction, height = size.height)
                     )
                 }

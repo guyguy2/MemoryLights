@@ -3,11 +3,11 @@ package com.happypuppy.memorylights.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -18,12 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.ui.theme.LocalHapticsEnabled
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 import kotlinx.coroutines.launch
 
 /**
@@ -42,6 +48,9 @@ fun SoundAndHapticsScreen(
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
+    val haptic = LocalHapticFeedback.current
+    val hapticsEnabled = LocalHapticsEnabled.current
+    val reducedMotion = LocalReducedMotion.current
     fun toast(message: String) {
         coroutineScope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
@@ -105,7 +114,8 @@ fun SoundAndHapticsScreen(
                     Text(
                         text = stringResource(R.string.sound_packs_heading),
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { heading() }
                     )
                 }
 
@@ -115,7 +125,7 @@ fun SoundAndHapticsScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(surfaceContainerColor)
                 ) {
                     LazyColumn(
@@ -128,6 +138,9 @@ fun SoundAndHapticsScreen(
                                 isSelected = soundPack == currentSoundPack,
                                 onSelect = {
                                     if (soundPack.isAvailable) {
+                                        if (hapticsEnabled) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                                        }
                                         onSoundPackSelected(soundPack)
                                         toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
                                     }
@@ -153,7 +166,11 @@ fun SoundAndHapticsScreen(
                                 )
                                 .clickable {
                                     coroutineScope.launch {
-                                        soundPackListState.animateScrollBy(100f)
+                                        if (reducedMotion) {
+                                            soundPackListState.scrollBy(100f)
+                                        } else {
+                                            soundPackListState.animateScrollBy(100f)
+                                        }
                                     }
                                 }
                                 .padding(vertical = 8.dp)

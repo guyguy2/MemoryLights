@@ -2,7 +2,6 @@ package com.happypuppy.memorylights.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewFontScale
@@ -97,7 +97,8 @@ fun StatisticsScreen(
                     Text(
                         text = stringResource(R.string.statistics_section_heading),
                         color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.semantics { heading() }
                     )
                 }
 
@@ -271,7 +272,7 @@ fun StatisticCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -326,7 +327,9 @@ private fun AchievementsSection(unlockedAchievements: Set<String>) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier
+            .padding(vertical = 8.dp)
+            .semantics(mergeDescendants = true) { heading() }
     ) {
         Icon(
             imageVector = Icons.Default.Star,
@@ -398,7 +401,7 @@ private fun AchievementRow(achievement: Achievement, unlocked: Boolean) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -434,7 +437,9 @@ private fun AchievementRow(achievement: Achievement, unlocked: Boolean) {
 @PreviewScreenSizes
 @Composable
 private fun StatisticsScreenPopulatedPreview() {
-    MyApplicationTheme(themeMode = ThemeMode.DARK) {
+    MyApplicationTheme(
+        themeMode = if (androidx.compose.foundation.isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT
+    ) {
         StatisticsScreen(
             statistics = GameStatistics(
                 gamesPlayed = 24,

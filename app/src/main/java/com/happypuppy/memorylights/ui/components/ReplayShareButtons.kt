@@ -2,6 +2,10 @@ package com.happypuppy.memorylights.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -36,7 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
-import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 
 /**
  * Bottom-aligned GameOver action cluster: a prominent filled primary "New Game"
@@ -66,10 +70,21 @@ fun ReplayShareButtons(
     showReplay: Boolean = true,
     topContent: (@Composable () -> Unit)? = null
 ) {
+    val reducedMotion = LocalReducedMotion.current
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn() + scaleIn(initialScale = 0.9f),
-        exit = fadeOut(),
+        enter = if (reducedMotion) {
+            EnterTransition.None
+        } else {
+            fadeIn() + scaleIn(
+                initialScale = 0.9f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        },
+        exit = if (reducedMotion) ExitTransition.None else fadeOut(),
         modifier = modifier.fillMaxSize()
     ) {
         val orientation = LocalConfiguration.current.orientation
@@ -152,10 +167,10 @@ private fun ReplayActionButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = GameBoardBackdrop.copy(alpha = 0.72f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
             contentColor = onSurface
         ),
-        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Icon(
             imageVector = Icons.Default.Refresh,
@@ -177,10 +192,10 @@ private fun ShareActionButton(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = GameBoardBackdrop.copy(alpha = 0.72f),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.94f),
             contentColor = onSurface
         ),
-        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Icon(
             imageVector = Icons.Default.Share,

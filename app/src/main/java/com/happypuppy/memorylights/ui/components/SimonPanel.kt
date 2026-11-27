@@ -93,13 +93,18 @@ fun SimonPanel(
         )
     }
 
+    val reducedMotion = com.happypuppy.memorylights.ui.theme.LocalReducedMotion.current
     // Single animation progress for the button press (0f to 1f)
     val pressAnimation by animateFloatAsState(
         targetValue = if (userPressed) 1f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
+        animationSpec = if (reducedMotion) {
+            androidx.compose.animation.core.snap()
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        },
         label = "pressAnimation"
     )
 
@@ -116,7 +121,11 @@ fun SimonPanel(
     // Smoothly ramp between off and lit state instead of hard switching.
     val litProgress by animateFloatAsState(
         targetValue = if (isLit) 1f else 0f,
-        animationSpec = tween(durationMillis = 120, easing = FastOutSlowInEasing),
+        animationSpec = if (reducedMotion) {
+            androidx.compose.animation.core.snap()
+        } else {
+            tween(durationMillis = 120, easing = FastOutSlowInEasing)
+        },
         label = "litProgress"
     )
     val brightDimColor = remember(brightColor) {
@@ -164,7 +173,7 @@ fun SimonPanel(
     Box(
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Minimum touch target size per Material Design
-            .clip(RoundedCornerShape(16.dp))
+            .clip(androidx.compose.material3.MaterialTheme.shapes.large)
             .semantics {
                 contentDescription = buttonContentDesc
                 stateDescription = stateDesc
@@ -178,7 +187,7 @@ fun SimonPanel(
                 .background(darkBorderColor)
         )
 
-        // Middle layer - main button with gradient
+        // Middle layer - main button with gradient (concentric medium radius inside large outer frame)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -191,7 +200,7 @@ fun SimonPanel(
                 .offset(x = offsetX.dp, y = offsetY.dp)
                 // Reduce size to account for the offset
                 .fillMaxSize()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(androidx.compose.material3.MaterialTheme.shapes.medium)
                 .background(brush = buttonBrush)
                 .pointerInput(Unit) {
                     detectTapGestures(

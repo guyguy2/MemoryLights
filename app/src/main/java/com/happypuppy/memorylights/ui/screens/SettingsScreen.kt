@@ -4,9 +4,9 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,6 +40,7 @@ import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.LocalHapticsEnabled
 import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.util.AppVersionInfo
 import kotlinx.coroutines.launch
@@ -568,7 +571,7 @@ fun SettingsCard(
     val cardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     )
-    val cardShape = RoundedCornerShape(12.dp)
+    val cardShape = MaterialTheme.shapes.medium
 
     if (onClick != null) {
         Card(
@@ -647,7 +650,7 @@ fun SoundPackOption(
         if (!isAvailable) {
             Spacer(modifier = Modifier.width(8.dp))
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.surfaceContainerHighest
             ) {
                 Text(
@@ -662,15 +665,18 @@ fun SoundPackOption(
 }
 
 /**
- * Theme picker card (F12). Two FilterChips for AMOLED Black / Dark.
- * Mirrors the timeout chip-group pattern in GameplayScreen so users
- * recognise the segmented-control idiom.
+ * Theme picker card (F12). Three FilterChips for AMOLED Black / Dark / Light
+ * in a responsive [FlowRow] so chips stay single-line on compact phones and
+ * wrap cleanly at `2.0x` font scale.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ThemeCard(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+    val hapticsEnabled = LocalHapticsEnabled.current
     SettingsCard {
         Column(
             modifier = Modifier
@@ -701,22 +707,27 @@ private fun ThemeCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 ThemeMode.entries.forEach { mode ->
                     FilterChip(
                         selected = mode == themeMode,
-                        onClick = { onThemeModeChange(mode) },
+                        onClick = {
+                            if (hapticsEnabled) {
+                                haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                            }
+                            onThemeModeChange(mode)
+                        },
                         label = { Text(stringResource(mode.displayNameRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        modifier = Modifier.weight(1f)
+                        )
                     )
                 }
             }
@@ -729,10 +740,11 @@ private fun ThemeCard(
 @PreviewScreenSizes
 @Composable
 private fun SettingsScreenPreview() {
-    MyApplicationTheme(themeMode = ThemeMode.DARK) {
+    val mode = if (isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT
+    MyApplicationTheme(themeMode = mode) {
         SettingsScreen(
             currentSoundPack = SoundPack.RETRO,
-            themeMode = ThemeMode.DARK,
+            themeMode = mode,
             onThemeModeChange = {},
             onGameModesClick = {},
             onGameplayClick = {},

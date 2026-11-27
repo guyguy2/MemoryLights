@@ -9,8 +9,8 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import com.happypuppy.memorylights.ui.theme.CelebrationParticleColors
+import com.happypuppy.memorylights.ui.theme.LocalCelebrationParticleColors
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 import kotlin.math.*
 import kotlin.random.Random
 
@@ -45,8 +45,8 @@ fun ParticleEffect(
     isActive: Boolean,
     modifier: Modifier = Modifier,
     particleCount: Int = 50,
-    colors: List<Color> = CelebrationParticleColors,
-    reducedMotion: Boolean = isReducedMotionEnabled(LocalContext.current),
+    colors: List<Color> = LocalCelebrationParticleColors.current,
+    reducedMotion: Boolean = LocalReducedMotion.current,
     onComplete: (() -> Unit)? = null
 ) {
     var particles by remember { mutableStateOf(emptyList<Particle>()) }

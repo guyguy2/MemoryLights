@@ -390,6 +390,8 @@ private fun ToggleCard(
     onToggle: (Boolean) -> Unit,
     iconTint: Color = MaterialTheme.colorScheme.onSurface
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val hapticsEnabled = com.happypuppy.memorylights.ui.theme.LocalHapticsEnabled.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -397,7 +399,7 @@ private fun ToggleCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -405,7 +407,12 @@ private fun ToggleCard(
                 .toggleable(
                     value = checked,
                     role = Role.Switch,
-                    onValueChange = onToggle
+                    onValueChange = { next ->
+                        if (hapticsEnabled) {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
+                        }
+                        onToggle(next)
+                    }
                 )
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically

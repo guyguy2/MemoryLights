@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -15,6 +16,7 @@ import com.happypuppy.memorylights.BuildConfig
 import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.ui.screens.MemoryLightsGame
 import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
@@ -69,7 +71,28 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
-            MyApplicationTheme(themeMode = uiState.themeMode) {
+            val isLightTheme = uiState.themeMode == ThemeMode.LIGHT
+
+            DisposableEffect(isLightTheme) {
+                val barStyle = if (isLightTheme) {
+                    SystemBarStyle.light(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                } else {
+                    SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+                }
+                enableEdgeToEdge(
+                    statusBarStyle = barStyle,
+                    navigationBarStyle = barStyle
+                )
+                onDispose {}
+            }
+
+            MyApplicationTheme(
+                themeMode = uiState.themeMode,
+                hapticsEnabled = uiState.vibrateEnabled
+            ) {
                 MemoryLightsGame(viewModel)
             }
         }

@@ -145,6 +145,8 @@ fun GameplayScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // #35 Color-blind mode — pure presentation toggle, safe mid-run.
+                val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+                val hapticsEnabled = com.happypuppy.memorylights.ui.theme.LocalHapticsEnabled.current
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,7 +154,7 @@ fun GameplayScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Row(
                         modifier = Modifier
@@ -161,6 +163,9 @@ fun GameplayScreen(
                                 value = colorBlindModeEnabled,
                                 role = Role.Switch,
                                 onValueChange = { next ->
+                                    if (hapticsEnabled) {
+                                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm)
+                                    }
                                     onColorBlindModeToggled(next)
                                     toast(
                                         resources.getString(

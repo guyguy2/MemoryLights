@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -25,6 +26,8 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.domain.enums.SimonButton
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.LocalReducedMotion
 
 /**
  * Unified single reactive border ring for the 4-tile center disc (Wave 19 Option A).
@@ -62,16 +65,23 @@ fun CenterDiscRing(
     }
 
     val onSurface = MaterialTheme.colorScheme.onSurface
+    val isLightSurface = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val accents = LocalGameAccentColors.current
+    val reducedMotion = LocalReducedMotion.current
     val neutralRingColor = onSurface.copy(alpha = 0.16f)
-    val reactiveTargetColor = litButton?.color ?: neutralRingColor
+    val reactiveTargetColor = when {
+        litButton == null -> neutralRingColor
+        isLightSurface && litButton == SimonButton.YELLOW -> accents.countdownAmber
+        else -> litButton.color
+    }
     val reactiveColor by animateColorAsState(
         targetValue = reactiveTargetColor,
-        animationSpec = tween(durationMillis = 120),
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 120),
         label = "discRingReactiveColor"
     )
     val reactiveGlowAlpha by animateFloatAsState(
         targetValue = if (!isPlayerTurn && litButton != null) 0.35f else 0f,
-        animationSpec = tween(durationMillis = 120),
+        animationSpec = if (reducedMotion) snap() else tween(durationMillis = 120),
         label = "discRingGlowAlpha"
     )
 
@@ -116,7 +126,7 @@ fun CenterDiscRing(
             val fraction = timeoutFraction.value.coerceIn(0f, 1f)
             if (fraction > 0f) {
                 drawArc(
-                    color = countdownProgressColor(fraction),
+                    color = countdownProgressColor(fraction, accents),
                     startAngle = -90f,
                     sweepAngle = 360f * fraction,
                     useCenter = false,
