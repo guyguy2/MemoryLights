@@ -16,16 +16,31 @@
     <string name="game_action_disable_vibration">Disable Vibration</string>
     <string name="game_action_enable_vibration">Enable Vibration</string>
 
-    <!-- Game screen: center disc -->
+    <!-- Game screen: center disc & HUD -->
     <string name="game_loading">Loading…</string>
     <string name="game_tap_to_start">Tap to start</string>
+    <string name="game_start">Start Game</string>
     <string name="game_sound_load_failed">Sound load failed</string>
     <string name="game_audio_fallback">Game playable without audio</string>
     <string name="game_play_again">Play Again</string>
     <string name="game_sound_pack">Sound Pack</string>
-    <string name="game_high_score_inline">High: %1$d</string>
     <string name="game_best_score">Best %1$d</string>
     <string name="game_best_time">Best %1$s</string>
+    <string name="game_round_score">Round %1$d</string>
+
+    <!-- Option A HUD strips -->
+    <string name="hud_round">ROUND</string>
+    <string name="hud_blitz_label">BLITZ</string>
+    <string name="hud_best_score_star">★ Best %1$d</string>
+    <string name="hud_best_time_star">★ Best %1$s</string>
+    <string name="hud_status_watch">Watch</string>
+    <string name="hud_status_ready">Ready</string>
+    <string name="hud_status_paused">Paused</string>
+    <string name="hud_status_game_over">Game Over</string>
+    <string name="hud_status_victory">Victory!</string>
+    <string name="hud_status_audio_error">Audio error</string>
+    <string name="hud_step_progress">%1$d / %2$d</string>
+    <string name="a11y_countdown_progress">Turn timer</string>
 
     <!-- Game screen: overlay text -->
     <string name="overlay_high_score">HIGH SCORE!</string>

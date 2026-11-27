@@ -5,7 +5,7 @@ import org.junit.Test
 
 /**
  * Locks the Speed Blitz `M:SS.s` formatter shared by CenterDiscContent (GameOver)
- * and BlitzHud (live timer). Negative inputs must not render a minus sign.
+ * and TopHudStrip (live timer). Negative inputs must not render a minus sign.
  */
 class FormatBlitzTimeTest {
 

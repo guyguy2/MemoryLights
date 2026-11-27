@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,21 +15,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ripple
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -36,7 +40,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.happypuppy.memorylights.ui.share.ScoreShareHelper
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.happypuppy.memorylights.R
@@ -46,25 +49,26 @@ import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
-import com.happypuppy.memorylights.ui.components.BlitzHud
-import com.happypuppy.memorylights.ui.components.CenterDiscCanvas
 import com.happypuppy.memorylights.ui.components.CenterDiscContent
+import com.happypuppy.memorylights.ui.components.CenterDiscRing
+import com.happypuppy.memorylights.ui.components.CountdownAmber
+import com.happypuppy.memorylights.ui.components.FullTopHudStrip
+import com.happypuppy.memorylights.ui.components.GameScreenTags
 import com.happypuppy.memorylights.ui.components.HeadlineOverlay
-import com.happypuppy.memorylights.ui.components.OverlayBias4Button
-import com.happypuppy.memorylights.ui.components.OverlayBias4ButtonTurn
-import com.happypuppy.memorylights.ui.components.OverlayBias6Button
 import com.happypuppy.memorylights.ui.components.ParticleEffect
 import com.happypuppy.memorylights.ui.components.PausedOverlay
-import com.happypuppy.memorylights.ui.components.PlayerTurnHalo
 import com.happypuppy.memorylights.ui.components.ReplayShareButtons
 import com.happypuppy.memorylights.ui.components.SimonButtonGrid
-import com.happypuppy.memorylights.ui.components.TimeoutCountdownRing
+import com.happypuppy.memorylights.ui.components.SlimMetadataStrip
+import com.happypuppy.memorylights.ui.components.consumeCircularTouch
+import com.happypuppy.memorylights.ui.components.formatBlitzTime
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
 import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
+import com.happypuppy.memorylights.ui.share.ScoreShareHelper
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -243,11 +247,6 @@ fun SimonGameScreen(
         }
     }
 
-    // F8 polish: one-shot snackbar when a new achievement unlocks during a
-    // session. Channel-backed flow so re-collecting on rotation doesn't
-    // re-fire stale toasts; multi-unlock game-overs (e.g. FirstWin + Level10
-    // on the very first deep run) collapse into one "N achievements
-    // unlocked" message rather than queuing N snackbars.
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(unlockEvents) {
         unlockEvents.collect { newlyUnlocked ->
@@ -263,25 +262,17 @@ fun SimonGameScreen(
                     newlyUnlocked.size
                 )
             }
-            // Dismiss any in-flight snackbar so back-to-back unlocks don't
-            // queue up; the most recent badge wins the screen.
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
         }
     }
 
     // Audio-Only Mode (F3): swallow currentlyLit during the watch phase so
-    // the panels stay dark while the sound plays. Player presses still light
-    // up — that branch goes through `currentlyLit` while gameState is
-    // PlayerRepeating, which this guard does not touch. The all-buttons
-    // game-over flash is also unaffected.
+    // the panels (and 4-tile reactive disc ring) stay dark while the sound plays.
     val displayLit: SimonButton? = if (
         uiState.audioOnlyModeEnabled && uiState.gameState == GameState.ShowingSequence
     ) null else uiState.currentlyLit
 
-    // Function to handle both press and release events. Memoized so SimonPanel
-    // children don't get a fresh lambda — and a fresh recomposition — on every
-    // parent update.
     val handleButtonInteraction = remember(onButtonClick) {
         { button: SimonButton, isPress: Boolean ->
             if (isPress) {
@@ -292,6 +283,19 @@ fun SimonGameScreen(
             onButtonClick(button, isPress)
         }
     }
+
+    val isIdleTappable = uiState.gameState == GameState.GameOver ||
+        uiState.gameState == GameState.WaitingToStart
+    val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
+    val ctaScale by pulseTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ctaScalePulse"
+    )
 
     Scaffold(
         topBar = {
@@ -306,7 +310,6 @@ fun SimonGameScreen(
                 actions = {
                     // Pause button — leftmost slot and always rendered so
                     // Mute, Vibration, and Settings never shift across turns.
-                    // Enabled only while the player is repeating; dimmed otherwise.
                     val canPause = uiState.gameState == GameState.PlayerRepeating
                     IconButton(
                         onClick = onPauseGame,
@@ -376,226 +379,259 @@ fun SimonGameScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        // Game content with minimal padding to maximize button size
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = 0.dp,
-                    start = 0.dp,
-                    end = 0.dp
-                ),
+                .padding(top = paddingValues.calculateTopPadding()),
             contentAlignment = Alignment.Center
         ) {
-            // Simon Says Game UI - Using more vertical space. The width cap
-            // keeps the panels from stretching uncomfortably wide on tablets
-            // and large foldables (the disc + arc geometry was tuned for
-            // phone proportions).
-            Box(
+            // Option A layout: width-capped Column with Top HUD/Metadata Strip + Play Board.
+            Column(
                 modifier = Modifier
-                    .fillMaxHeight(0.95f)
-                    .fillMaxWidth(0.9f)
+                    .align(Alignment.Center)
+                    .fillMaxHeight(0.97f)
+                    .fillMaxWidth(0.92f)
                     .widthIn(max = 500.dp)
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.Center
+                    .padding(top = 4.dp, bottom = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Background
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black)
-                )
-
-                // Simon Says colored panels — layout/orientation handling is
-                // owned by `SimonButtonGrid` so this screen stays focused on
-                // the overlays, the center disc, and game-state plumbing (#17).
-                SimonButtonGrid(
-                    memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
-                    litButton = displayLit,
-                    allButtonsLit = uiState.allButtonsLit,
-                    pressedButtons = localPressedButtons,
-                    colorBlindModeEnabled = uiState.colorBlindModeEnabled,
-                    onButtonInteraction = handleButtonInteraction
-                )
-
-                // Center counter/button. Tappable in idle states (GameOver,
-                // WaitingToStart) to start / restart a game; passive otherwise.
-                val isIdleTappable = uiState.gameState == GameState.GameOver ||
-                        uiState.gameState == GameState.WaitingToStart
-                // Subtle scale pulse when the disc is tappable but the player
-                // hasn't started yet — telegraphs the affordance.
-                val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
-                val ctaScale by pulseTransition.animateFloat(
-                    initialValue = 1.0f,
-                    targetValue = 1.06f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "ctaScalePulse"
-                )
-                Box(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .graphicsLayer(
-                            scaleX = if (isIdleTappable) ctaScale else 1f,
-                            scaleY = if (isIdleTappable) ctaScale else 1f
-                        )
-                        .then(
-                            if (isIdleTappable) {
-                                Modifier
-                                    .shadow(
-                                        elevation = 6.dp,
-                                        shape = CircleShape,
-                                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                                    )
-                                    .clip(CircleShape)
-                                    // Center disc stays near-black on both AMOLED and DARK so
-                                    // the colored panels keep their contrast pop regardless of theme.
-                                    .background(Color.Black)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = ripple(),
-                                        onClickLabel = stringResource(
-                                            if (uiState.gameState == GameState.GameOver) R.string.game_new_game
-                                            else R.string.game_tap_to_start
-                                        ),
-                                        role = Role.Button,
-                                        onClick = { onStartNewGame() }
-                                    )
-                            } else {
-                                Modifier
-                                    .background(Color.Black, RoundedCornerShape(60.dp))
-                                    .zIndex(3f)
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Colored arcs - Dynamic based on mode
-                    CenterDiscCanvas(
-                        memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
-                        colorBlindModeEnabled = uiState.colorBlindModeEnabled
-                    )
-
-                    // Sound pack chip + level / loading / game-over summary.
-                    // Extracted (Wave 9) so this screen owns layout scaffolding
-                    // and overlays only.
-                    CenterDiscContent(
-                        gameState = uiState.gameState,
+                if (uiState.memoryLightsPlusEnabled) {
+                    FullTopHudStrip(
                         gameMode = uiState.gameMode,
+                        gameState = uiState.gameState,
                         level = uiState.level,
-                        currentHighScore = uiState.currentHighScore,
-                        blitzElapsedMs = uiState.blitzElapsedMs,
-                        currentBestBlitzTimeMs = uiState.currentBestBlitzTimeMs,
-                        soundLoadError = uiState.soundLoadError,
-                        soundsLoaded = uiState.soundsLoaded,
-                        soundPackDisplayNameRes = uiState.currentSoundPack.displayNameRes,
+                        targetLevel = GameConstants.BLITZ_TARGET_LEVEL,
                         sequenceSize = uiState.sequence.size,
-                        playerSequenceSize = uiState.playerSequence.size
+                        playerSequenceSize = uiState.playerSequence.size,
+                        currentHighScore = uiState.currentHighScore,
+                        currentBestBlitzTimeMs = uiState.currentBestBlitzTimeMs,
+                        blitzStartTimeMs = uiState.blitzStartTimeMs,
+                        blitzPauseStartedAtMs = uiState.blitzPauseStartedAtMs,
+                        blitzElapsedMs = uiState.blitzElapsedMs,
+                        blitzWon = uiState.blitzWon,
+                        soundsLoaded = uiState.soundsLoaded,
+                        soundLoadError = uiState.soundLoadError,
+                        timeoutResetTick = uiState.timeoutResetTick,
+                        playerTimeoutMs = uiState.playerTimeoutMs,
+                        soundPackDisplayNameRes = uiState.currentSoundPack.displayNameRes
+                    )
+                } else {
+                    SlimMetadataStrip(
+                        gameMode = uiState.gameMode,
+                        gameState = uiState.gameState,
+                        level = uiState.level,
+                        targetLevel = GameConstants.BLITZ_TARGET_LEVEL,
+                        currentHighScore = uiState.currentHighScore,
+                        currentBestBlitzTimeMs = uiState.currentBestBlitzTimeMs,
+                        blitzStartTimeMs = uiState.blitzStartTimeMs,
+                        blitzPauseStartedAtMs = uiState.blitzPauseStartedAtMs,
+                        blitzElapsedMs = uiState.blitzElapsedMs,
+                        soundPackDisplayNameRes = uiState.currentSoundPack.displayNameRes
                     )
                 }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Play Board slot
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    SimonButtonGrid(
+                        memoryLightsPlusEnabled = uiState.memoryLightsPlusEnabled,
+                        litButton = displayLit,
+                        allButtonsLit = uiState.allButtonsLit,
+                        pressedButtons = localPressedButtons,
+                        colorBlindModeEnabled = uiState.colorBlindModeEnabled,
+                        onButtonInteraction = handleButtonInteraction,
+                        modifier = Modifier.testTag(GameScreenTags.SIMON_BUTTON_GRID)
+                    )
+
+                    if (!uiState.memoryLightsPlusEnabled) {
+                        // 4-tile decluttered focal disc (~104.dp) with crisp dark inset gutter,
+                        // unified reactive ring, and active-play circular touch absorption.
+                        val canTapDiscToStart = isIdleTappable &&
+                            (uiState.soundsLoaded || uiState.soundLoadError != null)
+                        Box(
+                            modifier = Modifier
+                                .size(104.dp)
+                                .zIndex(3f)
+                                .testTag(GameScreenTags.CENTER_DISC)
+                                .graphicsLayer(
+                                    scaleX = if (canTapDiscToStart) ctaScale else 1f,
+                                    scaleY = if (canTapDiscToStart) ctaScale else 1f
+                                )
+                                .then(
+                                    if (canTapDiscToStart) {
+                                        Modifier
+                                            .shadow(
+                                                elevation = 8.dp,
+                                                shape = CircleShape,
+                                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                            )
+                                            .clip(CircleShape)
+                                            .background(Color.Black)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = ripple(),
+                                                onClickLabel = stringResource(
+                                                    if (uiState.gameState == GameState.GameOver) R.string.game_new_game
+                                                    else R.string.game_tap_to_start
+                                                ),
+                                                role = Role.Button,
+                                                onClick = { onStartNewGame() }
+                                            )
+                                    } else {
+                                        Modifier
+                                            .clip(CircleShape)
+                                            .background(Color.Black)
+                                            .consumeCircularTouch()
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CenterDiscRing(
+                                isPlayerTurn = uiState.gameState == GameState.PlayerRepeating,
+                                timeoutMs = uiState.playerTimeoutMs,
+                                resetTick = uiState.timeoutResetTick,
+                                litButton = displayLit
+                            )
+
+                            CenterDiscContent(
+                                gameState = uiState.gameState,
+                                gameMode = uiState.gameMode,
+                                level = uiState.level,
+                                currentHighScore = uiState.currentHighScore,
+                                blitzElapsedMs = uiState.blitzElapsedMs,
+                                currentBestBlitzTimeMs = uiState.currentBestBlitzTimeMs,
+                                soundLoadError = uiState.soundLoadError,
+                                soundsLoaded = uiState.soundsLoaded,
+                                sequenceSize = uiState.sequence.size,
+                                playerSequenceSize = uiState.playerSequence.size
+                            )
+                        }
+                    } else if (uiState.gameState == GameState.WaitingToStart) {
+                        // 6-tile mode has NO center disc; show accessible Start CTA / status pill.
+                        SixTileWaitingAffordance(
+                            soundsLoaded = uiState.soundsLoaded,
+                            soundLoadError = uiState.soundLoadError,
+                            ctaScale = ctaScale,
+                            onStartNewGame = onStartNewGame,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .zIndex(4f)
+                        )
+                    }
+
+                    // Collision-free headline overlays inside the Play Board Box.
+                    val isSixTileGameOver = uiState.memoryLightsPlusEnabled && uiState.gameState == GameState.GameOver
+                    val overlaySlotModifier = if (!uiState.memoryLightsPlusEnabled) {
+                        // Strictly in upper half above the 104.dp center disc (56.dp bottom clearance >= 52.dp radius)
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.5f)
+                            .padding(bottom = 56.dp, start = 8.dp, end = 8.dp)
+                    } else if (isSixTileGameOver) {
+                        // Upper region above GameOver summary + ReplayShareButtons
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.42f)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    } else {
+                        Modifier
+                            .align(Alignment.Center)
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    }
+
+                    BoxWithConstraints(
+                        modifier = overlaySlotModifier
+                            .zIndex(5f)
+                            .testTag(GameScreenTags.HEADLINE_OVERLAY_CONTAINER),
+                        contentAlignment = if (isSixTileGameOver) Alignment.TopCenter else Alignment.Center
+                    ) {
+                        val compactOverlay = maxHeight < 96.dp
+                        val headlineStyle = when {
+                            isSixTileGameOver && maxHeight < 120.dp -> MaterialTheme.typography.titleMedium
+                            compactOverlay -> MaterialTheme.typography.titleLarge
+                            else -> MaterialTheme.typography.headlineLarge
+                        }
+                        val speedUpStyle = if (compactOverlay) {
+                            MaterialTheme.typography.titleMedium
+                        } else {
+                            MaterialTheme.typography.headlineMedium
+                        }
+                        val turnStyle = if (compactOverlay) {
+                            MaterialTheme.typography.titleSmall
+                        } else {
+                            MaterialTheme.typography.headlineSmall
+                        }
+                        val overlayHeadlineColor = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow
+
+                        Box(contentAlignment = Alignment.Center) {
+                            val isGameOver = uiState.gameState == GameState.GameOver
+                            HeadlineOverlay(
+                                visible = isGameOver && uiState.showHighScoreText,
+                                text = stringResource(
+                                    if (uiState.blitzWon) R.string.overlay_best_time
+                                    else R.string.overlay_high_score
+                                ),
+                                color = overlayHeadlineColor,
+                                style = headlineStyle,
+                                initialScale = 0.7f
+                            )
+
+                            HeadlineOverlay(
+                                visible = isGameOver && uiState.showGameOverText,
+                                text = stringResource(
+                                    if (uiState.blitzWon) R.string.overlay_victory
+                                    else R.string.overlay_game_over
+                                ),
+                                color = overlayHeadlineColor,
+                                style = headlineStyle,
+                                initialScale = 0.85f
+                            )
+
+                            HeadlineOverlay(
+                                visible = !isGameOver && uiState.showSpeedUpText,
+                                text = stringResource(R.string.overlay_speed_up),
+                                color = Color(0xFFFF7043),
+                                style = speedUpStyle,
+                                initialScale = 0.7f
+                            )
+
+                            HeadlineOverlay(
+                                visible = uiState.gameState == GameState.PlayerRepeating &&
+                                    uiState.showYourTurnText &&
+                                    !uiState.showSpeedUpText,
+                                text = stringResource(R.string.overlay_your_turn),
+                                color = Color.White,
+                                style = turnStyle,
+                                initialScale = 0.9f,
+                                useScaleOut = false
+                            )
+                        }
+                    }
+                }
             }
-            
-            // Inactivity countdown ring around the center disc — drains over
-            // uiState.playerTimeoutMs during the player's turn and resets on
-            // each press. Color shifts from green to red as time runs out so
-            // the signal is readable peripherally. Re-keying on playerTimeoutMs
-            // lets a mid-turn slider change re-launch the animation at the new
-            // duration. Extracted to a dedicated component (Wave 4).
-            if (uiState.gameState == GameState.PlayerRepeating) {
-                TimeoutCountdownRing(
-                    timeoutMs = uiState.playerTimeoutMs,
-                    resetTick = uiState.timeoutResetTick
-                )
-            }
 
-            // Center-anchored headline overlays. Each is a fade/scale text
-            // popup above the game disc, consolidated into a single
-            // `HeadlineOverlay` composable (#65). HIGH SCORE / GAME OVER
-            // both swap copy + color when the run is a Speed Blitz win.
-            val overlayAlign = if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4Button
-            val overlayHeadlineColor = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow
-
-            // HIGH SCORE / BEST TIME — snappy 0.7 scale-in/out.
-            HeadlineOverlay(
-                visible = uiState.showHighScoreText,
-                text = stringResource(
-                    if (uiState.blitzWon) R.string.overlay_best_time
-                    else R.string.overlay_high_score
-                ),
-                color = overlayHeadlineColor,
-                style = MaterialTheme.typography.headlineLarge,
-                alignment = overlayAlign,
-                initialScale = 0.7f
-            )
-
-            // GAME OVER / VICTORY — slightly slower 0.85 scale matches the
-            // weightier end-of-run beat.
-            HeadlineOverlay(
-                visible = uiState.showGameOverText,
-                text = stringResource(
-                    if (uiState.blitzWon) R.string.overlay_victory
-                    else R.string.overlay_game_over
-                ),
-                color = overlayHeadlineColor,
-                style = MaterialTheme.typography.headlineLarge,
-                alignment = overlayAlign,
-                initialScale = 0.85f
-            )
-
-            // SPEED UP! transient overlay when difficulty crosses a faster
-            // tier (level 5, 9, 13, ... with difficulty enabled). Clears
-            // itself via SPEED_UP_TEXT_DISPLAY_MS. Surfaces a change that
-            // was previously invisible to the player (#62).
-            HeadlineOverlay(
-                visible = uiState.showSpeedUpText,
-                text = stringResource(R.string.overlay_speed_up),
-                color = Color(0xFFFF7043),
-                style = MaterialTheme.typography.headlineMedium,
-                alignment = overlayAlign,
-                initialScale = 0.7f
-            )
-
-            // YOUR TURN — softer 0.9 scale-in, plain fadeOut (no scaleOut)
-            // so the handoff to the gameplay halo doesn't pop. Uses a
-            // different 4-button bias to clear the level number.
-            HeadlineOverlay(
-                visible = uiState.gameState == GameState.PlayerRepeating && uiState.showYourTurnText,
-                text = stringResource(R.string.overlay_your_turn),
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                alignment = if (uiState.memoryLightsPlusEnabled) OverlayBias6Button else OverlayBias4ButtonTurn,
-                initialScale = 0.9f,
-                useScaleOut = false
-            )
-            
-            // Persistent player-turn cue: a pulsing halo around the center disc
-            // for the entire PlayerRepeating phase. The "YOUR TURN" text only
-            // shows for the first 3 rounds (#15 a11y) — after that, this halo
-            // is the sole turn indicator, so it animates to stay legible
-            // peripherally even at high levels (#60). Extracted to a
-            // dedicated component (Wave 4).
-            if (uiState.gameState == GameState.PlayerRepeating) {
-                PlayerTurnHalo()
-            }
-            
             // Particle effect overlay for new high score celebration
             if (uiState.showHighScoreParticles) {
                 ParticleEffect(
                     isActive = true,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(7f),
                     onComplete = { onClearParticleEffects?.invoke() }
                 )
             }
 
-            // Replay-last-sequence + share affordances, visible only on GameOver.
-            // The disc itself starts a fresh run; Replay lets the player retry
-            // the same sequence (highest-leverage retention loop), Share fires
-            // an Android share sheet with a 1080x1080 score-card PNG (F10).
-            // Extracted to a dedicated component (Wave 4) — the share-helper
-            // wiring stays here so the component doesn't need to know about
-            // context, level, high-score, or 6-button mode.
+            // Game Over action cluster + 6-tile compact score/best summary
             ReplayShareButtons(
                 visible = uiState.gameState == GameState.GameOver &&
                         uiState.sequence.isNotEmpty(),
@@ -609,38 +645,183 @@ fun SimonGameScreen(
                         bestScore = uiState.currentHighScore,
                         is6ButtonMode = uiState.memoryLightsPlusEnabled
                     )
-                }
+                },
+                modifier = Modifier.zIndex(6f),
+                topContent = if (uiState.memoryLightsPlusEnabled) {
+                    {
+                        SixTileGameOverSummary(
+                            gameMode = uiState.gameMode,
+                            level = uiState.level,
+                            currentHighScore = uiState.currentHighScore,
+                            blitzElapsedMs = uiState.blitzElapsedMs,
+                            currentBestBlitzTimeMs = uiState.currentBestBlitzTimeMs
+                        )
+                    }
+                } else null
             )
 
-            // Paused overlay (F14). Tap anywhere on the dim backdrop to resume.
-            // Z-ordered above all game content so the player can't accidentally
-            // hit a colored panel while paused. Extracted to a dedicated
-            // component (Wave 4) — same dim color, icon, copy, and z-order.
+            // Paused overlay (F14)
             PausedOverlay(
                 visible = uiState.gameState == GameState.Paused,
                 onResume = onResumeGame
             )
+        }
+    }
+}
 
-            // Speed Blitz HUD (F4) — sits at the top of the play area in any
-            // active blitz state, showing progress to BLITZ_TARGET_LEVEL and
-            // the live elapsed timer. Hidden in Classic mode and on the
-            // GameOver screen (the disc shows the final time there).
-            if (uiState.gameMode == GameMode.SPEED_BLITZ &&
-                (uiState.gameState == GameState.ShowingSequence ||
-                        uiState.gameState == GameState.PlayerRepeating ||
-                        uiState.gameState == GameState.Paused)
+@Composable
+private fun SixTileWaitingAffordance(
+    soundsLoaded: Boolean,
+    soundLoadError: String?,
+    ctaScale: Float,
+    onStartNewGame: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (soundLoadError != null) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = Color.Black.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, CountdownAmber.copy(alpha = 0.6f))
             ) {
-                BlitzHud(
-                    level = uiState.level,
-                    targetLevel = GameConstants.BLITZ_TARGET_LEVEL,
-                    bestTimeMs = uiState.currentBestBlitzTimeMs,
-                    startTimeMs = uiState.blitzStartTimeMs,
-                    isPaused = uiState.gameState == GameState.Paused,
-                    pauseStartedAtMs = uiState.blitzPauseStartedAtMs,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 8.dp)
-                        .zIndex(4f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = stringResource(R.string.game_sound_load_failed),
+                        tint = CountdownAmber,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.game_sound_load_failed),
+                            color = CountdownAmber,
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.game_audio_fallback),
+                            color = Color.White.copy(alpha = 0.8f),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        if (!soundsLoaded && soundLoadError == null) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = Color.Black.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White,
+                        strokeWidth = 2.5.dp
+                    )
+                    Text(
+                        text = stringResource(R.string.game_loading),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            }
+        } else {
+            Button(
+                onClick = onStartNewGame,
+                shape = RoundedCornerShape(28.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
+                modifier = Modifier
+                    .defaultMinSize(minWidth = 148.dp, minHeight = 52.dp)
+                    .testTag(GameScreenTags.SIX_TILE_START_CTA)
+                    .graphicsLayer(scaleX = ctaScale, scaleY = ctaScale)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.play_arrow_24px),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.game_start),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SixTileGameOverSummary(
+    gameMode: GameMode,
+    level: Int,
+    currentHighScore: Int,
+    blitzElapsedMs: Long,
+    currentBestBlitzTimeMs: Long
+) {
+    val isBlitzWithTime = gameMode == GameMode.SPEED_BLITZ && blitzElapsedMs > 0L
+    val scoreText = if (isBlitzWithTime) {
+        formatBlitzTime(blitzElapsedMs)
+    } else {
+        stringResource(R.string.game_round_score, level)
+    }
+    val bestText = when {
+        gameMode == GameMode.SPEED_BLITZ && currentBestBlitzTimeMs > 0L ->
+            stringResource(R.string.game_best_time, formatBlitzTime(currentBestBlitzTimeMs))
+        gameMode == GameMode.CLASSIC && currentHighScore > 0 ->
+            stringResource(R.string.game_best_score, currentHighScore)
+        else -> null
+    }
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color.Black.copy(alpha = 0.85f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+        modifier = Modifier.testTag(GameScreenTags.SIX_TILE_GAME_OVER_SUMMARY)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = scoreText,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (bestText != null) {
+                Text(
+                    text = stringResource(R.string.blitz_separator),
+                    color = Color.White.copy(alpha = 0.45f),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Text(
+                    text = bestText,
+                    color = Color(0xFFFFC107),
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

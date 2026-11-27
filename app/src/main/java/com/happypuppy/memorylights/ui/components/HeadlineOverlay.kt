@@ -5,51 +5,27 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * Bias-based alignment for the four center-anchored text overlays
- * (HIGH SCORE, GAME OVER, SPEED UP, YOUR TURN). Each overlay sits above
- * the center disc; the bias is roughly proportional to screen height so
- * the text floats consistently across phone sizes without a magic dp
- * offset (#31).
+ * Fade/scale-animated headline badge used for HIGH SCORE / BEST TIME,
+ * GAME OVER / VICTORY, SPEED UP!, and YOUR TURN.
  *
- * Shared here so the screen and the overlay composable can both reach
- * them without duplicating the magic numbers.
- */
-val OverlayBias6Button = BiasAlignment(0f, -0.18f)
-val OverlayBias4Button = BiasAlignment(0f, -0.07f)
-val OverlayBias4ButtonTurn = BiasAlignment(0f, -0.13f)
-
-/**
- * Center-anchored, fade/scale-animated text overlay used for the four
- * headline states above the game disc: HIGH SCORE / VICTORY, GAME OVER,
- * SPEED UP, and YOUR TURN.
- *
- * The four call sites previously inlined the same
- * `AnimatedVisibility { Box(fillMax + Center) { Text(...) } }` block with
- * minor parameter differences. Consolidating here eliminates four copies
- * of the wrapper and concentrates the animation/layout tuning in one
- * place. The pattern is intentionally byte-equivalent to the previous
- * inline blocks — visibility, easing, scale, and alignment values were
- * preserved verbatim.
- *
- * @param initialScale starting scale for `scaleIn`/`scaleOut` (0.7 for
- *   the snappier HIGH SCORE / SPEED UP, 0.85 for GAME OVER, 0.9 for the
- *   subtler YOUR TURN nudge).
- * @param useScaleOut whether to apply `scaleOut` on exit. YOUR TURN
- *   exits with `fadeOut()` only because the next overlay (typically the
- *   level-advance halo) doesn't need a tight motion handoff.
+ * Placed inside layout-aware overlay slots in `SimonGameScreen` (above the
+ * 4-tile center disc or centered/upper-aligned in 6-tile mode) rather than
+ * fixed screen-height biases so headlines never collide with the Top HUD
+ * strip or 4-tile center disc across portrait, landscape, or `2.0x` font
+ * scale (#72).
  */
 @Composable
 fun HeadlineOverlay(
@@ -57,28 +33,30 @@ fun HeadlineOverlay(
     text: String,
     color: Color,
     style: TextStyle,
-    alignment: Alignment,
+    modifier: Modifier = Modifier,
     initialScale: Float = 0.85f,
-    useScaleOut: Boolean = true,
-    modifier: Modifier = Modifier
+    useScaleOut: Boolean = true
 ) {
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + scaleIn(initialScale = initialScale),
         exit = if (useScaleOut) fadeOut() + scaleOut(targetScale = initialScale) else fadeOut(),
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.Black.copy(alpha = 0.78f),
+            border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
+            shadowElevation = 6.dp
         ) {
             Text(
                 text = text,
                 color = color,
                 style = style,
-                modifier = Modifier
-                    .align(alignment)
-                    .shadow(4.dp)
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
     }

@@ -8,8 +8,6 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.happypuppy.memorylights.domain.enums.ColorBlindShape
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * High-contrast fill + outline used for color-blind markers so shapes
@@ -131,23 +129,5 @@ fun DrawScope.drawColorBlindShape(
             }
         }
     }
-}
-
-/**
- * Arc mid-point in Canvas coordinates (0° = 3 o'clock, clockwise — matches
- * [androidx.compose.ui.graphics.drawscope.DrawScope.drawArc]).
- */
-fun arcMidpoint(
-    center: Offset,
-    radius: Float,
-    startAngleDeg: Float,
-    sweepAngleDeg: Float
-): Offset {
-    val midDeg = startAngleDeg + sweepAngleDeg / 2f
-    val rad = Math.toRadians(midDeg.toDouble())
-    return Offset(
-        x = center.x + radius * cos(rad).toFloat(),
-        y = center.y + radius * sin(rad).toFloat()
-    )
 }
 

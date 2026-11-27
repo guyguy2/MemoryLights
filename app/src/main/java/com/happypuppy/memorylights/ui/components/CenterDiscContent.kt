@@ -1,6 +1,5 @@
 package com.happypuppy.memorylights.ui.components
 
-import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -8,13 +7,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,11 +19,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
@@ -39,8 +42,8 @@ import com.happypuppy.memorylights.domain.model.GameState
  * milliseconds. Negative or zero inputs render as `0:00.0` so a stale
  * state never shows an unexpected `-` or rolls weirdly past midnight.
  *
- * Shared by [CenterDiscContent] (GameOver blitz summary) and [BlitzHud]
- * (live timer). Public so both call sites share one formatter.
+ * Shared by [CenterDiscContent] (GameOver blitz summary) and [TopHudStrip]
+ * (live timer). Public so all call sites and unit tests share one formatter.
  */
 fun formatBlitzTime(ms: Long): String {
     val safe = ms.coerceAtLeast(0L)
@@ -51,17 +54,18 @@ fun formatBlitzTime(ms: Long): String {
 }
 
 /**
- * Inner content of the center play disc: sound-pack chip, level / loading /
- * game-over summary column, and high-score footer.
+ * Decluttered inner content for the 4-tile focal disc (Wave 19 Option A).
  *
- * Extracted from `SimonGameScreen` (Wave 9) so the screen stays focused on
- * layout scaffolding and overlays. Branching is byte-equivalent to the
- * prior inline block — same strings, sizes, colors, and AnimatedContent
- * slide for the in-progress level number.
+ * High score and sound pack metadata moved to `SlimMetadataStrip` above the
+ * grid so this disc carries only the immediate focal signal:
+ * - Active play: animated Round number + `playerSequenceSize / sequenceSize`
+ *   during `PlayerRepeating`.
+ * - `WaitingToStart`: Play icon + concise "Tap to start" (no "1", pack, or best).
+ * - `GameOver`: final score (or Blitz time) + subtle best + Play Again icon.
+ * - Loading / `soundLoadError`: crisp spinner or warning icon + concise label.
  *
- * @param soundPackDisplayNameRes string resource for the current pack name
- * @param sequenceSize length of the full sequence (for N / M progress)
- * @param playerSequenceSize presses completed so far this turn
+ * Font scale inside the fixed-diameter disc is bounded (`<= 1.25f`) so `2.0x`
+ * system font scaling never clips or collides inside the circle (#72).
  */
 @Composable
 fun CenterDiscContent(
@@ -73,187 +77,171 @@ fun CenterDiscContent(
     currentBestBlitzTimeMs: Long,
     soundLoadError: String?,
     soundsLoaded: Boolean,
-    @StringRes soundPackDisplayNameRes: Int,
     sequenceSize: Int,
     playerSequenceSize: Int,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Sound pack indicator - only show when NOT in GameOver state
-        if (gameState != GameState.GameOver) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 10.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.music_note_24px),
-                    contentDescription = stringResource(R.string.game_sound_pack),
-                    tint = Color.Gray,
-                    modifier = Modifier.size(10.dp)
-                )
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(
-                    text = stringResource(soundPackDisplayNameRes),
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
+    val baseDensity = LocalDensity.current
+    val clampedDensity = Density(
+        density = baseDensity.density,
+        fontScale = baseDensity.fontScale.coerceAtMost(1.25f)
+    )
 
-        // Center content (level number, play button, or loading indicator)
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
+    CompositionLocalProvider(LocalDensity provides clampedDensity) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            contentAlignment = Alignment.Center
         ) {
-            if (soundLoadError != null) {
-                // Surface the load error so the player isn't left
-                // staring at a silent indefinite spinner.
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = stringResource(R.string.game_sound_load_failed),
-                    tint = Color(0xFFFFB300),
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.game_sound_load_failed),
-                    color = Color(0xFFFFB300),
-                    style = MaterialTheme.typography.labelSmall
-                )
-                Text(
-                    text = stringResource(R.string.game_audio_fallback),
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
-                )
-            } else if (!soundsLoaded) {
-                // Show loading indicator while sounds are loading
-                CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    color = Color.White,
-                    strokeWidth = 3.dp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.game_loading),
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            } else if (gameState == GameState.GameOver) {
-                // Score summary so the game-over moment lingers
-                // long enough for the player to register it.
-                // In Speed Blitz the headline is the elapsed
-                // time; level is implicit (always 20 on win,
-                // wherever the player died on loss).
-                if (gameMode == GameMode.SPEED_BLITZ &&
-                    blitzElapsedMs > 0L
-                ) {
-                    Text(
-                        text = formatBlitzTime(blitzElapsedMs),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    if (currentBestBlitzTimeMs > 0L) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when {
+                    soundLoadError != null -> {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = stringResource(R.string.game_sound_load_failed),
+                            tint = CountdownAmber,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = stringResource(
-                                R.string.game_best_time,
-                                formatBlitzTime(currentBestBlitzTimeMs)
-                            ),
-                            color = Color(0xFFFFC107),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                            text = stringResource(R.string.game_sound_load_failed),
+                            color = CountdownAmber,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                } else {
-                    Text(
-                        text = level.toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp)
-                    )
-                    if (currentHighScore > 0) {
+
+                    !soundsLoaded -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(26.dp),
+                            color = Color.White,
+                            strokeWidth = 2.5.dp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = stringResource(R.string.game_best_score, currentHighScore),
-                            color = Color(0xFFFFC107),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
+                            text = stringResource(R.string.game_loading),
+                            color = Color.LightGray,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
-                Icon(
-                    painter = painterResource(R.drawable.play_arrow_24px),
-                    contentDescription = stringResource(R.string.game_play_again),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else if (gameState == GameState.WaitingToStart) {
-                // Tap-to-start affordance — play icon + label invite
-                // the player to begin instead of staring at a "1".
-                Text(
-                    text = level.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontSize = 26.sp)
-                )
-                Icon(
-                    painter = painterResource(R.drawable.play_arrow_24px),
-                    contentDescription = stringResource(R.string.game_tap_to_start),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(R.string.game_tap_to_start),
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp)
-                )
-            } else {
-                // Animated level display with smooth transitions
-                AnimatedContent(
-                    targetState = level,
-                    transitionSpec = {
-                        slideInVertically(
-                            initialOffsetY = { height -> height }
-                        ) togetherWith slideOutVertically(
-                            targetOffsetY = { height -> -height }
+
+                    gameState == GameState.GameOver -> {
+                        if (gameMode == GameMode.SPEED_BLITZ && blitzElapsedMs > 0L) {
+                            Text(
+                                text = formatBlitzTime(blitzElapsedMs),
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (currentBestBlitzTimeMs > 0L) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.game_best_time,
+                                        formatBlitzTime(currentBestBlitzTimeMs)
+                                    ),
+                                    color = Color(0xFFFFC107),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = level.toString(),
+                                color = Color.White,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            if (currentHighScore > 0) {
+                                Text(
+                                    text = stringResource(R.string.game_best_score, currentHighScore),
+                                    color = Color(0xFFFFC107),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(1.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.play_arrow_24px),
+                            contentDescription = stringResource(R.string.game_play_again),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
                         )
-                    },
-                    label = "level_animation"
-                ) { animatedLevel ->
-                    Text(
-                        text = animatedLevel.toString(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.displaySmall
-                    )
-                }
-                // Sequence-progress indicator under the level number
-                // during the player's turn. Players lose count of
-                // long sequences without a visible step counter (#64).
-                if (gameState == GameState.PlayerRepeating &&
-                    sequenceSize > 0
-                ) {
-                    Text(
-                        text = "$playerSequenceSize / $sequenceSize",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    }
+
+                    gameState == GameState.WaitingToStart -> {
+                        Icon(
+                            painter = painterResource(R.drawable.play_arrow_24px),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.game_tap_to_start),
+                            color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.labelMedium.copy(lineHeight = 13.sp),
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    else -> {
+                        AnimatedContent(
+                            targetState = level,
+                            transitionSpec = {
+                                slideInVertically(
+                                    initialOffsetY = { height -> height }
+                                ) togetherWith slideOutVertically(
+                                    targetOffsetY = { height -> -height }
+                                )
+                            },
+                            label = "level_animation"
+                        ) { animatedLevel ->
+                            Text(
+                                text = animatedLevel.toString(),
+                                color = Color.White,
+                                style = MaterialTheme.typography.displaySmall.copy(
+                                    fontSize = 32.sp,
+                                    lineHeight = 36.sp
+                                ),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                        if (gameState == GameState.PlayerRepeating && sequenceSize > 0) {
+                            Text(
+                                text = stringResource(
+                                    R.string.hud_step_progress,
+                                    playerSequenceSize,
+                                    sequenceSize
+                                ),
+                                color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
                 }
             }
-        }
-
-        // High score display at bottom - only show when NOT in GameOver state
-        if (currentHighScore > 0 && gameState != GameState.GameOver) {
-            Text(
-                text = stringResource(R.string.game_high_score_inline, currentHighScore),
-                color = Color.Gray,
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 10.dp)
-            )
         }
     }
 }

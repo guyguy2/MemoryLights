@@ -63,7 +63,8 @@ fun ReplayShareButtons(
     onReplay: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
-    showReplay: Boolean = true
+    showReplay: Boolean = true,
+    topContent: (@Composable () -> Unit)? = null
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -83,17 +84,23 @@ fun ReplayShareButtons(
         ) {
             val useCompactRow = isLandscape || maxHeight < 480.dp
             if (useCompactRow) {
-                FlowRow(
+                Column(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    itemVerticalAlignment = Alignment.CenterVertically
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    NewGameActionButton(onClick = onNewGame)
-                    if (showReplay) {
-                        ReplayActionButton(onClick = onReplay)
+                    topContent?.invoke()
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically
+                    ) {
+                        NewGameActionButton(onClick = onNewGame)
+                        if (showReplay) {
+                            ReplayActionButton(onClick = onReplay)
+                        }
+                        ShareActionButton(onClick = onShare)
                     }
-                    ShareActionButton(onClick = onShare)
                 }
             } else {
                 Column(
@@ -101,6 +108,7 @@ fun ReplayShareButtons(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    topContent?.invoke()
                     NewGameActionButton(onClick = onNewGame)
 
                     FlowRow(
