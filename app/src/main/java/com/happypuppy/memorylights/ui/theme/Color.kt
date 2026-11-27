@@ -1,6 +1,8 @@
 package com.happypuppy.memorylights.ui.theme
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 val Purple80 = Color(0xFFD0BCFF)
@@ -20,6 +22,58 @@ val DialogBackground = Color(0xFF1A1A1A)
 val SurfaceContainer = Color(0xFF121212)
 val SurfaceSelected = Color(0xFF303030)
 val SurfaceContainerFade = Color(0xE6121212)
+
+// Game-board pure-black canvas and high-contrast overlay scrims
+val GameBoardBackdrop = Color(0xFF000000)
+
+// Celebratory particle palette centralized in theme
+val CelebrationParticleColors = listOf(
+    Color(0xFFFFD700), // Gold
+    Color(0xFFFFA500), // Orange
+    Color(0xFFFF6B6B), // Red
+    Color(0xFF4ECDC4), // Teal
+    Color(0xFF45B7D1), // Blue
+    Color(0xFF96CEB4), // Green
+    Color(0xFFFECA57)  // Yellow
+)
+
+/**
+ * Semantic accent colors for Statistics cards, Settings icons, and in-game
+ * overlays. Every foreground accent here is verified against both AMOLED and
+ * Dark `surfaceContainerHigh` in `ThemeContrastTest` (>= 4.5:1 WCAG AA).
+ */
+@Immutable
+data class GameAccentColors(
+    val gamesPlayed: Color,
+    val highScore: Color,
+    val averageScore: Color,
+    val totalScore: Color,
+    val bestStreak: Color,
+    val resetWarning: Color,
+    val victory: Color,
+    val speedUp: Color,
+    val headlineHighlight: Color,
+    val countdownGreen: Color,
+    val countdownAmber: Color,
+    val countdownRed: Color,
+)
+
+val DefaultGameAccentColors = GameAccentColors(
+    gamesPlayed = Color(0xFF42A5F5),
+    highScore = Color(0xFFFFC107),
+    averageScore = Color(0xFF4CAF50),
+    totalScore = Color(0xFFCE93D8),
+    bestStreak = Color(0xFFFF7043),
+    resetWarning = Color(0xFFFF9800),
+    victory = Color(0xFF66BB6A),
+    speedUp = Color(0xFFFF7043),
+    headlineHighlight = Color(0xFFFFFF00),
+    countdownGreen = Color(0xFF4CAF50),
+    countdownAmber = Color(0xFFFFB300),
+    countdownRed = Color(0xFFE53935),
+)
+
+val LocalGameAccentColors = staticCompositionLocalOf { DefaultGameAccentColors }
 
 // AMOLED variant — pure black background. Default; matches the
 // historic Memory Lights aesthetic and saves OLED pixels.

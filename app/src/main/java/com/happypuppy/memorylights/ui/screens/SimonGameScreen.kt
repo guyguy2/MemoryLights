@@ -22,18 +22,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewFontScale
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,12 +52,13 @@ import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
+import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.SimonGameUiState
 import com.happypuppy.memorylights.ui.components.CenterDiscContent
 import com.happypuppy.memorylights.ui.components.CenterDiscRing
-import com.happypuppy.memorylights.ui.components.CountdownAmber
 import com.happypuppy.memorylights.ui.components.FullTopHudStrip
 import com.happypuppy.memorylights.ui.components.GameScreenTags
 import com.happypuppy.memorylights.ui.components.HeadlineOverlay
@@ -62,6 +69,7 @@ import com.happypuppy.memorylights.ui.components.SimonButtonGrid
 import com.happypuppy.memorylights.ui.components.SlimMetadataStrip
 import com.happypuppy.memorylights.ui.components.consumeCircularTouch
 import com.happypuppy.memorylights.ui.components.formatBlitzTime
+import com.happypuppy.memorylights.ui.components.isReducedMotionEnabled
 import com.happypuppy.memorylights.ui.navigation.GameModesRoute
 import com.happypuppy.memorylights.ui.navigation.GameRoute
 import com.happypuppy.memorylights.ui.navigation.GameplayRoute
@@ -69,6 +77,9 @@ import com.happypuppy.memorylights.ui.navigation.SettingsRoute
 import com.happypuppy.memorylights.ui.navigation.SoundAndHapticsRoute
 import com.happypuppy.memorylights.ui.navigation.StatisticsRoute
 import com.happypuppy.memorylights.ui.share.ScoreShareHelper
+import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -209,17 +220,20 @@ fun SimonGameScreen(
     // Single source of truth for which buttons are physically pressed (for UI feedback only)
     var localPressedButtons by remember { mutableStateOf(mapOf<SimonButton, Boolean>()) }
 
-    // Screen reader announcements for accessibility
-    val view = LocalView.current
-
     val context = LocalContext.current
     val resources = LocalResources.current
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val accents = LocalGameAccentColors.current
+    val reducedMotion = remember(context) { isReducedMotionEnabled(context) }
+
+    // Polite live-region text for TalkBack announcements (replaces deprecated announceForAccessibility, #70).
+    var liveAnnouncement by remember { mutableStateOf("") }
 
     // Announce level changes (skip initial level 1 on game start)
     var previousLevel by remember { mutableIntStateOf(0) }
     LaunchedEffect(uiState.level) {
         if (previousLevel > 0 && uiState.level > previousLevel) {
-            view.announceForAccessibility(resources.getString(R.string.a11y_level_announce, uiState.level))
+            liveAnnouncement = resources.getString(R.string.a11y_level_announce, uiState.level)
         }
         previousLevel = uiState.level
     }
@@ -228,22 +242,25 @@ fun SimonGameScreen(
     LaunchedEffect(uiState.gameState) {
         when (uiState.gameState) {
             GameState.PlayerRepeating -> {
-                view.announceForAccessibility(resources.getString(R.string.a11y_your_turn))
+                liveAnnouncement = resources.getString(R.string.a11y_your_turn)
             }
             GameState.GameOver -> {
-                view.announceForAccessibility(resources.getString(R.string.a11y_game_over_level, uiState.level))
+                liveAnnouncement = resources.getString(R.string.a11y_game_over_level, uiState.level)
             }
             GameState.Paused -> {
-                view.announceForAccessibility(resources.getString(R.string.a11y_paused))
+                liveAnnouncement = resources.getString(R.string.a11y_paused)
             }
-            else -> { /* No announcement for other states */ }
+            GameState.ShowingSequence,
+            GameState.WaitingToStart -> {
+                liveAnnouncement = ""
+            }
         }
     }
 
     // Announce new high score celebration
     LaunchedEffect(uiState.showHighScoreText) {
         if (uiState.showHighScoreText) {
-            view.announceForAccessibility(resources.getString(R.string.a11y_high_score_celebrate, uiState.level))
+            liveAnnouncement = resources.getString(R.string.a11y_high_score_celebrate, uiState.level)
         }
     }
 
@@ -286,16 +303,21 @@ fun SimonGameScreen(
 
     val isIdleTappable = uiState.gameState == GameState.GameOver ||
         uiState.gameState == GameState.WaitingToStart
-    val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
-    val ctaScale by pulseTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "ctaScalePulse"
-    )
+    val ctaScale = if (reducedMotion) {
+        1f
+    } else {
+        val pulseTransition = rememberInfiniteTransition(label = "ctaPulse")
+        val animatedScale by pulseTransition.animateFloat(
+            initialValue = 1.0f,
+            targetValue = 1.05f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "ctaScalePulse"
+        )
+        animatedScale
+    }
 
     Scaffold(
         topBar = {
@@ -318,7 +340,7 @@ fun SimonGameScreen(
                         Icon(
                             painter = painterResource(R.drawable.pause_24px),
                             contentDescription = stringResource(R.string.action_pause),
-                            tint = if (canPause) Color.White else Color.White.copy(alpha = 0.35f),
+                            tint = if (canPause) onSurface else onSurface.copy(alpha = 0.35f),
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -336,7 +358,7 @@ fun SimonGameScreen(
                                 if (uiState.soundEnabled) R.string.game_action_mute
                                 else R.string.game_action_unmute
                             ),
-                            tint = Color.White,
+                            tint = onSurface,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -354,7 +376,7 @@ fun SimonGameScreen(
                                 if (uiState.vibrateEnabled) R.string.game_action_disable_vibration
                                 else R.string.game_action_enable_vibration
                             ),
-                            tint = Color.White,
+                            tint = onSurface,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -364,15 +386,15 @@ fun SimonGameScreen(
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = stringResource(R.string.action_settings),
-                            tint = Color.White,
+                            tint = onSurface,
                             modifier = Modifier.size(28.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+                    titleContentColor = onSurface,
+                    actionIconContentColor = onSurface
                 )
             )
         },
@@ -385,6 +407,16 @@ fun SimonGameScreen(
                 .padding(top = paddingValues.calculateTopPadding()),
             contentAlignment = Alignment.Center
         ) {
+            if (liveAnnouncement.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .size(1.dp)
+                        .semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            contentDescription = liveAnnouncement
+                        }
+                )
+            }
             // Option A layout: width-capped Column with Top HUD/Metadata Strip + Play Board.
             Column(
                 modifier = Modifier
@@ -437,7 +469,7 @@ fun SimonGameScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(Color.Black),
+                        .background(GameBoardBackdrop),
                     contentAlignment = Alignment.Center
                 ) {
                     SimonButtonGrid(
@@ -473,7 +505,7 @@ fun SimonGameScreen(
                                                 spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                             )
                                             .clip(CircleShape)
-                                            .background(Color.Black)
+                                            .background(GameBoardBackdrop)
                                             .clickable(
                                                 interactionSource = remember { MutableInteractionSource() },
                                                 indication = ripple(),
@@ -487,7 +519,7 @@ fun SimonGameScreen(
                                     } else {
                                         Modifier
                                             .clip(CircleShape)
-                                            .background(Color.Black)
+                                            .background(GameBoardBackdrop)
                                             .consumeCircularTouch()
                                     }
                                 ),
@@ -571,7 +603,7 @@ fun SimonGameScreen(
                         } else {
                             MaterialTheme.typography.headlineSmall
                         }
-                        val overlayHeadlineColor = if (uiState.blitzWon) Color(0xFF66BB6A) else Color.Yellow
+                        val overlayHeadlineColor = if (uiState.blitzWon) accents.victory else accents.headlineHighlight
 
                         Box(contentAlignment = Alignment.Center) {
                             val isGameOver = uiState.gameState == GameState.GameOver
@@ -600,7 +632,7 @@ fun SimonGameScreen(
                             HeadlineOverlay(
                                 visible = !isGameOver && uiState.showSpeedUpText,
                                 text = stringResource(R.string.overlay_speed_up),
-                                color = Color(0xFFFF7043),
+                                color = accents.speedUp,
                                 style = speedUpStyle,
                                 initialScale = 0.7f
                             )
@@ -610,7 +642,7 @@ fun SimonGameScreen(
                                     uiState.showYourTurnText &&
                                     !uiState.showSpeedUpText,
                                 text = stringResource(R.string.overlay_your_turn),
-                                color = Color.White,
+                                color = onSurface,
                                 style = turnStyle,
                                 initialScale = 0.9f,
                                 useScaleOut = false
@@ -677,6 +709,8 @@ private fun SixTileWaitingAffordance(
     onStartNewGame: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val accents = LocalGameAccentColors.current
     Column(
         modifier = modifier.padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -685,8 +719,8 @@ private fun SixTileWaitingAffordance(
         if (soundLoadError != null) {
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color.Black.copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, CountdownAmber.copy(alpha = 0.6f))
+                color = GameBoardBackdrop.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, accents.countdownAmber.copy(alpha = 0.6f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -696,20 +730,20 @@ private fun SixTileWaitingAffordance(
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = stringResource(R.string.game_sound_load_failed),
-                        tint = CountdownAmber,
+                        tint = accents.countdownAmber,
                         modifier = Modifier.size(18.dp)
                     )
                     Column {
                         Text(
                             text = stringResource(R.string.game_sound_load_failed),
-                            color = CountdownAmber,
+                            color = accents.countdownAmber,
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = stringResource(R.string.game_audio_fallback),
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = onSurface.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -722,8 +756,8 @@ private fun SixTileWaitingAffordance(
         if (!soundsLoaded && soundLoadError == null) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = Color.Black.copy(alpha = 0.85f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f))
+                color = GameBoardBackdrop.copy(alpha = 0.85f),
+                border = BorderStroke(1.dp, onSurface.copy(alpha = 0.18f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -732,12 +766,12 @@ private fun SixTileWaitingAffordance(
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = onSurface,
                         strokeWidth = 2.5.dp
                     )
                     Text(
                         text = stringResource(R.string.game_loading),
-                        color = Color.White,
+                        color = onSurface,
                         style = MaterialTheme.typography.titleSmall
                     )
                 }
@@ -778,6 +812,8 @@ private fun SixTileGameOverSummary(
     blitzElapsedMs: Long,
     currentBestBlitzTimeMs: Long
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val accents = LocalGameAccentColors.current
     val isBlitzWithTime = gameMode == GameMode.SPEED_BLITZ && blitzElapsedMs > 0L
     val scoreText = if (isBlitzWithTime) {
         formatBlitzTime(blitzElapsedMs)
@@ -794,8 +830,8 @@ private fun SixTileGameOverSummary(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = Color.Black.copy(alpha = 0.85f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
+        color = GameBoardBackdrop.copy(alpha = 0.85f),
+        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.16f)),
         modifier = Modifier.testTag(GameScreenTags.SIX_TILE_GAME_OVER_SUMMARY)
     ) {
         Row(
@@ -805,25 +841,111 @@ private fun SixTileGameOverSummary(
         ) {
             Text(
                 text = scoreText,
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = onSurface,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFeatureSettings = "tnum"
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             if (bestText != null) {
                 Text(
                     text = stringResource(R.string.blitz_separator),
-                    color = Color.White.copy(alpha = 0.45f),
+                    color = onSurface.copy(alpha = 0.45f),
                     style = MaterialTheme.typography.labelLarge
                 )
                 Text(
                     text = bestText,
-                    color = Color(0xFFFFC107),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = accents.highScore,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = "tnum"
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
+    }
+}
+
+@PreviewLightDark
+@PreviewFontScale
+@PreviewScreenSizes
+@Composable
+private fun SimonGameScreenFourTilePreview() {
+    MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
+        SimonGameScreen(
+            uiState = SimonGameUiState(
+                gameState = GameState.PlayerRepeating,
+                soundsLoaded = true,
+                level = 5,
+                highScore4Button = 14,
+                currentSoundPack = SoundPack.STANDARD,
+                sequence = listOf(
+                    SimonButton.GREEN,
+                    SimonButton.RED,
+                    SimonButton.BLUE,
+                    SimonButton.YELLOW,
+                    SimonButton.GREEN
+                ),
+                playerSequence = listOf(SimonButton.GREEN, SimonButton.RED)
+            ),
+            onButtonClick = { _, _ -> },
+            onSettingsClick = {},
+            onStartNewGame = {},
+            onToggleSound = {},
+            onToggleVibration = {}
+        )
+    }
+}
+
+@PreviewLightDark
+@PreviewFontScale
+@PreviewScreenSizes
+@Composable
+private fun SimonGameScreenSixTilePreview() {
+    MyApplicationTheme(themeMode = ThemeMode.DARK) {
+        SimonGameScreen(
+            uiState = SimonGameUiState(
+                memoryLightsPlusEnabled = true,
+                gameMode = GameMode.SPEED_BLITZ,
+                gameState = GameState.PlayerRepeating,
+                soundsLoaded = true,
+                level = 7,
+                bestBlitzTime6ButtonMs = 24_800L,
+                blitzStartTimeMs = 1_000L,
+                blitzPauseStartedAtMs = 14_300L,
+                currentSoundPack = SoundPack.RETRO,
+                sequence = List(7) { SimonButton.GREEN },
+                playerSequence = List(3) { SimonButton.GREEN }
+            ),
+            onButtonClick = { _, _ -> },
+            onSettingsClick = {},
+            onStartNewGame = {},
+            onToggleSound = {},
+            onToggleVibration = {}
+        )
+    }
+}
+
+@Preview(name = "4-Tile Waiting AMOLED", showBackground = true)
+@Composable
+private fun SimonGameScreenWaitingPreview() {
+    MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
+        SimonGameScreen(
+            uiState = SimonGameUiState(
+                gameState = GameState.WaitingToStart,
+                soundsLoaded = true,
+                highScore4Button = 12,
+                currentSoundPack = SoundPack.ELECTRONIC
+            ),
+            onButtonClick = { _, _ -> },
+            onSettingsClick = {},
+            onStartNewGame = {},
+            onToggleSound = {},
+            onToggleVibration = {}
+        )
     }
 }

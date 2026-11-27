@@ -2,6 +2,8 @@ package com.happypuppy.memorylights.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,16 +15,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
 import kotlinx.coroutines.launch
 
 /**
- * Game Modes settings sub-screen (F18). Hosts the four toggles that change
+ * Game Modes settings sub-screen (F18). Hosts the toggles that change
  * how a run plays: Difficulty (speed scaling), Reverse Mode (recall in
- * reverse), Practice Mode (wrong button replays sequence), and Memory
- * Lights+ (4-button → 6-button).
+ * reverse), Practice Mode (wrong button replays sequence), Audio-Only,
+ * Daily Challenge, and Memory Lights+ (4-button → 6-button).
  *
  * Memory Lights+ retains the mid-game switch confirm-dialog because
  * flipping it ends the current run; the parent passes [hasActiveGame] so
@@ -80,124 +84,134 @@ fun GameModesScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // Game mode picker — Classic vs Speed Blitz. Switching mid-game
-            // ends the current run, so prompt before flipping if there's
-            // something to lose. Mirrors the ML+ confirm-dialog flow.
-            GameModeCard(
-                selected = gameMode,
-                onSelect = { newMode ->
-                    if (newMode == gameMode) return@GameModeCard
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 840.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                // Game mode picker — Classic vs Speed Blitz. Switching mid-game
+                // ends the current run, so prompt before flipping if there's
+                // something to lose. Mirrors the ML+ confirm-dialog flow.
+                GameModeCard(
+                    selected = gameMode,
+                    onSelect = { newMode ->
+                        if (newMode == gameMode) return@GameModeCard
+                        if (hasActiveGame) {
+                            pendingGameModeChange = newMode
+                        } else {
+                            onGameModeSelected(newMode)
+                            toast(resources.getString(R.string.snack_mode, resources.getString(newMode.displayNameRes)))
+                        }
+                    }
+                )
+
+                val toggleDifficulty: (Boolean) -> Unit = { value ->
+                    onDifficultyToggled(value)
+                    toast(resources.getString(if (value) R.string.snack_difficulty_on else R.string.snack_difficulty_off))
+                }
+                ToggleCard(
+                    title = stringResource(R.string.toggle_difficulty_title),
+                    description = stringResource(R.string.toggle_difficulty_summary),
+                    iconResId = R.drawable.speed_24px,
+                    checked = difficultyEnabled,
+                    onToggle = toggleDifficulty
+                )
+
+                val toggleReverse: (Boolean) -> Unit = { value ->
+                    onReverseModeToggled(value)
+                    toast(resources.getString(if (value) R.string.snack_reverse_on else R.string.snack_reverse_off))
+                }
+                ToggleCard(
+                    title = stringResource(R.string.toggle_reverse_title),
+                    description = stringResource(R.string.toggle_reverse_summary),
+                    iconResId = R.drawable.speed_24px,
+                    checked = reverseModeEnabled,
+                    onToggle = toggleReverse
+                )
+
+                val togglePractice: (Boolean) -> Unit = { value ->
+                    onPracticeModeToggled(value)
+                    toast(resources.getString(if (value) R.string.snack_practice_on else R.string.snack_practice_off))
+                }
+                ToggleCard(
+                    title = stringResource(R.string.toggle_practice_title),
+                    description = stringResource(R.string.toggle_practice_summary),
+                    iconResId = R.drawable.reset_score_24px,
+                    checked = practiceModeEnabled,
+                    onToggle = togglePractice
+                )
+
+                val toggleAudioOnly: (Boolean) -> Unit = { value ->
+                    onAudioOnlyModeToggled(value)
+                    toast(resources.getString(if (value) R.string.snack_audio_only_on else R.string.snack_audio_only_off))
+                }
+                ToggleCard(
+                    title = stringResource(R.string.toggle_audio_only_title),
+                    description = stringResource(R.string.toggle_audio_only_summary),
+                    iconResId = R.drawable.music_note_24px,
+                    checked = audioOnlyModeEnabled,
+                    onToggle = toggleAudioOnly
+                )
+
+                val toggleDaily: (Boolean) -> Unit = { value ->
+                    onDailyChallengeToggled(value)
+                    toast(resources.getString(if (value) R.string.snack_daily_on else R.string.snack_daily_off))
+                }
+                // Subtitle: when on AND a run was already played today, lead with
+                // completion + high score so the player sees progress inline.
+                val dailyDescription = if (dailyChallengeEnabled && dailyCompletedToday && dailyBestLevel > 0) {
+                    stringResource(
+                        R.string.toggle_daily_challenge_completed_with_score,
+                        stringResource(R.string.toggle_daily_challenge_completed),
+                        stringResource(R.string.statistic_high_score),
+                        dailyBestLevel
+                    )
+                } else {
+                    stringResource(R.string.toggle_daily_challenge_summary)
+                }
+                ToggleCard(
+                    title = stringResource(R.string.toggle_daily_challenge_title),
+                    description = dailyDescription,
+                    iconResId = R.drawable.schedule_24px,
+                    checked = dailyChallengeEnabled,
+                    onToggle = toggleDaily
+                )
+
+                val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
                     if (hasActiveGame) {
-                        pendingGameModeChange = newMode
+                        pendingMemoryLightsPlusToggle = newValue
                     } else {
-                        onGameModeSelected(newMode)
-                        toast(resources.getString(R.string.snack_mode, resources.getString(newMode.displayNameRes)))
+                        onMemoryLightsPlusToggled(newValue)
+                        toast(resources.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
                     }
                 }
-            )
+                ToggleCard(
+                    title = stringResource(R.string.toggle_memory_lights_plus_title),
+                    description = stringResource(R.string.toggle_memory_lights_plus_summary),
+                    iconResId = R.drawable.play_arrow_24px,
+                    iconTint = LocalGameAccentColors.current.averageScore,
+                    checked = memoryLightsPlusEnabled,
+                    onToggle = requestMemoryLightsPlusToggle
+                )
 
-            val toggleDifficulty: (Boolean) -> Unit = { value ->
-                onDifficultyToggled(value)
-                toast(resources.getString(if (value) R.string.snack_difficulty_on else R.string.snack_difficulty_off))
+                Spacer(modifier = Modifier.height(32.dp))
             }
-            ToggleCard(
-                title = stringResource(R.string.toggle_difficulty_title),
-                description = stringResource(R.string.toggle_difficulty_summary),
-                iconResId = R.drawable.speed_24px,
-                checked = difficultyEnabled,
-                onToggle = toggleDifficulty
-            )
-
-            val toggleReverse: (Boolean) -> Unit = { value ->
-                onReverseModeToggled(value)
-                toast(resources.getString(if (value) R.string.snack_reverse_on else R.string.snack_reverse_off))
-            }
-            ToggleCard(
-                title = stringResource(R.string.toggle_reverse_title),
-                description = stringResource(R.string.toggle_reverse_summary),
-                iconResId = R.drawable.speed_24px,
-                checked = reverseModeEnabled,
-                onToggle = toggleReverse
-            )
-
-            val togglePractice: (Boolean) -> Unit = { value ->
-                onPracticeModeToggled(value)
-                toast(resources.getString(if (value) R.string.snack_practice_on else R.string.snack_practice_off))
-            }
-            ToggleCard(
-                title = stringResource(R.string.toggle_practice_title),
-                description = stringResource(R.string.toggle_practice_summary),
-                iconResId = R.drawable.reset_score_24px,
-                checked = practiceModeEnabled,
-                onToggle = togglePractice
-            )
-
-            val toggleAudioOnly: (Boolean) -> Unit = { value ->
-                onAudioOnlyModeToggled(value)
-                toast(resources.getString(if (value) R.string.snack_audio_only_on else R.string.snack_audio_only_off))
-            }
-            ToggleCard(
-                title = stringResource(R.string.toggle_audio_only_title),
-                description = stringResource(R.string.toggle_audio_only_summary),
-                iconResId = R.drawable.music_note_24px,
-                checked = audioOnlyModeEnabled,
-                onToggle = toggleAudioOnly
-            )
-
-            val toggleDaily: (Boolean) -> Unit = { value ->
-                onDailyChallengeToggled(value)
-                toast(resources.getString(if (value) R.string.snack_daily_on else R.string.snack_daily_off))
-            }
-            // Subtitle: when on AND a run was already played today, lead with
-            // "Today's best: level N" so the player can see their progress
-            // without leaving the toggle.
-            val dailyDescription = if (dailyChallengeEnabled && dailyCompletedToday && dailyBestLevel > 0) {
-                stringResource(R.string.toggle_daily_challenge_completed) +
-                    " " + stringResource(R.string.statistic_high_score) + ": $dailyBestLevel"
-            } else {
-                stringResource(R.string.toggle_daily_challenge_summary)
-            }
-            ToggleCard(
-                title = stringResource(R.string.toggle_daily_challenge_title),
-                description = dailyDescription,
-                iconResId = R.drawable.schedule_24px,
-                checked = dailyChallengeEnabled,
-                onToggle = toggleDaily
-            )
-
-            val requestMemoryLightsPlusToggle: (Boolean) -> Unit = { newValue ->
-                if (hasActiveGame) {
-                    pendingMemoryLightsPlusToggle = newValue
-                } else {
-                    onMemoryLightsPlusToggled(newValue)
-                    toast(resources.getString(if (newValue) R.string.snack_memory_lights_plus_on else R.string.snack_memory_lights_plus_off))
-                }
-            }
-            ToggleCard(
-                title = stringResource(R.string.toggle_memory_lights_plus_title),
-                description = stringResource(R.string.toggle_memory_lights_plus_summary),
-                iconResId = R.drawable.play_arrow_24px,
-                iconTint = Color(0xFF4CAF50),
-                checked = memoryLightsPlusEnabled,
-                onToggle = requestMemoryLightsPlusToggle
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 
@@ -208,7 +222,7 @@ fun GameModesScreen(
                 Text(
                     text = stringResource(R.string.confirm_end_game_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -217,7 +231,7 @@ fun GameModesScreen(
                         R.string.confirm_end_game_mode,
                         stringResource(newMode.displayNameRes)
                     ),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -252,9 +266,9 @@ fun GameModesScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 
@@ -265,13 +279,13 @@ fun GameModesScreen(
                 Text(
                     text = stringResource(R.string.confirm_end_game_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.confirm_end_game_generic),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -299,9 +313,9 @@ fun GameModesScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -320,8 +334,8 @@ private fun GameModeCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(R.drawable.speed_24px),
-                    contentDescription = stringResource(R.string.game_modes_card_cd),
-                    tint = Color.White,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -330,13 +344,13 @@ private fun GameModeCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.game_modes_card_title),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge
                     )
 
                     Text(
                         text = stringResource(R.string.game_modes_card_summary),
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -355,9 +369,9 @@ private fun GameModeCard(
                         label = { Text(stringResource(mode.displayNameRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            labelColor = Color.Gray,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = Color.White
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         modifier = Modifier.weight(1f)
                     )
@@ -374,18 +388,31 @@ private fun ToggleCard(
     iconResId: Int,
     checked: Boolean,
     onToggle: (Boolean) -> Unit,
-    iconTint: Color = Color.White
+    iconTint: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    SettingsCard(onClick = { onToggle(!checked) }) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .toggleable(
+                    value = checked,
+                    role = Role.Switch,
+                    onValueChange = onToggle
+                )
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(iconResId),
-                contentDescription = title,
+                contentDescription = null,
                 tint = iconTint,
                 modifier = Modifier.size(24.dp)
             )
@@ -393,18 +420,28 @@ private fun ToggleCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = Color.White, style = MaterialTheme.typography.bodyLarge)
-                Text(text = description, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = description,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
 
             Switch(
                 checked = checked,
-                onCheckedChange = onToggle,
+                onCheckedChange = null,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.primary,
                     checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                    uncheckedThumbColor = Color.Gray,
-                    uncheckedTrackColor = Color.DarkGray
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 )
             )
         }

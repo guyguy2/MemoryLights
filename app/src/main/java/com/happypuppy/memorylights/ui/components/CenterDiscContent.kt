@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -31,10 +30,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.model.GameState
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
 
 /**
  * Format Speed Blitz elapsed time as `M:SS.s` — minutes, seconds, tenths.
@@ -86,12 +85,15 @@ fun CenterDiscContent(
         density = baseDensity.density,
         fontScale = baseDensity.fontScale.coerceAtMost(1.25f)
     )
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val accents = LocalGameAccentColors.current
 
     CompositionLocalProvider(LocalDensity provides clampedDensity) {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -104,14 +106,14 @@ fun CenterDiscContent(
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = stringResource(R.string.game_sound_load_failed),
-                            tint = CountdownAmber,
+                            tint = accents.countdownAmber,
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(R.string.game_sound_load_failed),
-                            color = CountdownAmber,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+                            color = accents.countdownAmber,
+                            style = MaterialTheme.typography.labelSmall,
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -121,13 +123,13 @@ fun CenterDiscContent(
                     !soundsLoaded -> {
                         CircularProgressIndicator(
                             modifier = Modifier.size(26.dp),
-                            color = Color.White,
+                            color = onSurface,
                             strokeWidth = 2.5.dp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(R.string.game_loading),
-                            color = Color.LightGray,
+                            color = onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -138,8 +140,11 @@ fun CenterDiscContent(
                         if (gameMode == GameMode.SPEED_BLITZ && blitzElapsedMs > 0L) {
                             Text(
                                 text = formatBlitzTime(blitzElapsedMs),
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = onSurface,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontFeatureSettings = "tnum"
+                                ),
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis
@@ -150,8 +155,10 @@ fun CenterDiscContent(
                                         R.string.game_best_time,
                                         formatBlitzTime(currentBestBlitzTimeMs)
                                     ),
-                                    color = Color(0xFFFFC107),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    color = accents.highScore,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFeatureSettings = "tnum"
+                                    ),
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
@@ -160,16 +167,20 @@ fun CenterDiscContent(
                         } else {
                             Text(
                                 text = level.toString(),
-                                color = Color.White,
-                                style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                                color = onSurface,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontFeatureSettings = "tnum"
+                                ),
                                 maxLines = 1,
                                 softWrap = false
                             )
                             if (currentHighScore > 0) {
                                 Text(
                                     text = stringResource(R.string.game_best_score, currentHighScore),
-                                    color = Color(0xFFFFC107),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    color = accents.highScore,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFeatureSettings = "tnum"
+                                    ),
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
@@ -195,8 +206,8 @@ fun CenterDiscContent(
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = stringResource(R.string.game_tap_to_start),
-                            color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.labelMedium.copy(lineHeight = 13.sp),
+                            color = onSurface.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.labelMedium,
                             textAlign = TextAlign.Center,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -217,10 +228,9 @@ fun CenterDiscContent(
                         ) { animatedLevel ->
                             Text(
                                 text = animatedLevel.toString(),
-                                color = Color.White,
-                                style = MaterialTheme.typography.displaySmall.copy(
-                                    fontSize = 32.sp,
-                                    lineHeight = 36.sp
+                                color = onSurface,
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    fontFeatureSettings = "tnum"
                                 ),
                                 maxLines = 1,
                                 softWrap = false
@@ -233,8 +243,10 @@ fun CenterDiscContent(
                                     playerSequenceSize,
                                     sequenceSize
                                 ),
-                                color = Color.White.copy(alpha = 0.7f),
-                                style = MaterialTheme.typography.labelMedium,
+                                color = onSurfaceVariant,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontFeatureSettings = "tnum"
+                                ),
                                 maxLines = 1,
                                 softWrap = false
                             )

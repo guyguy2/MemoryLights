@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,7 +61,8 @@ fun CenterDiscRing(
         )
     }
 
-    val neutralRingColor = Color.White.copy(alpha = 0.16f)
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val neutralRingColor = onSurface.copy(alpha = 0.16f)
     val reactiveTargetColor = litButton?.color ?: neutralRingColor
     val reactiveColor by animateColorAsState(
         targetValue = reactiveTargetColor,
@@ -101,7 +103,7 @@ fun CenterDiscRing(
 
         // Subtle neutral track
         drawArc(
-            color = Color.White.copy(alpha = 0.14f),
+            color = onSurface.copy(alpha = 0.14f),
             startAngle = 0f,
             sweepAngle = 360f,
             useCenter = false,

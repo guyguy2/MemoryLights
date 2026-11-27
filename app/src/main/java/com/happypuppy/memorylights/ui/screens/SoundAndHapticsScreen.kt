@@ -70,126 +70,135 @@ fun SoundAndHapticsScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.music_note_24px),
-                    contentDescription = stringResource(R.string.sound_packs_heading),
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = stringResource(R.string.sound_packs_heading),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-
-            val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            val fadeColor = surfaceContainerColor.copy(alpha = 0.9f)
-            Box(
+            Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .widthIn(max = 840.dp)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(surfaceContainerColor)
+                    .fillMaxHeight()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                LazyColumn(
-                    state = soundPackListState,
-                    modifier = Modifier.fillMaxSize()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 ) {
-                    items(SoundPack.entries.toList()) { soundPack ->
-                        SoundPackOption(
-                            soundPack = soundPack,
-                            isSelected = soundPack == currentSoundPack,
-                            onSelect = {
-                                if (soundPack.isAvailable) {
-                                    onSoundPackSelected(soundPack)
-                                    toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
-                                }
-                            }
-                        )
-                    }
-
-                    item { Spacer(modifier = Modifier.height(40.dp)) }
+                    Icon(
+                        painter = painterResource(R.drawable.music_note_24px),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = stringResource(R.string.sound_packs_heading),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
 
-                if (canScrollDown) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        fadeColor
-                                    )
-                                )
-                            )
-                            .clickable {
-                                coroutineScope.launch {
-                                    soundPackListState.animateScrollBy(100f)
-                                }
-                            }
-                            .padding(vertical = 8.dp)
-                            .align(Alignment.BottomCenter),
-                        contentAlignment = Alignment.Center
+                val surfaceContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                val fadeColor = surfaceContainerColor.copy(alpha = 0.9f)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(surfaceContainerColor)
+                ) {
+                    LazyColumn(
+                        state = soundPackListState,
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = stringResource(R.string.sound_packs_more_cd),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = stringResource(R.string.sound_packs_more),
-                                color = Color.Gray,
-                                style = MaterialTheme.typography.bodySmall
+                        items(SoundPack.entries.toList()) { soundPack ->
+                            SoundPackOption(
+                                soundPack = soundPack,
+                                isSelected = soundPack == currentSoundPack,
+                                onSelect = {
+                                    if (soundPack.isAvailable) {
+                                        onSoundPackSelected(soundPack)
+                                        toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
+                                    }
+                                }
                             )
                         }
-                    }
-                }
 
-                val showTopFade by remember {
-                    derivedStateOf {
-                        soundPackListState.firstVisibleItemIndex > 0 ||
-                                soundPackListState.firstVisibleItemScrollOffset > 0
+                        item { Spacer(modifier = Modifier.height(48.dp)) }
                     }
-                }
 
-                if (showTopFade) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        fadeColor,
-                                        Color.Transparent
+                    if (canScrollDown) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 48.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            fadeColor
+                                        )
                                     )
                                 )
-                            )
-                            .align(Alignment.TopCenter)
-                    )
+                                .clickable {
+                                    coroutineScope.launch {
+                                        soundPackListState.animateScrollBy(100f)
+                                    }
+                                }
+                                .padding(vertical = 8.dp)
+                                .align(Alignment.BottomCenter),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.sound_packs_more),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    val showTopFade by remember {
+                        derivedStateOf {
+                            soundPackListState.firstVisibleItemIndex > 0 ||
+                                    soundPackListState.firstVisibleItemScrollOffset > 0
+                        }
+                    }
+
+                    if (showTopFade) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(24.dp)
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            fadeColor,
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                                .align(Alignment.TopCenter)
+                        )
+                    }
                 }
             }
         }

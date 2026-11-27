@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -27,12 +26,18 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewFontScale
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.enums.ThemeMode
 import com.happypuppy.memorylights.domain.model.Achievement
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
+import com.happypuppy.memorylights.ui.theme.MyApplicationTheme
 import com.happypuppy.memorylights.util.AppVersionInfo
 import kotlinx.coroutines.launch
 
@@ -58,6 +63,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
+    val accents = LocalGameAccentColors.current
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     fun toast(message: String) {
@@ -68,7 +74,7 @@ fun SettingsScreen(
     }
 
     var showAboutDialog by rememberSaveable { mutableStateOf(false) }
-    var showResetHighScoreDialog by remember { mutableStateOf(false) }
+    var showResetHighScoreDialog by rememberSaveable { mutableStateOf(false) }
     val versionInfo = remember(context) { AppVersionInfo.getFullVersionInfo(context) }
 
     Scaffold(
@@ -85,227 +91,234 @@ fun SettingsScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.TopCenter
         ) {
-            NavCard(
-                title = stringResource(R.string.settings_game_modes_title),
-                summary = stringResource(R.string.settings_game_modes_summary),
-                iconPainterResId = R.drawable.speed_24px,
-                iconTint = Color.White,
-                onClick = onGameModesClick
-            )
-
-            NavCard(
-                title = stringResource(R.string.settings_gameplay_title),
-                summary = stringResource(R.string.settings_gameplay_summary),
-                iconPainterResId = R.drawable.schedule_24px,
-                iconTint = Color.White,
-                onClick = onGameplayClick
-            )
-
-            NavCard(
-                title = stringResource(R.string.settings_sound_title),
-                summary = stringResource(
-                    R.string.settings_sound_summary,
-                    stringResource(currentSoundPack.displayNameRes)
-                ),
-                iconPainterResId = R.drawable.music_note_24px,
-                iconTint = Color.White,
-                onClick = onSoundAndHapticsClick
-            )
-
-            ThemeCard(
-                themeMode = themeMode,
-                onThemeModeChange = { newMode ->
-                    if (newMode != themeMode) {
-                        onThemeModeChange(newMode)
-                        toast(resources.getString(R.string.snack_theme, resources.getString(newMode.displayNameRes)))
-                    }
-                }
-            )
-
-            HorizontalDivider(
+            Column(
                 modifier = Modifier
+                    .widthIn(max = 840.dp)
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
-
-            // F8 polish: surface unlocked-badge count without requiring a
-            // Statistics-screen visit. Tapping leads to the same Statistics
-            // route where the full Achievements list lives, so this is a
-            // shortcut, not a duplicated surface.
-            val totalAchievements = Achievement.entries.size
-            val unlockedCount = Achievement.entries.count { it.name in unlockedAchievements }
-            NavCard(
-                title = stringResource(R.string.settings_achievements_title),
-                summary = stringResource(
-                    R.string.settings_achievements_summary,
-                    unlockedCount,
-                    totalAchievements
-                ),
-                iconImageVector = Icons.Default.Star,
-                iconTint = Color(0xFFFFC107),
-                onClick = onStatisticsClicked
-            )
-
-            NavCard(
-                title = stringResource(R.string.settings_statistics_title),
-                summary = stringResource(R.string.settings_statistics_summary),
-                iconImageVector = Icons.Default.DateRange,
-                iconTint = Color(0xFF4CAF50),
-                onClick = onStatisticsClicked
-            )
-
-            // Reset Score & Statistics card. Only the inner Reset button triggers
-            // the destructive dialog so users can scroll/scan the card without
-            // accidentally firing it.
-            SettingsCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.counter_0_24px),
-                        contentDescription = stringResource(R.string.settings_reset_cd),
-                        tint = Color(0xFFFF9800),
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_reset_title),
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-
-                        Text(
-                            text = stringResource(R.string.settings_reset_summary),
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-
-                    TextButton(
-                        onClick = { showResetHighScoreDialog = true },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text(stringResource(R.string.action_reset))
-                    }
-                }
-            }
-
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest
-            )
-
-            SettingsCard(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                        data = "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
-                        setPackage("com.android.vending")
-                    }
-                    try {
-                        context.startActivity(intent)
-                    } catch (_: ActivityNotFoundException) {
-                        // Fallback to web browser when the Play Store app isn't installed
-                        // (e.g. side-loaded build, GMS-less device).
-                        val fallbackIntent = Intent(
-                            Intent.ACTION_VIEW,
-                            "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
-                        )
-                        context.startActivity(fallbackIntent)
-                    }
-                }
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Row(
+                NavCard(
+                    title = stringResource(R.string.settings_game_modes_title),
+                    summary = stringResource(R.string.settings_game_modes_summary),
+                    iconPainterResId = R.drawable.speed_24px,
+                    iconTint = MaterialTheme.colorScheme.onSurface,
+                    onClick = onGameModesClick
+                )
+
+                NavCard(
+                    title = stringResource(R.string.settings_gameplay_title),
+                    summary = stringResource(R.string.settings_gameplay_summary),
+                    iconPainterResId = R.drawable.schedule_24px,
+                    iconTint = MaterialTheme.colorScheme.onSurface,
+                    onClick = onGameplayClick
+                )
+
+                NavCard(
+                    title = stringResource(R.string.settings_sound_title),
+                    summary = stringResource(
+                        R.string.settings_sound_summary,
+                        stringResource(currentSoundPack.displayNameRes)
+                    ),
+                    iconPainterResId = R.drawable.music_note_24px,
+                    iconTint = MaterialTheme.colorScheme.onSurface,
+                    onClick = onSoundAndHapticsClick
+                )
+
+                ThemeCard(
+                    themeMode = themeMode,
+                    onThemeModeChange = { newMode ->
+                        if (newMode != themeMode) {
+                            onThemeModeChange(newMode)
+                            toast(resources.getString(R.string.snack_theme, resources.getString(newMode.displayNameRes)))
+                        }
+                    }
+                )
+
+                HorizontalDivider(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = stringResource(R.string.settings_rate_cd),
-                        tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(24.dp)
-                    )
+                        .padding(vertical = 12.dp),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                // F8 polish: surface unlocked-badge count without requiring a
+                // Statistics-screen visit. Tapping leads to the same Statistics
+                // route where the full Achievements list lives, so this is a
+                // shortcut, not a duplicated surface.
+                val totalAchievements = Achievement.entries.size
+                val unlockedCount = Achievement.entries.count { it.name in unlockedAchievements }
+                NavCard(
+                    title = stringResource(R.string.settings_achievements_title),
+                    summary = stringResource(
+                        R.string.settings_achievements_summary,
+                        unlockedCount,
+                        totalAchievements
+                    ),
+                    iconImageVector = Icons.Default.Star,
+                    iconTint = accents.highScore,
+                    onClick = onStatisticsClicked
+                )
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_rate_title),
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge
+                NavCard(
+                    title = stringResource(R.string.settings_statistics_title),
+                    summary = stringResource(R.string.settings_statistics_summary),
+                    iconImageVector = Icons.Default.DateRange,
+                    iconTint = accents.averageScore,
+                    onClick = onStatisticsClicked
+                )
+
+                // Reset Score & Statistics card. Only the inner Reset button triggers
+                // the destructive dialog so users can scroll/scan the card without
+                // accidentally firing it.
+                SettingsCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.counter_0_24px),
+                            contentDescription = null,
+                            tint = accents.resetWarning,
+                            modifier = Modifier.size(24.dp)
                         )
 
-                        Text(
-                            text = stringResource(R.string.settings_rate_summary),
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_reset_title),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = stringResource(R.string.settings_reset_summary),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { showResetHighScoreDialog = true },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text(stringResource(R.string.action_reset))
+                        }
                     }
                 }
-            }
 
-            SettingsCard(onClick = { showAboutDialog = true }) {
-                Row(
+                HorizontalDivider(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(vertical = 12.dp),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                )
+
+                SettingsCard(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            data = "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
+                            setPackage("com.android.vending")
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                            // Fallback to web browser when the Play Store app isn't installed
+                            // (e.g. side-loaded build, GMS-less device).
+                            val fallbackIntent = Intent(
+                                Intent.ACTION_VIEW,
+                                "https://play.google.com/store/apps/details?id=com.happypuppy.memorylights".toUri()
+                            )
+                            context.startActivity(fallbackIntent)
+                        }
+                    }
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = stringResource(R.string.settings_about_cd),
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_about_title),
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyLarge
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = accents.highScore,
+                            modifier = Modifier.size(24.dp)
                         )
 
-                        Text(
-                            text = stringResource(R.string.settings_about_summary, versionInfo),
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_rate_title),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = stringResource(R.string.settings_rate_summary),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                SettingsCard(onClick = { showAboutDialog = true }) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_about_title),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+
+                            Text(
+                                text = stringResource(R.string.settings_about_summary, versionInfo),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 
@@ -323,13 +336,13 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.reset_high_score_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.reset_high_score_body),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -356,9 +369,9 @@ fun SettingsScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             },
-            containerColor = MaterialTheme.colorScheme.surface,
-            titleContentColor = Color.White,
-            textContentColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            textContentColor = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -374,14 +387,14 @@ fun AboutDialog(
             Text(
                 text = stringResource(R.string.about_dialog_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(R.string.about_dialog_description),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
 
@@ -391,13 +404,13 @@ fun AboutDialog(
                     Text(
                         text = stringResource(R.string.about_dialog_version),
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = versionInfo,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -406,12 +419,12 @@ fun AboutDialog(
 
                 Text(
                     text = stringResource(R.string.about_dialog_copyright),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
                     text = stringResource(R.string.about_dialog_rights),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -424,9 +437,9 @@ fun AboutDialog(
                 )
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
-        titleContentColor = Color.White,
-        textContentColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurface
     )
 }
 
@@ -454,13 +467,13 @@ private fun NavCard(
             when {
                 iconImageVector != null -> Icon(
                     imageVector = iconImageVector,
-                    contentDescription = title,
+                    contentDescription = null,
                     tint = iconTint,
                     modifier = Modifier.size(24.dp)
                 )
                 iconPainterResId != null -> Icon(
                     painter = painterResource(iconPainterResId),
-                    contentDescription = title,
+                    contentDescription = null,
                     tint = iconTint,
                     modifier = Modifier.size(24.dp)
                 )
@@ -469,14 +482,22 @@ private fun NavCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, color = Color.White, style = MaterialTheme.typography.bodyLarge)
-                Text(text = summary, color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = summary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -485,20 +506,35 @@ private fun NavCard(
 
 @Composable
 fun SettingsCard(
+    modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
-            .padding(bottom = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        content()
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .padding(bottom = 8.dp)
+    val cardColors = CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+    val cardShape = RoundedCornerShape(12.dp)
+
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = cardModifier,
+            colors = cardColors,
+            shape = cardShape
+        ) {
+            content()
+        }
+    } else {
+        Card(
+            modifier = cardModifier,
+            colors = cardColors,
+            shape = cardShape
+        ) {
+            content()
+        }
     }
 }
 
@@ -515,6 +551,7 @@ fun SoundPackOption(
         Color.Transparent
     }
     val contentAlpha = if (isAvailable) 1f else 0.45f
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
         modifier = Modifier
@@ -533,9 +570,9 @@ fun SoundPackOption(
             enabled = isAvailable,
             colors = RadioButtonDefaults.colors(
                 selectedColor = MaterialTheme.colorScheme.primary,
-                unselectedColor = Color.Gray,
-                disabledSelectedColor = Color.Gray.copy(alpha = 0.45f),
-                disabledUnselectedColor = Color.Gray.copy(alpha = 0.45f)
+                unselectedColor = onSurfaceVariant,
+                disabledSelectedColor = onSurfaceVariant.copy(alpha = 0.45f),
+                disabledUnselectedColor = onSurfaceVariant.copy(alpha = 0.45f)
             )
         )
 
@@ -544,13 +581,13 @@ fun SoundPackOption(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(soundPack.displayNameRes),
-                color = Color.White.copy(alpha = contentAlpha),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                 style = MaterialTheme.typography.bodyLarge
             )
 
             Text(
                 text = stringResource(soundPack.descriptionRes),
-                color = Color.Gray.copy(alpha = contentAlpha),
+                color = onSurfaceVariant.copy(alpha = contentAlpha),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
@@ -563,7 +600,7 @@ fun SoundPackOption(
             ) {
                 Text(
                     text = stringResource(R.string.sound_pack_coming_soon),
-                    color = Color.LightGray,
+                    color = onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
@@ -591,20 +628,20 @@ private fun ThemeCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Default.Star,
-                    contentDescription = stringResource(R.string.settings_theme_cd),
-                    tint = Color.White,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.settings_theme_title),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = stringResource(R.string.settings_theme_summary),
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -623,14 +660,64 @@ private fun ThemeCard(
                         label = { Text(stringResource(mode.displayNameRes)) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            labelColor = Color.Gray,
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = Color.White
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ),
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
+    }
+}
+
+@PreviewLightDark
+@PreviewFontScale
+@PreviewScreenSizes
+@Composable
+private fun SettingsScreenPreview() {
+    MyApplicationTheme(themeMode = ThemeMode.DARK) {
+        SettingsScreen(
+            currentSoundPack = SoundPack.RETRO,
+            themeMode = ThemeMode.DARK,
+            onThemeModeChange = {},
+            onGameModesClick = {},
+            onGameplayClick = {},
+            onSoundAndHapticsClick = {},
+            onStatisticsClicked = {},
+            onResetHighScore = {},
+            onBackPressed = {},
+            unlockedAchievements = setOf(Achievement.FirstWin.name, Achievement.Level10.name)
+        )
+    }
+}
+
+@Preview(name = "AMOLED Settings", showBackground = true)
+@Composable
+private fun SettingsScreenAmoledPreview() {
+    MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
+        SettingsScreen(
+            currentSoundPack = SoundPack.STANDARD,
+            themeMode = ThemeMode.AMOLED,
+            onThemeModeChange = {},
+            onGameModesClick = {},
+            onGameplayClick = {},
+            onSoundAndHapticsClick = {},
+            onStatisticsClicked = {},
+            onResetHighScore = {},
+            onBackPressed = {}
+        )
+    }
+}
+
+@Preview(name = "AMOLED About Dialog", showBackground = true)
+@Composable
+private fun AboutDialogPreview() {
+    MyApplicationTheme(themeMode = ThemeMode.AMOLED) {
+        AboutDialog(
+            versionInfo = "1.0.3 (4)",
+            onDismiss = {}
+        )
     }
 }

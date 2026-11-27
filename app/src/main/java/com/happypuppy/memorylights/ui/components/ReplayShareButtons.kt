@@ -31,12 +31,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
 
 /**
  * Bottom-aligned GameOver action cluster: a prominent filled primary "New Game"
@@ -147,14 +147,15 @@ private fun NewGameActionButton(onClick: () -> Unit) {
 
 @Composable
 private fun ReplayActionButton(onClick: () -> Unit) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.Black.copy(alpha = 0.72f),
-            contentColor = Color.White
+            containerColor = GameBoardBackdrop.copy(alpha = 0.72f),
+            contentColor = onSurface
         ),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.4f))
     ) {
         Icon(
             imageVector = Icons.Default.Refresh,
@@ -171,14 +172,15 @@ private fun ReplayActionButton(onClick: () -> Unit) {
 
 @Composable
 private fun ShareActionButton(onClick: () -> Unit) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
     OutlinedButton(
         onClick = onClick,
         modifier = Modifier.defaultMinSize(minHeight = 48.dp),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.Black.copy(alpha = 0.72f),
-            contentColor = Color.White
+            containerColor = GameBoardBackdrop.copy(alpha = 0.72f),
+            contentColor = onSurface
         ),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+        border = BorderStroke(1.dp, onSurface.copy(alpha = 0.4f))
     ) {
         Icon(
             imageVector = Icons.Default.Share,

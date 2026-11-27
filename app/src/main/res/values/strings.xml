@@ -70,6 +70,10 @@
     <string name="a11y_paused">Game paused.</string>
     <string name="a11y_high_score_celebrate">New high score! Level %1$d.</string>
     <string name="a11y_pause_overlay">Game paused. Tap to resume.</string>
+    <string name="a11y_simon_button">%1$s button</string>
+    <string name="a11y_button_state_pressed">pressed</string>
+    <string name="a11y_button_state_illuminated">illuminated</string>
+    <string name="a11y_button_state_off">off</string>
 
     <!-- Settings hub -->
     <string name="settings_title">Settings</string>
@@ -83,13 +87,10 @@
     <string name="settings_statistics_summary">View your game progress and stats</string>
     <string name="settings_reset_title">Reset Score &amp; Statistics</string>
     <string name="settings_reset_summary">Clears high score, games played, and all statistics</string>
-    <string name="settings_reset_cd">Reset Score and Statistics</string>
     <string name="settings_rate_title">Rate this App</string>
     <string name="settings_rate_summary">Enjoying Memory Lights? Let us know!</string>
-    <string name="settings_rate_cd">Rate App</string>
     <string name="settings_about_title">About</string>
     <string name="settings_about_summary">Version %1$s</string>
-    <string name="settings_about_cd">About</string>
 
     <!-- About dialog -->
     <string name="about_dialog_title">About Memory Lights</string>
@@ -106,7 +107,6 @@
     <string name="game_modes_title">Game Modes</string>
     <string name="game_modes_card_title">Game Mode</string>
     <string name="game_modes_card_summary">Classic plays until you miss; Speed Blitz races to level 20</string>
-    <string name="game_modes_card_cd">Game mode</string>
 
     <string name="toggle_difficulty_title">Difficulty</string>
     <string name="toggle_difficulty_summary">Increase speed as levels progress</string>
@@ -118,7 +118,8 @@
     <string name="toggle_audio_only_summary">Hide button colors during playback — recognize the sequence by sound alone</string>
     <string name="toggle_daily_challenge_title">Daily Challenge</string>
     <string name="toggle_daily_challenge_summary">Same sequence for everyone today; come back tomorrow for a new one</string>
-    <string name="toggle_daily_challenge_completed">Completed today — come back tomorrow!</string>
+    <string name="toggle_daily_challenge_completed">Completed today &#8212; come back tomorrow!</string>
+    <string name="toggle_daily_challenge_completed_with_score">%1$s %2$s: %3$d</string>
     <string name="toggle_memory_lights_plus_title">Memory Lights+</string>
     <string name="toggle_memory_lights_plus_summary">6 buttons</string>
 
@@ -146,7 +147,6 @@
     <string name="theme_mode_dark">Dark</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_summary">Surface colors used across menus and dialogs</string>
-    <string name="settings_theme_cd">Theme</string>
 
     <string name="confirm_end_game_title">End current game?</string>
     <string name="confirm_end_game_mode">Switching to %1$s will end your current run. Continue?</string>
@@ -156,7 +156,6 @@
     <string name="gameplay_title">Gameplay</string>
     <string name="gameplay_timeout_title">Player Timeout</string>
     <string name="gameplay_timeout_summary">How long you have to press the next button</string>
-    <string name="gameplay_timeout_cd">Player timeout</string>
     <string name="gameplay_timeout_chip">%1$ds</string>
     <string name="toggle_color_blind_title">Color-Blind Mode</string>
     <string name="toggle_color_blind_summary">Distinct shapes on each button so the game is playable without relying on color</string>
@@ -165,7 +164,6 @@
     <string name="sound_haptics_title">Sound &amp; Haptics</string>
     <string name="sound_packs_heading">Sound Packs</string>
     <string name="sound_packs_more">More sound options</string>
-    <string name="sound_packs_more_cd">More options</string>
     <string name="sound_pack_coming_soon">Coming soon</string>
 
     <!-- Statistics screen -->
@@ -181,7 +179,6 @@
     <string name="statistics_reset_summary">Clear all game progress and statistics</string>
     <string name="statistics_reset_dialog_title">Reset Statistics</string>
     <string name="statistics_reset_dialog_body">Are you sure you want to reset all statistics? This will clear all your game progress and cannot be undone.</string>
-    <string name="statistics_reset_cd">Reset Statistics</string>
 
     <!-- Sound packs (enum-bound) -->
     <string name="sound_pack_standard_name">Standard</string>
@@ -215,6 +212,8 @@
     <string name="achievements_section_heading">Achievements</string>
     <string name="achievements_unlocked_format">%1$d / %2$d unlocked</string>
     <string name="achievements_empty">Play a game to start earning badges.</string>
+    <string name="achievement_cd_unlocked">%1$s unlocked. %2$s</string>
+    <string name="achievement_cd_locked">%1$s locked. %2$s</string>
     <string name="achievement_first_win_title">First Run</string>
     <string name="achievement_first_win_desc">Finish your first game</string>
     <string name="achievement_level_10_title">Double Digits</string>

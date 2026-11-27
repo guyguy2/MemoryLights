@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.happypuppy.memorylights.ui.theme.GameBoardBackdrop
 
 /**
  * Fade/scale-animated headline badge used for HIGH SCORE / BEST TIME,
@@ -45,7 +46,7 @@ fun HeadlineOverlay(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.Black.copy(alpha = 0.78f),
+            color = GameBoardBackdrop.copy(alpha = 0.78f),
             border = BorderStroke(1.dp, color.copy(alpha = 0.35f)),
             shadowElevation = 6.dp
         ) {

@@ -8,10 +8,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import com.happypuppy.memorylights.ui.theme.DefaultGameAccentColors
 
-val CountdownGreen = Color(0xFF4CAF50)
-val CountdownAmber = Color(0xFFFFB300)
-val CountdownRed = Color(0xFFE53935)
+val CountdownGreen = DefaultGameAccentColors.countdownGreen
+val CountdownAmber = DefaultGameAccentColors.countdownAmber
+val CountdownRed = DefaultGameAccentColors.countdownRed
 
 /**
  * Smooth 3-stop countdown urgency color:

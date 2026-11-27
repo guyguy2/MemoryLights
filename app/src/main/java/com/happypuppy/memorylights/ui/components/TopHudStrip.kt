@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -56,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.model.GameState
+import com.happypuppy.memorylights.ui.theme.LocalGameAccentColors
 
 /**
  * Slim top metadata strip directly under `TopAppBar` for 4-tile mode (Wave 19 Option A).
@@ -81,6 +81,9 @@ fun SlimMetadataStrip(
     @StringRes soundPackDisplayNameRes: Int,
     modifier: Modifier = Modifier
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val accents = LocalGameAccentColors.current
+
     if (gameMode == GameMode.SPEED_BLITZ) {
         val isActiveBlitz = gameState == GameState.ShowingSequence ||
             gameState == GameState.PlayerRepeating ||
@@ -101,7 +104,7 @@ fun SlimMetadataStrip(
                 .testTag(GameScreenTags.SLIM_METADATA_STRIP),
             shape = RoundedCornerShape(12.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f))
+            border = BorderStroke(1.dp, onSurface.copy(alpha = 0.10f))
         ) {
             FlowRow(
                 modifier = Modifier
@@ -117,25 +120,31 @@ fun SlimMetadataStrip(
                     if (isActiveBlitz) {
                         Text(
                             text = stringResource(R.string.blitz_level_progress, level, targetLevel),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = onSurface,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontFeatureSettings = "tnum"
+                            ),
                             maxLines = 1
                         )
                         Text(
                             text = stringResource(R.string.blitz_separator),
-                            color = Color.White.copy(alpha = 0.45f),
+                            color = onSurface.copy(alpha = 0.45f),
                             style = MaterialTheme.typography.labelLarge
                         )
                         Text(
                             text = formatBlitzTime(liveElapsedMs),
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = onSurface,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = "tnum"
+                            ),
                             maxLines = 1
                         )
                     } else {
                         Text(
                             text = stringResource(R.string.game_mode_speed_blitz),
-                            color = Color.White,
+                            color = onSurface,
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                             maxLines = 1
                         )
@@ -152,8 +161,11 @@ fun SlimMetadataStrip(
                                 R.string.hud_best_time_star,
                                 formatBlitzTime(currentBestBlitzTimeMs)
                             ),
-                            color = Color(0xFFFFC107),
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = accents.highScore,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontFeatureSettings = "tnum"
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -174,8 +186,11 @@ fun SlimMetadataStrip(
             if (currentHighScore > 0) {
                 Text(
                     text = stringResource(R.string.hud_best_score_star, currentHighScore),
-                    color = Color(0xFFFFC107),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = accents.highScore,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = "tnum"
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -241,7 +256,7 @@ fun FullTopHudStrip(
             .testTag(GameScreenTags.FULL_TOP_HUD_STRIP),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             BoxWithConstraints(
@@ -335,21 +350,25 @@ private fun HudRoundBlock(
     level: Int,
     targetLevel: Int
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
     Column(horizontalAlignment = Alignment.Start) {
         Text(
             text = stringResource(
                 if (gameMode == GameMode.SPEED_BLITZ) R.string.hud_blitz_label
                 else R.string.hud_round
             ),
-            color = Color.White.copy(alpha = 0.62f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
             maxLines = 1
         )
         if (gameMode == GameMode.SPEED_BLITZ) {
             Text(
                 text = stringResource(R.string.blitz_level_progress, level, targetLevel),
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = onSurface,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFeatureSettings = "tnum"
+                ),
                 maxLines = 1
             )
         } else {
@@ -362,8 +381,11 @@ private fun HudRoundBlock(
             ) { animatedLevel ->
                 Text(
                     text = animatedLevel.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = onSurface,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFeatureSettings = "tnum"
+                    ),
                     maxLines = 1
                 )
             }
@@ -382,13 +404,15 @@ private fun HudStatusPill(
     soundsLoaded: Boolean,
     soundLoadError: String?
 ) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val accents = LocalGameAccentColors.current
     val pillShape = RoundedCornerShape(50)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
-            .background(Color.White.copy(alpha = 0.08f), pillShape)
-            .border(1.dp, Color.White.copy(alpha = 0.14f), pillShape)
+            .background(onSurface.copy(alpha = 0.08f), pillShape)
+            .border(1.dp, onSurface.copy(alpha = 0.14f), pillShape)
             .padding(horizontal = 12.dp, vertical = 5.dp)
     ) {
         when {
@@ -396,12 +420,12 @@ private fun HudStatusPill(
                 Icon(
                     imageVector = Icons.Default.Warning,
                     contentDescription = null,
-                    tint = CountdownAmber,
+                    tint = accents.countdownAmber,
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
                     text = stringResource(R.string.hud_status_audio_error),
-                    color = CountdownAmber,
+                    color = accents.countdownAmber,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -411,12 +435,12 @@ private fun HudStatusPill(
             !soundsLoaded -> {
                 CircularProgressIndicator(
                     modifier = Modifier.size(13.dp),
-                    color = Color.White,
+                    color = onSurface,
                     strokeWidth = 2.dp
                 )
                 Text(
                     text = stringResource(R.string.game_loading),
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = onSurface.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -426,20 +450,26 @@ private fun HudStatusPill(
             gameState == GameState.PlayerRepeating -> {
                 Text(
                     text = stringResource(R.string.hud_step_progress, playerSequenceSize, sequenceSize),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = onSurface,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontFeatureSettings = "tnum"
+                    ),
                     maxLines = 1
                 )
                 if (gameMode == GameMode.SPEED_BLITZ) {
                     Text(
                         text = stringResource(R.string.blitz_separator),
-                        color = Color.White.copy(alpha = 0.45f),
+                        color = onSurface.copy(alpha = 0.45f),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(
                         text = formatBlitzTime(blitzElapsedDisplayMs),
-                        color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = onSurface.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = "tnum"
+                        ),
                         maxLines = 1
                     )
                 }
@@ -448,20 +478,23 @@ private fun HudStatusPill(
             gameState == GameState.ShowingSequence -> {
                 Text(
                     text = stringResource(R.string.hud_status_watch),
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = onSurface.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1
                 )
                 if (gameMode == GameMode.SPEED_BLITZ) {
                     Text(
                         text = stringResource(R.string.blitz_separator),
-                        color = Color.White.copy(alpha = 0.45f),
+                        color = onSurface.copy(alpha = 0.45f),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(
                         text = formatBlitzTime(blitzElapsedDisplayMs),
-                        color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = onSurface.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = "tnum"
+                        ),
                         maxLines = 1
                     )
                 }
@@ -470,20 +503,23 @@ private fun HudStatusPill(
             gameState == GameState.Paused -> {
                 Text(
                     text = stringResource(R.string.hud_status_paused),
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = onSurface.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1
                 )
                 if (gameMode == GameMode.SPEED_BLITZ) {
                     Text(
                         text = stringResource(R.string.blitz_separator),
-                        color = Color.White.copy(alpha = 0.45f),
+                        color = onSurface.copy(alpha = 0.45f),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(
                         text = formatBlitzTime(blitzElapsedDisplayMs),
-                        color = Color.White.copy(alpha = 0.9f),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = onSurface.copy(alpha = 0.9f),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            fontFeatureSettings = "tnum"
+                        ),
                         maxLines = 1
                     )
                 }
@@ -492,7 +528,7 @@ private fun HudStatusPill(
             gameState == GameState.WaitingToStart -> {
                 Text(
                     text = stringResource(R.string.hud_status_ready),
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = onSurface.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
                     maxLines = 1
                 )
@@ -504,20 +540,23 @@ private fun HudStatusPill(
                         if (blitzWon) R.string.hud_status_victory
                         else R.string.hud_status_game_over
                     ),
-                    color = if (blitzWon) Color(0xFF66BB6A) else Color.White,
+                    color = if (blitzWon) accents.victory else onSurface,
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                     maxLines = 1
                 )
                 if (gameMode == GameMode.SPEED_BLITZ && blitzElapsedDisplayMs > 0L) {
                     Text(
                         text = stringResource(R.string.blitz_separator),
-                        color = Color.White.copy(alpha = 0.45f),
+                        color = onSurface.copy(alpha = 0.45f),
                         style = MaterialTheme.typography.labelMedium
                     )
                     Text(
                         text = formatBlitzTime(blitzElapsedDisplayMs),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = onSurface,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontFeatureSettings = "tnum"
+                        ),
                         maxLines = 1
                     )
                 }
@@ -533,6 +572,7 @@ private fun HudBestAndPackBlock(
     currentBestBlitzTimeMs: Long,
     @StringRes soundPackDisplayNameRes: Int
 ) {
+    val accents = LocalGameAccentColors.current
     Column(horizontalAlignment = Alignment.End) {
         if (gameMode == GameMode.SPEED_BLITZ) {
             if (currentBestBlitzTimeMs > 0L) {
@@ -541,8 +581,11 @@ private fun HudBestAndPackBlock(
                         R.string.hud_best_time_star,
                         formatBlitzTime(currentBestBlitzTimeMs)
                     ),
-                    color = Color(0xFFFFC107),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = accents.highScore,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = "tnum"
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -550,8 +593,11 @@ private fun HudBestAndPackBlock(
         } else if (currentHighScore > 0) {
             Text(
                 text = stringResource(R.string.hud_best_score_star, currentHighScore),
-                color = Color(0xFFFFC107),
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = accents.highScore,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontFeatureSettings = "tnum"
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -562,17 +608,18 @@ private fun HudBestAndPackBlock(
 
 @Composable
 private fun SoundPackLabel(@StringRes soundPackDisplayNameRes: Int) {
+    val tint = MaterialTheme.colorScheme.onSurfaceVariant
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(R.drawable.music_note_24px),
             contentDescription = stringResource(R.string.game_sound_pack),
-            tint = Color.White.copy(alpha = 0.72f),
+            tint = tint,
             modifier = Modifier.size(13.dp)
         )
         Spacer(modifier = Modifier.width(3.dp))
         Text(
             text = stringResource(soundPackDisplayNameRes),
-            color = Color.White.copy(alpha = 0.72f),
+            color = tint,
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -607,7 +654,7 @@ private fun HudCountdownBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(4.dp)
-            .background(Color.White.copy(alpha = 0.10f))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
             .testTag(GameScreenTags.COUNTDOWN_BAR)
             .then(
                 if (isPlayerTurn) {

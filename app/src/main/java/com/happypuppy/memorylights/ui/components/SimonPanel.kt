@@ -22,12 +22,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.happypuppy.memorylights.R
 import com.happypuppy.memorylights.domain.enums.ColorBlindShape
 
 @Composable
@@ -149,19 +151,22 @@ fun SimonPanel(
     val offsetX = startPaddingValue
     val offsetY = topPaddingValue
 
-    // Accessibility state description
-    val stateDesc = when {
-        userPressed -> "pressed"
-        isLit -> "illuminated"
-        else -> "off"
-    }
+    // Accessibility content & state descriptions (localized)
+    val buttonContentDesc = stringResource(R.string.a11y_simon_button, colorName)
+    val stateDesc = stringResource(
+        when {
+            userPressed -> R.string.a11y_button_state_pressed
+            isLit -> R.string.a11y_button_state_illuminated
+            else -> R.string.a11y_button_state_off
+        }
+    )
 
     Box(
         modifier = modifier
             .sizeIn(minWidth = 48.dp, minHeight = 48.dp) // Minimum touch target size per Material Design
             .clip(RoundedCornerShape(16.dp))
             .semantics {
-                contentDescription = "$colorName button"
+                contentDescription = buttonContentDesc
                 stateDescription = stateDesc
                 role = Role.Button
             }
