@@ -1,8 +1,8 @@
 # Memory Lights — UX, Visual Craft & Automated Guard Plan
 
 **Source:** `android-ux-audit` against `android-ux-design` standards (2026-11-27)
-**Status:** Planned (not started — execute on a clean feature branch off `main`, e.g. `ux/wave-20-craft-and-guards`)
-**Verification baseline:** `local-ci.sh --app memorylights` + `local-emulator-test.sh --app memorylights` on `Pixel_10` (`emulator-5558`)
+**Status:** Complete (Wave 20 — Waves A, B, C, and D implemented and verified on `ux/wave-20-craft-and-guards`, merged into `main`)
+**Verification baseline:** `local-ci.sh --app memorylights` (140/140 unit tests, `lintDebug` 0 errors) + `Pixel_10` (`emulator-5558`, 27/27 instrumented & ATF tests, `2.0x` font scale & reduced-motion spot-checks) + 62 Compose multipreview renders (`android preview render`)
 
 ---
 
