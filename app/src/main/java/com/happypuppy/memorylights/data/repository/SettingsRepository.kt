@@ -48,7 +48,7 @@ data class AppSettings(
     val dailyCompletedEpochDay: Long = 0L,
     /** Best level reached on `dailyCompletedEpochDay`'s daily run. Resets when the day rolls over. */
     val dailyBestLevel: Int = 0,
-    val themeMode: ThemeMode = ThemeMode.AMOLED,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
     /**
      * F8: persisted set of unlocked achievement IDs (matching `Achievement.name`).
      * Stored as a string set so the data layer never has to import the
@@ -185,12 +185,12 @@ class DataStoreSettingsRepository internal constructor(
     }
 
     private fun readThemeMode(prefs: Preferences): ThemeMode {
-        val name = prefs[KEY_THEME_MODE] ?: return ThemeMode.AMOLED
+        val name = prefs[KEY_THEME_MODE] ?: return ThemeMode.SYSTEM
         return try {
             ThemeMode.valueOf(name)
         } catch (_: IllegalArgumentException) {
-            Log.w(TAG, "Invalid theme mode name: $name, defaulting to AMOLED")
-            ThemeMode.AMOLED
+            Log.w(TAG, "Invalid theme mode name: $name, defaulting to SYSTEM")
+            ThemeMode.SYSTEM
         }
     }
 

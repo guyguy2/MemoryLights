@@ -196,25 +196,34 @@ class ScreenAccessibilityTest {
         checkAllWindows()
         rule.onNodeWithText("Cancel").performClick()
 
-        // Verify Privacy Policy row is visible, accessible, and clickable
-        rule.onNodeWithText("Privacy Policy").performScrollTo().assertIsDisplayed().performClick()
-        assertEquals(1, privacyPolicyClicks)
-        assertTrue(PRIVACY_POLICY_URL.startsWith("https://"))
+        // Privacy Policy is housed inside the About dialog, not as a top-level Settings card
+        rule.onNodeWithText("Privacy Policy").assertDoesNotExist()
 
-        // Open About dialog and verify dialog window
+        // Open About dialog and verify dialog window + Privacy Policy link
         rule.onNodeWithText("About").performScrollTo().performClick()
         rule.onNodeWithText("About Memory Lights").assertIsDisplayed()
         checkAllWindows()
+
+        rule.onNodeWithText("Privacy Policy").assertIsDisplayed().performClick()
+        assertEquals(1, privacyPolicyClicks)
+        assertTrue(PRIVACY_POLICY_URL.startsWith("https://"))
     }
 
     @Test
     fun aboutDialog_darkTheme_passesAccessibilityChecks() {
+        var privacyPolicyClicks = 0
         rule.setContent {
             MyApplicationTheme(themeMode = ThemeMode.DARK) {
-                AboutDialog(versionInfo = "1.0.3 (4)", onDismiss = {})
+                AboutDialog(
+                    versionInfo = "1.0.3 (4)",
+                    onDismiss = {},
+                    onPrivacyPolicyClick = { privacyPolicyClicks++ }
+                )
             }
         }
         checkAllWindows()
+        rule.onNodeWithText("Privacy Policy").assertIsDisplayed().performClick()
+        assertEquals(1, privacyPolicyClicks)
     }
 
     @Test
@@ -327,6 +336,8 @@ class ScreenAccessibilityTest {
         }
         rule.onNodeWithText("Light").assertIsDisplayed().performClick()
         assertEquals(ThemeMode.LIGHT, selectedTheme)
+        rule.onNodeWithText("System Default").assertIsDisplayed().performClick()
+        assertEquals(ThemeMode.SYSTEM, selectedTheme)
         checkAllWindows()
     }
 

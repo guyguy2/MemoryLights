@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,8 +45,14 @@ class MainActivity : ComponentActivity() {
                 SystemClock.elapsedRealtime() < splashDeadlineMs
         }
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
         )
 
         Log.d(TAG, "onCreate called")
@@ -71,7 +78,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
-            val isLightTheme = uiState.themeMode == ThemeMode.LIGHT
+            val systemInDarkTheme = isSystemInDarkTheme()
+            val isLightTheme = uiState.themeMode.resolve(systemInDarkTheme) == ThemeMode.LIGHT
 
             DisposableEffect(isLightTheme) {
                 val barStyle = if (isLightTheme) {

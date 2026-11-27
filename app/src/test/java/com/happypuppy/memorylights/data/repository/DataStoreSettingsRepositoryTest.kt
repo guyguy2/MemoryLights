@@ -3,9 +3,12 @@ package com.happypuppy.memorylights.data.repository
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import app.cash.turbine.test
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SoundPack
+import com.happypuppy.memorylights.domain.enums.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,10 +59,28 @@ class DataStoreSettingsRepositoryTest {
         repo.settingsFlow.test {
             val first = awaitItem()
             assertEquals(AppSettings(), first)
+            assertEquals(ThemeMode.SYSTEM, first.themeMode)
             assertTrue(first.difficultyEnabled)
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun `setThemeMode persists all modes and invalid stored value falls back to SYSTEM`() =
+        runTest(testScope.testScheduler) {
+            repo.settingsFlow.test {
+                assertEquals(ThemeMode.SYSTEM, awaitItem().themeMode)
+                repo.setThemeMode(ThemeMode.AMOLED)
+                assertEquals(ThemeMode.AMOLED, awaitItem().themeMode)
+                repo.setThemeMode(ThemeMode.SYSTEM)
+                assertEquals(ThemeMode.SYSTEM, awaitItem().themeMode)
+                repo.setThemeMode(ThemeMode.LIGHT)
+                assertEquals(ThemeMode.LIGHT, awaitItem().themeMode)
+                dataStore.edit { it[stringPreferencesKey("theme_mode")] = "UNKNOWN_MODE" }
+                assertEquals(ThemeMode.SYSTEM, awaitItem().themeMode)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
 
     @Test
     fun `setSoundPack persists and re-emits`() = runTest(testScope.testScheduler) {

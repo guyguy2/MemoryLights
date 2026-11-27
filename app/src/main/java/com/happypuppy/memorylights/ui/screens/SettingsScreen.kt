@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,13 +12,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -28,7 +27,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewFontScale
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -50,8 +51,8 @@ internal const val PRIVACY_POLICY_URL = "https://guyguy2.github.io/MemoryLights/
 /**
  * Top-level Settings screen — a navigation hub since F18. Three chevron
  * rows lead to focused sub-screens (Game Modes / Gameplay / Sound &
- * Haptics); the global utilities (Statistics, Reset, Rate, Privacy Policy,
- * About) live directly here so they remain one tap away.
+ * Haptics); the global utilities (Statistics, Reset, Rate, About) live
+ * directly here so they remain one tap away.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -292,54 +293,6 @@ fun SettingsScreen(
                     }
                 }
 
-                SettingsCard(
-                    onClick = {
-                        if (onPrivacyPolicyClick != null) {
-                            onPrivacyPolicyClick()
-                        } else {
-                            val privacyIntent = Intent(
-                                Intent.ACTION_VIEW,
-                                PRIVACY_POLICY_URL.toUri()
-                            )
-                            try {
-                                context.startActivity(privacyIntent)
-                            } catch (_: ActivityNotFoundException) {
-                                toast(resources.getString(R.string.privacy_policy_unavailable))
-                            }
-                        }
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(24.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.settings_privacy_policy_title),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-
-                            Text(
-                                text = stringResource(R.string.settings_privacy_policy_summary),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-
                 SettingsCard(onClick = { showAboutDialog = true }) {
                     Row(
                         modifier = Modifier
@@ -380,7 +333,23 @@ fun SettingsScreen(
     if (showAboutDialog) {
         AboutDialog(
             versionInfo = versionInfo,
-            onDismiss = { showAboutDialog = false }
+            onDismiss = { showAboutDialog = false },
+            onPrivacyPolicyClick = {
+                if (onPrivacyPolicyClick != null) {
+                    onPrivacyPolicyClick()
+                } else {
+                    val privacyIntent = Intent(
+                        Intent.ACTION_VIEW,
+                        PRIVACY_POLICY_URL.toUri()
+                    )
+                    try {
+                        context.startActivity(privacyIntent)
+                    } catch (_: ActivityNotFoundException) {
+                        showAboutDialog = false
+                        toast(resources.getString(R.string.privacy_policy_unavailable))
+                    }
+                }
+            }
         )
     }
 
@@ -434,7 +403,8 @@ fun SettingsScreen(
 @Composable
 fun AboutDialog(
     versionInfo: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onPrivacyPolicyClick: () -> Unit = {}
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -446,7 +416,10 @@ fun AboutDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
                     text = stringResource(R.string.about_dialog_description),
                     color = MaterialTheme.colorScheme.onSurface,
@@ -482,6 +455,25 @@ fun AboutDialog(
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium
                 )
+
+                Box(
+                    modifier = Modifier
+                        .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable(
+                            role = Role.Button,
+                            onClick = onPrivacyPolicyClick
+                        ),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        text = stringResource(R.string.about_dialog_privacy_policy),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDecoration = TextDecoration.Underline
+                        )
+                    )
+                }
             }
         },
         confirmButton = {
@@ -665,8 +657,8 @@ fun SoundPackOption(
 }
 
 /**
- * Theme picker card (F12). Three FilterChips for AMOLED Black / Dark / Light
- * in a responsive [FlowRow] so chips stay single-line on compact phones and
+ * Theme picker card (F12). FilterChips for System Default / AMOLED Black / Dark /
+ * Light in a responsive [FlowRow] so chips stay single-line on compact phones and
  * wrap cleanly at `2.0x` font scale.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -740,11 +732,10 @@ private fun ThemeCard(
 @PreviewScreenSizes
 @Composable
 private fun SettingsScreenPreview() {
-    val mode = if (isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT
-    MyApplicationTheme(themeMode = mode) {
+    MyApplicationTheme(themeMode = ThemeMode.SYSTEM) {
         SettingsScreen(
             currentSoundPack = SoundPack.RETRO,
-            themeMode = mode,
+            themeMode = ThemeMode.SYSTEM,
             onThemeModeChange = {},
             onGameModesClick = {},
             onGameplayClick = {},

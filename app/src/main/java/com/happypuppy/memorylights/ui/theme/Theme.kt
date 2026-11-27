@@ -1,5 +1,6 @@
 package com.happypuppy.memorylights.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -10,26 +11,27 @@ import com.happypuppy.memorylights.ui.components.isReducedMotionEnabled
 
 @Composable
 fun MyApplicationTheme(
-    themeMode: ThemeMode = ThemeMode.AMOLED,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     hapticsEnabled: Boolean = true,
     reducedMotionOverride: Boolean? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val reducedMotion = reducedMotionOverride ?: remember(context) { isReducedMotionEnabled(context) }
+    val resolvedThemeMode = themeMode.resolve(isSystemInDarkTheme())
 
-    val colorScheme = when (themeMode) {
+    val colorScheme = when (resolvedThemeMode) {
         ThemeMode.AMOLED -> AmoledColorScheme
-        ThemeMode.DARK -> DarkMaterialColorScheme
+        ThemeMode.DARK, ThemeMode.SYSTEM -> DarkMaterialColorScheme
         ThemeMode.LIGHT -> LightMaterialColorScheme
     }
-    val accentColors = when (themeMode) {
+    val accentColors = when (resolvedThemeMode) {
         ThemeMode.LIGHT -> LightGameAccentColors
-        ThemeMode.AMOLED, ThemeMode.DARK -> DefaultGameAccentColors
+        ThemeMode.AMOLED, ThemeMode.DARK, ThemeMode.SYSTEM -> DefaultGameAccentColors
     }
-    val particleColors = when (themeMode) {
+    val particleColors = when (resolvedThemeMode) {
         ThemeMode.LIGHT -> LightCelebrationParticleColors
-        ThemeMode.AMOLED, ThemeMode.DARK -> CelebrationParticleColors
+        ThemeMode.AMOLED, ThemeMode.DARK, ThemeMode.SYSTEM -> CelebrationParticleColors
     }
 
     CompositionLocalProvider(
