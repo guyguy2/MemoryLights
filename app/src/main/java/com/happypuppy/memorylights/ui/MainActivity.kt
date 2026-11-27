@@ -8,7 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import com.happypuppy.memorylights.R
+import com.happypuppy.memorylights.BuildConfig
+import com.happypuppy.memorylights.data.manager.SimonSoundManager
 import com.happypuppy.memorylights.domain.enums.SimonButton
 import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.model.GameState
@@ -68,27 +69,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkSoundResources() {
+        if (!BuildConfig.DEBUG) return
         try {
-            // Get all sound packs
-            val soundPacks = SoundPack.entries
+            val soundPacks = SoundPack.entries.filter { it.isAvailable }
             val buttons = SimonButton.entries
 
             Log.d(TAG, "Checking sound resources:")
 
-            // Check resources for each sound pack
             soundPacks.forEach { soundPack ->
                 val prefix = soundPack.resourcePrefix
-                Log.d(TAG, "Checking ${getString(soundPack.displayNameRes)} (${prefix}) sound pack:")
+                Log.d(TAG, "Checking ${getString(soundPack.displayNameRes)} ($prefix) sound pack:")
 
-                // Check button sounds
                 buttons.forEach { button ->
-                    val resourceName = "${prefix}_${button.name.lowercase()}_tone"
-                    checkResource(resourceName)
+                    checkResource("${prefix}_${button.name.lowercase()}_tone")
                 }
 
-                // Check error sound
-                val errorResourceName = "${prefix}_error_tone"
-                checkResource(errorResourceName)
+                checkResource("${prefix}_error_tone")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error checking resources", e)
@@ -115,44 +111,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkResource(resourceName: String) {
-        // Map resource names to direct resource IDs
-        val resourceId = when (resourceName) {
-            // Standard sound pack
-            "standard_green_tone" -> R.raw.standard_green_tone
-            "standard_red_tone" -> R.raw.standard_red_tone
-            "standard_yellow_tone" -> R.raw.standard_yellow_tone
-            "standard_blue_tone" -> R.raw.standard_blue_tone
-            "standard_error_tone" -> R.raw.standard_error_tone
-
-            // Funny sound pack - using standard sounds until funny ones are added
-            "funny_green_tone", "funny_red_tone", "funny_yellow_tone",
-            "funny_blue_tone", "funny_error_tone" -> {
-                // Log that we're using standard sounds as fallback
-                Log.d(TAG, "  - Using standard sounds for: $resourceName")
-                0 // Return 0 to indicate it's not directly available but handled
-            }
-
-            // For all other resources
-            else -> 0
-        }
+        val resourceId = SimonSoundManager.getResourceId(resourceName)
 
         if (resourceId != 0) {
-            // Resource exists
             Log.d(TAG, "✓ Resource found: $resourceName (ID: $resourceId)")
-
-            // Try to open the resource to verify it's accessible
             try {
-                val descriptor = resources.openRawResourceFd(resourceId)
-                Log.d(TAG, "  - File size: ${descriptor.length} bytes")
-                descriptor.close()
+                resources.openRawResourceFd(resourceId).use { descriptor ->
+                    Log.d(TAG, "  - File size: ${descriptor.length} bytes")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "  - Error opening resource: $e")
             }
-        } else if (resourceName.startsWith("funny_")) {
-            // Resource not found but we have fallbacks for funny sounds
-            Log.d(TAG, "✓ (Fallback) Will use standard sounds for: $resourceName")
         } else {
-            // Resource not found and no fallback
             Log.e(TAG, "✗ Resource missing: $resourceName")
         }
     }

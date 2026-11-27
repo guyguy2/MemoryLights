@@ -7,7 +7,6 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.SoundPool
-import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -32,6 +31,77 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
 
     companion object {
         private const val TAG = "SimonSoundManager"
+
+        /**
+         * Resolve raw resource ID by canonical resource name using direct R.raw references.
+         */
+        internal fun getResourceId(resourceName: String): Int = when (resourceName) {
+            // Standard sound pack - all 6 buttons
+            "standard_green_tone" -> R.raw.standard_green_tone
+            "standard_red_tone" -> R.raw.standard_red_tone
+            "standard_yellow_tone" -> R.raw.standard_yellow_tone
+            "standard_blue_tone" -> R.raw.standard_blue_tone
+            "standard_purple_tone" -> R.raw.standard_purple_tone
+            "standard_orange_tone" -> R.raw.standard_orange_tone
+            "standard_error_tone" -> R.raw.standard_error_tone
+
+            // Funny sound pack - all 6 buttons
+            "funny_green_tone" -> R.raw.funny_green_tone
+            "funny_red_tone" -> R.raw.funny_red_tone
+            "funny_yellow_tone" -> R.raw.funny_yellow_tone
+            "funny_blue_tone" -> R.raw.funny_blue_tone
+            "funny_purple_tone" -> R.raw.funny_purple_tone
+            "funny_orange_tone" -> R.raw.funny_orange_tone
+            "funny_error_tone" -> R.raw.funny_error_tone
+
+            // Electronic sound pack - all 6 buttons
+            "electronic_green_tone" -> R.raw.electronic_green_tone
+            "electronic_red_tone" -> R.raw.electronic_red_tone
+            "electronic_yellow_tone" -> R.raw.electronic_yellow_tone
+            "electronic_blue_tone" -> R.raw.electronic_blue_tone
+            "electronic_purple_tone" -> R.raw.electronic_purple_tone
+            "electronic_orange_tone" -> R.raw.electronic_orange_tone
+            "electronic_error_tone" -> R.raw.electronic_error_tone
+
+            // Retro sound pack - all 6 buttons
+            "retro_green_tone" -> R.raw.retro_green_tone
+            "retro_red_tone" -> R.raw.retro_red_tone
+            "retro_yellow_tone" -> R.raw.retro_yellow_tone
+            "retro_blue_tone" -> R.raw.retro_blue_tone
+            "retro_purple_tone" -> R.raw.retro_purple_tone
+            "retro_orange_tone" -> R.raw.retro_orange_tone
+            "retro_error_tone" -> R.raw.retro_error_tone
+
+            // Musical sound pack - all 6 buttons
+            "musical_green_tone" -> R.raw.musical_green_tone
+            "musical_red_tone" -> R.raw.musical_red_tone
+            "musical_yellow_tone" -> R.raw.musical_yellow_tone
+            "musical_blue_tone" -> R.raw.musical_blue_tone
+            "musical_purple_tone" -> R.raw.musical_purple_tone
+            "musical_orange_tone" -> R.raw.musical_orange_tone
+            "musical_error_tone" -> R.raw.musical_error_tone
+
+            // Sci-Fi sound pack - all 6 buttons
+            "scifi_green_tone" -> R.raw.scifi_green_tone
+            "scifi_red_tone" -> R.raw.scifi_red_tone
+            "scifi_yellow_tone" -> R.raw.scifi_yellow_tone
+            "scifi_blue_tone" -> R.raw.scifi_blue_tone
+            "scifi_purple_tone" -> R.raw.scifi_purple_tone
+            "scifi_orange_tone" -> R.raw.scifi_orange_tone
+            "scifi_error_tone" -> R.raw.scifi_error_tone
+
+            // Nature sound pack - all 6 buttons
+            "nature_green_tone" -> R.raw.nature_green_tone
+            "nature_red_tone" -> R.raw.nature_red_tone
+            "nature_yellow_tone" -> R.raw.nature_yellow_tone
+            "nature_blue_tone" -> R.raw.nature_blue_tone
+            "nature_purple_tone" -> R.raw.nature_purple_tone
+            "nature_orange_tone" -> R.raw.nature_orange_tone
+            "nature_error_tone" -> R.raw.nature_error_tone
+
+            // For all other resources, return 0 (not found)
+            else -> 0
+        }
     }
 
     private val soundPool: SoundPool
@@ -403,80 +473,12 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
      */
     private fun getResourceId(resourceName: String): Int {
         Log.d(TAG, "🔍 Looking up resource ID for: $resourceName")
-        
-        // Use direct resource references to avoid reflection
-        val resourceId = when (resourceName) {
-            // Standard sound pack - all 6 buttons
-            "standard_green_tone" -> R.raw.standard_green_tone
-            "standard_red_tone" -> R.raw.standard_red_tone
-            "standard_yellow_tone" -> R.raw.standard_yellow_tone
-            "standard_blue_tone" -> R.raw.standard_blue_tone
-            "standard_purple_tone" -> R.raw.standard_purple_tone
-            "standard_orange_tone" -> R.raw.standard_orange_tone
-            "standard_error_tone" -> R.raw.standard_error_tone
-
-            // Funny sound pack - all 6 buttons
-            "funny_green_tone" -> R.raw.funny_green_tone
-            "funny_red_tone" -> R.raw.funny_red_tone
-            "funny_yellow_tone" -> R.raw.funny_yellow_tone
-            "funny_blue_tone" -> R.raw.funny_blue_tone
-            "funny_purple_tone" -> R.raw.funny_purple_tone
-            "funny_orange_tone" -> R.raw.funny_orange_tone
-            "funny_error_tone" -> R.raw.funny_error_tone
-
-            // Electronic sound pack - all 6 buttons
-            "electronic_green_tone" -> R.raw.electronic_green_tone
-            "electronic_red_tone" -> R.raw.electronic_red_tone
-            "electronic_yellow_tone" -> R.raw.electronic_yellow_tone
-            "electronic_blue_tone" -> R.raw.electronic_blue_tone
-            "electronic_purple_tone" -> R.raw.electronic_purple_tone
-            "electronic_orange_tone" -> R.raw.electronic_orange_tone
-            "electronic_error_tone" -> R.raw.electronic_error_tone
-
-            // Retro sound pack - all 6 buttons
-            "retro_green_tone" -> R.raw.retro_green_tone
-            "retro_red_tone" -> R.raw.retro_red_tone
-            "retro_yellow_tone" -> R.raw.retro_yellow_tone
-            "retro_blue_tone" -> R.raw.retro_blue_tone
-            "retro_purple_tone" -> R.raw.retro_purple_tone
-            "retro_orange_tone" -> R.raw.retro_orange_tone
-            "retro_error_tone" -> R.raw.retro_error_tone
-
-            // Musical sound pack - all 6 buttons
-            "musical_green_tone" -> R.raw.musical_green_tone
-            "musical_red_tone" -> R.raw.musical_red_tone
-            "musical_yellow_tone" -> R.raw.musical_yellow_tone
-            "musical_blue_tone" -> R.raw.musical_blue_tone
-            "musical_purple_tone" -> R.raw.musical_purple_tone
-            "musical_orange_tone" -> R.raw.musical_orange_tone
-            "musical_error_tone" -> R.raw.musical_error_tone
-
-            // Sci-Fi sound pack - all 6 buttons
-            "scifi_green_tone" -> R.raw.scifi_green_tone
-            "scifi_red_tone" -> R.raw.scifi_red_tone
-            "scifi_yellow_tone" -> R.raw.scifi_yellow_tone
-            "scifi_blue_tone" -> R.raw.scifi_blue_tone
-            "scifi_purple_tone" -> R.raw.scifi_purple_tone
-            "scifi_orange_tone" -> R.raw.scifi_orange_tone
-            "scifi_error_tone" -> R.raw.scifi_error_tone
-
-            // Nature sound pack - all 6 buttons
-            "nature_green_tone" -> R.raw.nature_green_tone
-            "nature_red_tone" -> R.raw.nature_red_tone
-            "nature_yellow_tone" -> R.raw.nature_yellow_tone
-            "nature_blue_tone" -> R.raw.nature_blue_tone
-            "nature_purple_tone" -> R.raw.nature_purple_tone
-            "nature_orange_tone" -> R.raw.nature_orange_tone
-            "nature_error_tone" -> R.raw.nature_error_tone
-
-            // For all other resources, return 0 (not found)
-            else -> {
-                Log.w(TAG, "Resource not found in direct mapping: $resourceName")
-                0
-            }
+        val resourceId = SimonSoundManager.getResourceId(resourceName)
+        if (resourceId == 0) {
+            Log.w(TAG, "Resource not found in direct mapping: $resourceName")
+        } else {
+            Log.d(TAG, "🔍 Resource ID lookup result: $resourceName -> $resourceId")
         }
-        
-        Log.d(TAG, "🔍 Resource ID lookup result: $resourceName -> $resourceId")
         return resourceId
     }
 
@@ -585,18 +587,11 @@ class SimonSoundManager(private val context: Context) : ComponentCallbacks2 {
 
         try {
             Log.d(TAG, "Triggering vibration")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val effect = VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE)
-                vibrator.vibrate(effect)
-                Log.d(TAG, "Vibrated using modern API")
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(100)
-                Log.d(TAG, "Vibrated using legacy API")
-            }
+            val effect = VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE)
+            vibrator.vibrate(effect)
+            Log.d(TAG, "Vibrated using modern API")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to vibrate", e)
-            e.printStackTrace()
         }
     }
 

@@ -56,6 +56,7 @@ class DataStoreSettingsRepositoryTest {
         repo.settingsFlow.test {
             val first = awaitItem()
             assertEquals(AppSettings(), first)
+            assertTrue(first.difficultyEnabled)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -66,6 +67,17 @@ class DataStoreSettingsRepositoryTest {
             assertEquals(SoundPack.STANDARD, awaitItem().soundPack)
             repo.setSoundPack(SoundPack.RETRO)
             assertEquals(SoundPack.RETRO, awaitItem().soundPack)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `unavailable sound pack falls back to STANDARD on read`() = runTest(testScope.testScheduler) {
+        repo.isSoundPackAvailable = { it != SoundPack.FUNNY }
+        repo.settingsFlow.test {
+            assertEquals(SoundPack.STANDARD, awaitItem().soundPack)
+            repo.setSoundPack(SoundPack.FUNNY)
+            assertEquals(SoundPack.STANDARD, awaitItem().soundPack)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -104,10 +116,12 @@ class DataStoreSettingsRepositoryTest {
             val a = awaitItem()
             assertEquals(false, a.vibrateEnabled)
             assertEquals(false, a.soundEnabled)
-            repo.setDifficultyEnabled(true)
+            repo.setDifficultyEnabled(false)
             val b = awaitItem()
-            assertEquals(true, b.difficultyEnabled)
+            assertEquals(false, b.difficultyEnabled)
             assertEquals(false, b.vibrateEnabled) // unchanged
+            repo.setDifficultyEnabled(true)
+            assertEquals(true, awaitItem().difficultyEnabled)
             cancelAndIgnoreRemainingEvents()
         }
     }

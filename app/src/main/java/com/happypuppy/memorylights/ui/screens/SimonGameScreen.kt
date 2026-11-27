@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -294,8 +296,30 @@ fun SimonGameScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 actions = {
+                    // Pause button — leftmost slot and always rendered so
+                    // Mute, Vibration, and Settings never shift across turns.
+                    // Enabled only while the player is repeating; dimmed otherwise.
+                    val canPause = uiState.gameState == GameState.PlayerRepeating
+                    IconButton(
+                        onClick = onPauseGame,
+                        enabled = canPause
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.pause_24px),
+                            contentDescription = stringResource(R.string.action_pause),
+                            tint = if (canPause) Color.White else Color.White.copy(alpha = 0.35f),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
                     // Mute/Unmute button
                     IconButton(onClick = onToggleSound) {
                         Icon(
@@ -330,20 +354,6 @@ fun SimonGameScreen(
                             tint = Color.White,
                             modifier = Modifier.size(28.dp)
                         )
-                    }
-
-                    // Pause button — only meaningful while the player is repeating.
-                    // Hidden in every other state so the action bar doesn't lie
-                    // about what's available.
-                    if (uiState.gameState == GameState.PlayerRepeating) {
-                        IconButton(onClick = onPauseGame) {
-                            Icon(
-                                painter = painterResource(R.drawable.pause_24px),
-                                contentDescription = stringResource(R.string.action_pause),
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
                     }
 
                     // Settings button
@@ -447,6 +457,11 @@ fun SimonGameScreen(
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = ripple(),
+                                        onClickLabel = stringResource(
+                                            if (uiState.gameState == GameState.GameOver) R.string.game_new_game
+                                            else R.string.game_tap_to_start
+                                        ),
+                                        role = Role.Button,
                                         onClick = { onStartNewGame() }
                                     )
                             } else {
@@ -584,6 +599,8 @@ fun SimonGameScreen(
             ReplayShareButtons(
                 visible = uiState.gameState == GameState.GameOver &&
                         uiState.sequence.isNotEmpty(),
+                showReplay = uiState.gameMode != GameMode.SPEED_BLITZ,
+                onNewGame = onStartNewGame,
                 onReplay = onReplayLastSequence,
                 onShare = {
                     ScoreShareHelper.shareScore(
@@ -619,6 +636,7 @@ fun SimonGameScreen(
                     bestTimeMs = uiState.currentBestBlitzTimeMs,
                     startTimeMs = uiState.blitzStartTimeMs,
                     isPaused = uiState.gameState == GameState.Paused,
+                    pauseStartedAtMs = uiState.blitzPauseStartedAtMs,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 8.dp)

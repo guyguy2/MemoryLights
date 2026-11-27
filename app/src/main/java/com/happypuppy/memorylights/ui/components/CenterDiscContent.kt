@@ -189,7 +189,7 @@ fun CenterDiscContent(
                     painter = painterResource(R.drawable.play_arrow_24px),
                     contentDescription = stringResource(R.string.game_play_again),
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             } else if (gameState == GameState.WaitingToStart) {
                 // Tap-to-start affordance — play icon + label invite

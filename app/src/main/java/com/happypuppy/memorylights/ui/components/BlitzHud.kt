@@ -38,9 +38,10 @@ fun BlitzHud(
     bestTimeMs: Long,
     startTimeMs: Long,
     isPaused: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    pauseStartedAtMs: Long = 0L
 ) {
-    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var nowMs by remember(startTimeMs, isPaused) { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(startTimeMs, isPaused) {
         if (startTimeMs <= 0L || isPaused) return@LaunchedEffect
         while (true) {
@@ -48,7 +49,11 @@ fun BlitzHud(
             kotlinx.coroutines.delay(100L)
         }
     }
-    val elapsed = if (startTimeMs > 0L) (nowMs - startTimeMs).coerceAtLeast(0L) else 0L
+    val elapsed = when {
+        startTimeMs <= 0L -> 0L
+        pauseStartedAtMs > 0L -> (pauseStartedAtMs - startTimeMs).coerceAtLeast(0L)
+        else -> (nowMs - startTimeMs).coerceAtLeast(0L)
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

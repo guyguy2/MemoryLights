@@ -506,19 +506,21 @@ fun SettingsCard(
 fun SoundPackOption(
     soundPack: SoundPack,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    isAvailable: Boolean = soundPack.isAvailable
 ) {
-    val backgroundColor = if (isSelected) {
+    val backgroundColor = if (isSelected && isAvailable) {
         MaterialTheme.colorScheme.surfaceContainerHighest
     } else {
         Color.Transparent
     }
+    val contentAlpha = if (isAvailable) 1f else 0.45f
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor)
-            .clickable { onSelect() }
+            .clickable(enabled = isAvailable) { onSelect() }
             .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -526,28 +528,46 @@ fun SoundPackOption(
         // clickable handles selection (and ripples once over the full row),
         // avoiding the previous double-ripple on every pack-row tap (#59).
         RadioButton(
-            selected = isSelected,
+            selected = isSelected && isAvailable,
             onClick = null,
+            enabled = isAvailable,
             colors = RadioButtonDefaults.colors(
                 selectedColor = MaterialTheme.colorScheme.primary,
-                unselectedColor = Color.Gray
+                unselectedColor = Color.Gray,
+                disabledSelectedColor = Color.Gray.copy(alpha = 0.45f),
+                disabledUnselectedColor = Color.Gray.copy(alpha = 0.45f)
             )
         )
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(soundPack.displayNameRes),
-                color = Color.White,
+                color = Color.White.copy(alpha = contentAlpha),
                 style = MaterialTheme.typography.bodyLarge
             )
 
             Text(
                 text = stringResource(soundPack.descriptionRes),
-                color = Color.Gray,
+                color = Color.Gray.copy(alpha = contentAlpha),
                 style = MaterialTheme.typography.bodyMedium
             )
+        }
+
+        if (!isAvailable) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest
+            ) {
+                Text(
+                    text = stringResource(R.string.sound_pack_coming_soon),
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
     }
 }

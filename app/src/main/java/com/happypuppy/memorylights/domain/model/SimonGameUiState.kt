@@ -26,7 +26,7 @@ data class SimonGameUiState(
     val currentSoundPack: SoundPack = SoundPack.STANDARD,
     val vibrateEnabled: Boolean = true, // Whether button vibration is enabled
     val soundEnabled: Boolean = true, // Whether sound is enabled (mute/unmute)
-    val difficultyEnabled: Boolean = false, // Whether progressive difficulty is enabled
+    val difficultyEnabled: Boolean = true, // Whether progressive difficulty is enabled
     val memoryLightsPlusEnabled: Boolean = false, // Whether 6-button mode is enabled
     val showHighScoreParticles: Boolean = false, // Whether to show particle effects for new high score
     val showHighScoreText: Boolean = false, // Whether to show flashing HIGH SCORE text
@@ -43,7 +43,8 @@ data class SimonGameUiState(
     val audioOnlyModeEnabled: Boolean = false, // Audio-Only mode (F3): hide button colors during sequence playback
     val colorBlindModeEnabled: Boolean = false, // #35: geometric shape overlays so the game is playable without hue discrimination
     val gameMode: GameMode = GameMode.CLASSIC, // Game mode (F4): Classic (open-ended) or Speed Blitz (sprint to BLITZ_TARGET_LEVEL)
-    val blitzStartTimeMs: Long = 0L, // Wall-clock start of the current Speed Blitz run; 0 = not started
+    val blitzStartTimeMs: Long = 0L, // Wall-clock start (shifted forward by completed pauses) of the current Speed Blitz run; 0 = not started
+    val blitzPauseStartedAtMs: Long = 0L, // Wall-clock moment when current pause began in Speed Blitz; 0 = running
     val blitzElapsedMs: Long = 0L, // Final elapsed time when blitz run completes (won or lost); 0 while still in flight
     val blitzWon: Boolean = false, // True when the player completed BLITZ_TARGET_LEVEL levels — drives "VICTORY" overlay vs GAME OVER
     val bestBlitzTime4ButtonMs: Long = 0L, // Persisted best blitz time for 4-button mode; 0 = no completion yet

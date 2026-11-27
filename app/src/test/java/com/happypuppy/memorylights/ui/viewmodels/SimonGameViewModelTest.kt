@@ -9,6 +9,7 @@ import com.happypuppy.memorylights.data.repository.SettingsRepository
 import com.happypuppy.memorylights.domain.GameConstants
 import com.happypuppy.memorylights.domain.enums.GameMode
 import com.happypuppy.memorylights.domain.enums.SimonButton
+import com.happypuppy.memorylights.domain.enums.SoundPack
 import com.happypuppy.memorylights.domain.model.Achievement
 import com.happypuppy.memorylights.domain.model.GameState
 import com.happypuppy.memorylights.domain.model.GameStatistics
@@ -988,5 +989,227 @@ class SimonGameViewModelTest {
             advanceTimeBy(4_000)
             runCurrent()
             assertEquals(2, vm.uiState.value.level)
+        }
+
+    // Wave 18: SoundPack availability fallback, Difficulty default ON, Speed Blitz pause-clock
+
+    @Test
+    fun `setSoundPack ignores unavailable pack and preserves current selection`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            vm.isSoundPackAvailable = { it != SoundPack.FUNNY }
+
+            vm.setSoundPack(SoundPack.FUNNY)
+            runCurrent()
+
+            assertEquals(SoundPack.STANDARD, vm.uiState.value.currentSoundPack)
+            verify(exactly = 0) { settingsRepository.setSoundPack(SoundPack.FUNNY) }
+        }
+
+    @Test
+    fun `loadInitialSettings falls back to STANDARD when persisted pack is unavailable`() =
+        runTest(testDispatcher.scheduler) {
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(500)
+                emit(AppSettings(soundPack = SoundPack.FUNNY))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+            vm.isSoundPackAvailable = { it != SoundPack.FUNNY }
+
+            advanceTimeBy(6_000)
+            runCurrent()
+
+            assertEquals(SoundPack.STANDARD, vm.uiState.value.currentSoundPack)
+            verify { soundManager.setSoundPack(SoundPack.STANDARD) }
+        }
+
+    @Test
+    fun `difficulty is enabled by default and triggers speed up at level 5 while keeping levels 1-4 at base`() =
+        runTest(testDispatcher.scheduler) {
+            val vm = createViewModel()
+            advanceToPlayerTurn()
+            assertTrue(vm.uiState.value.difficultyEnabled)
+
+            // Levels 1..4 stay at base timing (600/400 ms) and do not show SPEED UP!
+            for (lvl in 1..4) {
+                assertEquals(lvl, vm.uiState.value.level)
+                vm.uiState.value.sequence.forEach { vm.tap(it) }
+                if (lvl < 4) {
+                    assertEquals(false, vm.uiState.value.showSpeedUpText)
+                }
+                advanceTimeBy(6_000)
+                runCurrent()
+            }
+
+            // Advancing from level 4 -> 5 crosses the first speed-up tier
+            assertEquals(5, vm.uiState.value.level)
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+        }
+
+    @Test
+    fun `speed blitz loss excludes explicit pause duration from elapsed time`() =
+        runTest(testDispatcher.scheduler) {
+            var fakeNow = 10_000L
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(100)
+                emit(AppSettings(gameMode = GameMode.SPEED_BLITZ, difficultyEnabled = false))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+            vm.currentTimeMillis = { fakeNow }
+
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Active play 5s
+            fakeNow += 5_000L
+            vm.pauseGame()
+            assertEquals(GameState.Paused, vm.uiState.value.gameState)
+
+            // Paused for 30s — must be excluded from blitzElapsedMs
+            fakeNow += 30_000L
+            vm.resumeGame()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Active play 3s, then miss
+            fakeNow += 3_000L
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.tap(wrong)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(8_000L, vm.uiState.value.blitzElapsedMs)
+        }
+
+    @Test
+    fun `speed blitz win excludes pause, settings, and nested pause duration`() =
+        runTest(testDispatcher.scheduler) {
+            var fakeNow = 100_000L
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(100)
+                emit(AppSettings(gameMode = GameMode.SPEED_BLITZ, difficultyEnabled = false))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+            vm.currentTimeMillis = { fakeNow }
+
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            // Play levels 1..19, exercising pause, settings, and nested pause+settings
+            for (lvl in 1..GameConstants.BLITZ_TARGET_LEVEL) {
+                assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+                assertEquals(lvl, vm.uiState.value.level)
+
+                if (lvl == 2) {
+                    fakeNow += 1_000L
+                    vm.pauseGame()
+                    fakeNow += 25_000L // excluded explicit pause
+                    vm.resumeGame()
+                } else if (lvl == 3) {
+                    fakeNow += 1_000L
+                    vm.showSettings()
+                    fakeNow += 15_000L // excluded settings time
+                    vm.onReturnToGame()
+                } else if (lvl == 4) {
+                    fakeNow += 1_000L
+                    vm.pauseGame()
+                    fakeNow += 4_000L
+                    vm.showSettings()
+                    fakeNow += 6_000L
+                    vm.onReturnToGame()
+                    assertEquals(GameState.Paused, vm.uiState.value.gameState)
+                    fakeNow += 5_000L
+                    vm.resumeGame() // 15_000L total nested pause excluded
+                } else {
+                    fakeNow += 1_000L
+                }
+
+                vm.uiState.value.sequence.forEach { vm.tap(it) }
+                if (lvl < GameConstants.BLITZ_TARGET_LEVEL) {
+                    val nextSeqWaitMs = GameConstants.LEVEL_ADVANCE_DELAY_MS +
+                        GameConstants.SEQUENCE_START_DELAY_MS +
+                        (lvl + 1) * (GameConstants.BASE_LIT_DURATION_MS + GameConstants.BASE_PAUSE_DURATION_MS) +
+                        100L
+                    advanceTimeBy(nextSeqWaitMs)
+                    runCurrent()
+                }
+            }
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertTrue(vm.uiState.value.blitzWon)
+            // 20 levels * 1_000L active time = 20_000L; 55_000L paused/settings excluded
+            assertEquals(20_000L, vm.uiState.value.blitzElapsedMs)
+        }
+
+    @Test
+    fun `speed blitz loss excludes backgrounded duration`() =
+        runTest(testDispatcher.scheduler) {
+            var fakeNow = 50_000L
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(100)
+                emit(AppSettings(gameMode = GameMode.SPEED_BLITZ, difficultyEnabled = false))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+            vm.currentTimeMillis = { fakeNow }
+            val owner = mockk<LifecycleOwner>(relaxed = true)
+
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            fakeNow += 4_000L
+            vm.onPause(owner)
+            fakeNow += 20_000L // backgrounded — excluded
+            vm.onResume(owner)
+            fakeNow += 2_000L
+
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.tap(wrong)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(6_000L, vm.uiState.value.blitzElapsedMs)
+        }
+
+    @Test
+    fun `speed blitz replayLastSequence after game over idle is a no-op and does not pollute clock`() =
+        runTest(testDispatcher.scheduler) {
+            var fakeNow = 10_000L
+            every { settingsRepository.settingsFlow } returns flow {
+                delay(100)
+                emit(AppSettings(gameMode = GameMode.SPEED_BLITZ, difficultyEnabled = false))
+            }
+            val vm = SimonGameViewModel(soundManager, statisticsRepository, settingsRepository)
+            vm.currentTimeMillis = { fakeNow }
+
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertEquals(GameState.PlayerRepeating, vm.uiState.value.gameState)
+
+            // Active play 3s, then miss
+            fakeNow += 3_000L
+            val available = SimonButton.getAvailableButtons(memoryLightsPlusEnabled = false)
+            val wrong = available.first { it != vm.uiState.value.sequence[0] }
+            vm.tap(wrong)
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(3_000L, vm.uiState.value.blitzElapsedMs)
+
+            // Wait 25s on GameOver, then attempt replayLastSequence() (Challenger Probe 2)
+            fakeNow += 25_000L
+            vm.replayLastSequence()
+            advanceTimeBy(3_000)
+            runCurrent()
+
+            // Speed Blitz disallows replay: stays GameOver, elapsed time remains 3_000L
+            assertEquals(GameState.GameOver, vm.uiState.value.gameState)
+            assertEquals(3_000L, vm.uiState.value.blitzElapsedMs)
+            assertEquals(0L, vm.uiState.value.bestBlitzTime4ButtonMs)
         }
 }

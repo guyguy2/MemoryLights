@@ -12,7 +12,8 @@ import com.happypuppy.memorylights.R
 enum class SoundPack(
     @StringRes val displayNameRes: Int,
     @StringRes val descriptionRes: Int,
-    val resourcePrefix: String
+    val resourcePrefix: String,
+    val isAvailable: Boolean = true
 ) {
     STANDARD(R.string.sound_pack_standard_name, R.string.sound_pack_standard_desc, "standard"),
     FUNNY(R.string.sound_pack_funny_name, R.string.sound_pack_funny_desc, "funny"),

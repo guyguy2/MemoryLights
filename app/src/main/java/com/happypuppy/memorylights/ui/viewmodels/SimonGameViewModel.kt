@@ -102,6 +102,12 @@ class SimonGameViewModel(
     /** Today's epoch day. Indirected so tests can stub it. */
     internal var currentEpochDay: () -> Long = { LocalDate.now().toEpochDay() }
 
+    /** Wall-clock milliseconds. Indirected so tests can drive Speed Blitz timing deterministically. */
+    internal var currentTimeMillis: () -> Long = { System.currentTimeMillis() }
+
+    /** Availability predicate for SoundPack. Indirected so tests can verify unavailable-pack guards. */
+    internal var isSoundPackAvailable: (SoundPack) -> Boolean = { it.isAvailable }
+
     init {
         Log.d(TAG, "Initializing SimonGameViewModel")
 
@@ -149,14 +155,21 @@ class SimonGameViewModel(
 
         Log.d(TAG, "Loaded settings - Sound Pack: ${settings.soundPack}, High Score 4-button: ${settings.highScore4Button}, High Score 6-button: ${settings.highScore6Button}, Vibrate: ${settings.vibrateEnabled}, Sound Enabled: ${settings.soundEnabled}, Difficulty: ${settings.difficultyEnabled}, Memory Lights+: ${settings.memoryLightsPlusEnabled}")
 
+        val resolvedSoundPack = if (isSoundPackAvailable(settings.soundPack)) {
+            settings.soundPack
+        } else {
+            Log.w(TAG, "Persisted sound pack ${settings.soundPack} is unavailable, falling back to STANDARD")
+            SoundPack.STANDARD
+        }
+
         // Update sound manager with saved settings
-        soundManager.setSoundPack(settings.soundPack)
+        soundManager.setSoundPack(resolvedSoundPack)
         soundManager.setVibrationEnabled(settings.vibrateEnabled)
         soundManager.setSoundMuted(!settings.soundEnabled)
 
         // Update UI state with saved settings
         _uiState.update { it.copy(
-            currentSoundPack = settings.soundPack,
+            currentSoundPack = resolvedSoundPack,
             highScore4Button = settings.highScore4Button,
             highScore6Button = settings.highScore6Button,
             vibrateEnabled = settings.vibrateEnabled,
@@ -215,6 +228,8 @@ class SimonGameViewModel(
         // A miss in progress is final: land its outcome now so previousGameState
         // captures it, rather than restoring a dead turn on return.
         completePendingTurnEndNow()
+
+        pauseBlitzClock()
 
         isInSettings = true
         previousGameState = _uiState.value.gameState
@@ -275,6 +290,7 @@ class SimonGameViewModel(
             // If we were showing sequence when settings was opened, restart sequence display
             is GameState.ShowingSequence -> {
                 Log.d(TAG, "Resuming from ShowingSequence state - restarting sequence")
+                resumeBlitzClock()
                 _uiState.update { it.copy(gameState = GameState.WaitingToStart) }
                 showSequence()
             }
@@ -282,6 +298,7 @@ class SimonGameViewModel(
             // If player was repeating a sequence, let them continue
             is GameState.PlayerRepeating -> {
                 Log.d(TAG, "Resuming from PlayerRepeating state")
+                resumeBlitzClock()
                 _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                 resetTimeoutTimer()
             }
@@ -299,6 +316,7 @@ class SimonGameViewModel(
                 if (_uiState.value.sequence.isEmpty()) {
                     startNewGame()
                 } else {
+                    resumeBlitzClock()
                     _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                     resetTimeoutTimer()
                 }
@@ -320,6 +338,10 @@ class SimonGameViewModel(
      * Called from the Settings screen on selection.
      */
     fun setSoundPack(soundPack: SoundPack) {
+        if (!isSoundPackAvailable(soundPack)) {
+            Log.w(TAG, "Ignoring unavailable sound pack selection: ${soundPack.name}")
+            return
+        }
         Log.d(TAG, "Changing sound pack to: ${soundPack.name}")
 
         soundManager.setSoundPack(soundPack)
@@ -387,6 +409,7 @@ class SimonGameViewModel(
         }
         Log.d(TAG, "Pausing game")
         cancelTimeoutTimer()
+        pauseBlitzClock()
         _uiState.update { it.copy(
             gameState = GameState.Paused,
             currentlyLit = null,
@@ -410,6 +433,7 @@ class SimonGameViewModel(
             return
         }
         Log.d(TAG, "Resuming game")
+        resumeBlitzClock()
         _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
         startTimeoutTimer()
     }
@@ -525,6 +549,7 @@ class SimonGameViewModel(
             showHighScoreText = false,
             showGameOverText = false,
             blitzStartTimeMs = 0L,
+            blitzPauseStartedAtMs = 0L,
             blitzElapsedMs = 0L,
             blitzWon = false
         )}
@@ -601,6 +626,7 @@ class SimonGameViewModel(
             showHighScoreText = false,
             showGameOverText = false,
             blitzStartTimeMs = 0L,
+            blitzPauseStartedAtMs = 0L,
             blitzElapsedMs = 0L,
             blitzWon = false
         )}
@@ -657,6 +683,7 @@ class SimonGameViewModel(
                 showHighScoreText = false,
                 showGameOverText = false,
                 blitzStartTimeMs = 0L,
+                blitzPauseStartedAtMs = 0L,
                 blitzElapsedMs = 0L,
                 blitzWon = false
             )}
@@ -728,6 +755,7 @@ class SimonGameViewModel(
                 allButtonsLit = false,
                 showYourTurnText = false,
                 blitzStartTimeMs = 0L,
+                blitzPauseStartedAtMs = 0L,
                 blitzElapsedMs = 0L,
                 blitzWon = false
             )
@@ -749,12 +777,18 @@ class SimonGameViewModel(
      * preserves the current `sequence` and `level`. If they beat it, the
      * existing `advanceToNextLevel` path takes over and the run grows
      * normally from there. No-op if there is no sequence yet (e.g. before
-     * the very first round).
+     * the very first round) or in Speed Blitz mode (single continuous timed
+     * sprint — replaying mid-run or from GameOver would pollute the Blitz
+     * clock or allow cheesing best-time / Speedrunner achievements).
      */
     fun replayLastSequence() {
         val state = _uiState.value
         if (state.sequence.isEmpty()) {
             Log.d(TAG, "replayLastSequence called with empty sequence — ignoring")
+            return
+        }
+        if (state.gameMode == GameMode.SPEED_BLITZ) {
+            Log.d(TAG, "replayLastSequence ignored in Speed Blitz — timed sprints cannot be replayed")
             return
         }
         Log.d(TAG, "Replaying last sequence (${state.sequence.size} buttons, level ${state.level})")
@@ -802,6 +836,7 @@ class SimonGameViewModel(
             showYourTurnText = false,
             showSpeedUpText = false,
             blitzStartTimeMs = 0L,
+            blitzPauseStartedAtMs = 0L,
             blitzElapsedMs = 0L,
             blitzWon = false
         ) }
@@ -909,7 +944,8 @@ class SimonGameViewModel(
         _uiState.update {
             it.copy(
                 gameState = GameState.ShowingSequence,
-                blitzStartTimeMs = if (shouldStartBlitzTimer) System.currentTimeMillis() else it.blitzStartTimeMs
+                blitzStartTimeMs = if (shouldStartBlitzTimer) currentTimeMillis() else it.blitzStartTimeMs,
+                blitzPauseStartedAtMs = if (shouldStartBlitzTimer) 0L else it.blitzPauseStartedAtMs
             )
         }
 
@@ -1073,11 +1109,6 @@ class SimonGameViewModel(
         }
     }
 
-    // Handle game over state - Simplified version that calls the main implementation
-    private fun handleGameOver() {
-        handleGameOver("Wrong button pressed")
-    }
-
     /**
      * Player completed BLITZ_TARGET_LEVEL levels in Speed Blitz mode.
      * Compute elapsed time, persist a new best if applicable, and land on
@@ -1087,8 +1118,7 @@ class SimonGameViewModel(
      */
     private fun handleBlitzWin() {
         val state = _uiState.value
-        val startMs = state.blitzStartTimeMs
-        val elapsedMs = if (startMs > 0L) System.currentTimeMillis() - startMs else 0L
+        val elapsedMs = computeBlitzElapsedMs(state)
         Log.d(TAG, "Blitz win! Elapsed ${elapsedMs}ms (${if (state.memoryLightsPlusEnabled) "6-button" else "4-button"})")
 
         cancelTimeoutTimer()
@@ -1104,6 +1134,7 @@ class SimonGameViewModel(
         _uiState.update { it.copy(
             gameState = GameState.GameOver,
             blitzWon = true,
+            blitzPauseStartedAtMs = 0L,
             blitzElapsedMs = elapsedMs,
             currentlyLit = null,
             allButtonsLit = false,
@@ -1397,9 +1428,7 @@ class SimonGameViewModel(
         val currentHighScore = state.currentHighScore
         val isNewHighScore = !isBlitz && currentLevel > currentHighScore
         val newHighScore = if (isNewHighScore) currentLevel else currentHighScore
-        val blitzElapsedMs = if (isBlitz && state.blitzStartTimeMs > 0L) {
-            System.currentTimeMillis() - state.blitzStartTimeMs
-        } else 0L
+        val blitzElapsedMs = if (isBlitz) computeBlitzElapsedMs(state) else 0L
 
         Log.d(TAG, "$reason at level $currentLevel (mode: ${state.gameMode}, high score: $currentHighScore for ${if (state.memoryLightsPlusEnabled) "6-button" else "4-button"} mode${if (isBlitz) ", blitz elapsed ${blitzElapsedMs}ms" else ""})")
 
@@ -1443,6 +1472,7 @@ class SimonGameViewModel(
                     showHighScoreParticles = isNewHighScore,
                     showHighScoreText = isNewHighScore,
                     showGameOverText = !isNewHighScore, // Show GAME OVER when NOT a new high score
+                    blitzPauseStartedAtMs = 0L,
                     blitzElapsedMs = if (blitzElapsedMs > 0L) blitzElapsedMs else currentState.blitzElapsedMs,
                     blitzWon = false
                 )
@@ -1453,6 +1483,7 @@ class SimonGameViewModel(
                     showHighScoreParticles = isNewHighScore,
                     showHighScoreText = isNewHighScore,
                     showGameOverText = !isNewHighScore, // Show GAME OVER when NOT a new high score
+                    blitzPauseStartedAtMs = 0L,
                     blitzElapsedMs = if (blitzElapsedMs > 0L) blitzElapsedMs else currentState.blitzElapsedMs,
                     blitzWon = false
                 )
@@ -1631,10 +1662,12 @@ class SimonGameViewModel(
             when (gameStateBeforeBackground) {
                 is GameState.ShowingSequence -> {
                     // Restart showing sequence
+                    resumeBlitzClock()
                     showSequence()
                 }
                 is GameState.PlayerRepeating -> {
                     // Return to player's turn and restart timeout
+                    resumeBlitzClock()
                     _uiState.update { it.copy(gameState = GameState.PlayerRepeating) }
                     resetTimeoutTimer()
                 }
@@ -1654,6 +1687,8 @@ class SimonGameViewModel(
         // A miss in progress is final: land its outcome before the state
         // below is captured, so onResume does not restore a dead turn.
         completePendingTurnEndNow()
+
+        pauseBlitzClock()
 
         // Save current game state to restore later
         gameStateBeforeBackground = _uiState.value.gameState
@@ -1706,5 +1741,45 @@ class SimonGameViewModel(
         // the DI module releases it (onClose) when Koin shuts down. Releasing
         // it here left the next Activity's ViewModel with a dead SoundPool
         // after the app was closed and reopened in a warm process.
+    }
+
+    private fun pauseBlitzClock() {
+        val state = _uiState.value
+        if (state.gameMode == GameMode.SPEED_BLITZ &&
+            state.blitzStartTimeMs > 0L &&
+            state.blitzPauseStartedAtMs == 0L &&
+            state.gameState != GameState.GameOver &&
+            state.gameState != GameState.WaitingToStart
+        ) {
+            val now = currentTimeMillis()
+            _uiState.update { it.copy(blitzPauseStartedAtMs = now) }
+        }
+    }
+
+    private fun resumeBlitzClock() {
+        val state = _uiState.value
+        val pausedAt = state.blitzPauseStartedAtMs
+        if (state.gameMode == GameMode.SPEED_BLITZ &&
+            state.blitzStartTimeMs > 0L &&
+            pausedAt > 0L
+        ) {
+            val pausedDelta = (currentTimeMillis() - pausedAt).coerceAtLeast(0L)
+            _uiState.update {
+                it.copy(
+                    blitzStartTimeMs = it.blitzStartTimeMs + pausedDelta,
+                    blitzPauseStartedAtMs = 0L
+                )
+            }
+        }
+    }
+
+    private fun computeBlitzElapsedMs(state: SimonGameUiState): Long {
+        if (state.blitzStartTimeMs <= 0L) return 0L
+        val endMs = if (state.blitzPauseStartedAtMs > 0L) {
+            state.blitzPauseStartedAtMs
+        } else {
+            currentTimeMillis()
+        }
+        return (endMs - state.blitzStartTimeMs).coerceAtLeast(0L)
     }
 }

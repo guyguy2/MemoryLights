@@ -40,6 +40,7 @@
     <string name="game_paused_hint">Tap to resume</string>
 
     <!-- Game over actions -->
+    <string name="game_new_game">New Game</string>
     <string name="game_replay">Replay</string>
     <string name="game_share">Share</string>
 
@@ -150,6 +151,7 @@
     <string name="sound_packs_heading">Sound Packs</string>
     <string name="sound_packs_more">More sound options</string>
     <string name="sound_packs_more_cd">More options</string>
+    <string name="sound_pack_coming_soon">Coming soon</string>
 
     <!-- Statistics screen -->
     <string name="statistics_title">Statistics</string>
@@ -168,7 +170,7 @@
 
     <!-- Sound packs (enum-bound) -->
     <string name="sound_pack_standard_name">Standard</string>
-    <string name="sound_pack_standard_desc">Classic Simon game sounds</string>
+    <string name="sound_pack_standard_desc">Classic game sounds</string>
     <string name="sound_pack_funny_name">Funny</string>
     <string name="sound_pack_funny_desc">Humorous sound effects</string>
     <string name="sound_pack_electronic_name">Electronic</string>

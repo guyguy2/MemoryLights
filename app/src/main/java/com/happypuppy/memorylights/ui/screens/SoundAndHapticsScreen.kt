@@ -120,8 +120,10 @@ fun SoundAndHapticsScreen(
                             soundPack = soundPack,
                             isSelected = soundPack == currentSoundPack,
                             onSelect = {
-                                onSoundPackSelected(soundPack)
-                                toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
+                                if (soundPack.isAvailable) {
+                                    onSoundPackSelected(soundPack)
+                                    toast(resources.getString(R.string.snack_sound_pack, resources.getString(soundPack.displayNameRes)))
+                                }
                             }
                         )
                     }

@@ -32,7 +32,7 @@ data class AppSettings(
     val highScore6Button: Int = 0,
     val vibrateEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
-    val difficultyEnabled: Boolean = false,
+    val difficultyEnabled: Boolean = true,
     val memoryLightsPlusEnabled: Boolean = false,
     val playerTimeoutSeconds: Int = 10,
     val practiceModeEnabled: Boolean = false,
@@ -166,7 +166,7 @@ class DataStoreSettingsRepository internal constructor(
             highScore6Button = prefs[KEY_HIGH_SCORE_6_BUTTON] ?: 0,
             vibrateEnabled = prefs[KEY_VIBRATE_ENABLED] ?: true,
             soundEnabled = prefs[KEY_SOUND_ENABLED] ?: true,
-            difficultyEnabled = prefs[KEY_DIFFICULTY_ENABLED] ?: false,
+            difficultyEnabled = prefs[KEY_DIFFICULTY_ENABLED] ?: true,
             memoryLightsPlusEnabled = prefs[KEY_MEMORY_LIGHTS_PLUS_ENABLED] ?: false,
             playerTimeoutSeconds = prefs[KEY_PLAYER_TIMEOUT_SECONDS] ?: 10,
             practiceModeEnabled = prefs[KEY_PRACTICE_MODE_ENABLED] ?: false,
@@ -204,10 +204,19 @@ class DataStoreSettingsRepository internal constructor(
         }
     }
 
+    /** Availability predicate for SoundPack. Indirected so tests can verify fallback behavior. */
+    internal var isSoundPackAvailable: (SoundPack) -> Boolean = { it.isAvailable }
+
     private fun readSoundPack(prefs: Preferences): SoundPack {
         val name = prefs[KEY_SOUND_PACK] ?: return SoundPack.STANDARD
         return try {
-            SoundPack.valueOf(name)
+            val pack = SoundPack.valueOf(name)
+            if (isSoundPackAvailable(pack)) {
+                pack
+            } else {
+                Log.w(TAG, "Sound pack $name is unavailable, defaulting to STANDARD")
+                SoundPack.STANDARD
+            }
         } catch (_: IllegalArgumentException) {
             Log.w(TAG, "Invalid sound pack name: $name, defaulting to STANDARD")
             SoundPack.STANDARD
