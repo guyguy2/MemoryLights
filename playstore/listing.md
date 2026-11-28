@@ -7,8 +7,10 @@ Drafts for fields you'll paste into the Play Console. Tweak before submission.
 ## App title (max 30 chars)
 
 ```
-Memory Lights
+Memory Lights: Sequence Game
 ```
+
+(28/30 chars — `#74` post-approval title update.)
 
 ## Short description (max 80 chars)
 
@@ -30,14 +32,15 @@ Memory Lights is a polished take on the classic memory game. Watch the lights fl
 GAME MODES
 - Classic: the sequence grows until you miss
 - Speed Blitz: race to level 20 and beat your best time
+- Daily Challenge: everyone gets the same sequence each day
 - 4 or 6 buttons: standard colors, or Memory Lights+ with purple and orange for a tougher challenge
 - Reverse Mode: watch the sequence forward, repeat it backward
-- Practice Mode: wrong taps replay the sequence so you can drill tough patterns (high scores are not recorded)
+- Practice Mode: wrong taps or timeouts replay the sequence so you can drill tough patterns (high scores are not recorded)
 - Audio-Only Mode: colors are hidden during playback, so you recognize the pattern by sound alone
-- Difficulty: the game speeds up as you climb
+- Difficulty: the game speeds up smoothly as you climb
 
 SEVEN SOUND PACKS
-- Standard: classic tones
+- Standard: classic game sounds
 - Funny: humorous sound effects
 - Electronic: modern synth tones
 - Retro Gaming: 8-bit chiptune
@@ -46,14 +49,14 @@ SEVEN SOUND PACKS
 - Sci-Fi: chiptune bleeps and zaps
 
 PLAYABLE BY EVERYONE
-- Color-blind mode: a distinct shape on every button
+- Color-blind mode: a distinct geometric shape on every button
 - Adjustable player timeout (5, 10, 15, or 30 seconds) with a visible countdown ring
-- AMOLED black and dark themes
+- System Default, Light, Dark, and AMOLED Black themes
 - Screen-reader announcements for level, your turn, and game over
-- 48dp minimum touch targets and content descriptions throughout
+- 48dp minimum touch targets, reduced-motion support, and content descriptions throughout
 
 PROGRESS AND SHARING
-- Persistent high score and full game statistics
+- Persistent high score, win streaks, and full game statistics
 - Achievements to unlock
 - Pause mid-run, and replay the last sequence after game over
 - Share a 1080x1080 score card to any messaging app
@@ -121,15 +124,13 @@ First release of Memory Lights.
 
 ---
 
-## Required image assets (still TODO)
+## Required image assets
 
 | Asset | Spec | Status |
 |---|---|---|
 | App icon | 512x512 PNG, 32-bit, no alpha | Ready: `playstore/icon_512.png` (downscaled from `playstore/icon_master.png`) |
-| Feature graphic | 1024x500 PNG/JPG | Not done — see `feature_graphic.md` |
-| Phone screenshots | min 2, max 8, 16:9 to 9:16, min 320px | 7 screenshots in `screenshots/` |
+| Feature graphic | 1024x500 PNG/JPG | Ready: `playstore/feature_graphic.png` (restyled to match Wave 16 icon) |
+| Phone screenshots | min 2, max 8, 16:9 to 9:16, min 320px | 7 screenshots in `screenshots/` (refreshed on `Pixel_10` for `1.0.7`) |
 | 7-inch tablet screenshots | optional | not done |
 | 10-inch tablet screenshots | optional | not done |
 | Promo video (YouTube URL) | optional | not done |
-
-The 7 phone screenshots in `screenshots/` are 1080x2400 (Pixel 8) — well within Play Store specs.

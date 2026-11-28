@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.happypuppy.memorylights"><img alt="Get it on Google Play" src="https://img.shields.io/badge/Google%20Play-Download-414141.svg?logo=google-play&logoColor=white"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
   <img alt="Min SDK 31" src="https://img.shields.io/badge/minSdk-31-3DDC84.svg">
   <img alt="Kotlin 2.4" src="https://img.shields.io/badge/Kotlin-2.4-7F52FF.svg">
@@ -32,8 +33,9 @@ Memory Lights is a modern take on the classic handheld memory game. The game pla
 **Game modes**
 - **Classic**: the sequence grows until you miss.
 - **Speed Blitz**: race to a fixed target level; your best time is saved.
+- **Daily Challenge**: a deterministic daily sequence shared by every player for the calendar day, with daily best tracking.
 - **4 or 6 buttons**: the standard four colors, or the six-color Memory Lights+ board.
-- **Modifiers**: Reverse (repeat the sequence backward), Practice (a wrong tap replays the sequence), Audio-Only, and a difficulty setting that speeds the game up as you climb.
+- **Modifiers**: Reverse (repeat the sequence backward), Practice (wrong taps and inactivity timeouts replay the sequence instead of ending the game), Audio-Only, and a difficulty setting that speeds the game up as you climb.
 
 **Sound and feel**
 - Seven sound packs: Standard, Funny, Electronic, Retro, Musical, Nature and Sci-Fi.
@@ -44,10 +46,12 @@ Memory Lights is a modern take on the classic handheld memory game. The game pla
 - Pause, replay the last sequence, and share a 1080x1080 score card.
 - High score, full statistics and achievements.
 - Optional shapes on the buttons for color-blind players.
-- AMOLED black and dark themes, edge-to-edge layout, 48dp touch targets and content descriptions.
+- System Default, Light, Dark, and AMOLED Black themes with custom Space Grotesk & Plus Jakarta Sans typography, Jetpack SplashScreen API launch, edge-to-edge layout, 48dp touch targets and content descriptions.
 - Screen-reader announcements for level, your turn and game over.
 
 ## Getting started
+
+Install from [Google Play](https://play.google.com/store/apps/details?id=com.happypuppy.memorylights), or build from source.
 
 **Requirements:** Android Studio (recent stable), JDK 17 or newer, and an Android 12+ (API 31) device or emulator. The Gradle wrapper downloads the right Gradle version.
 
@@ -66,7 +70,7 @@ Or open the folder in Android Studio and press Run.
 | Build everything | `./gradlew build` |
 | Install the debug app | `./gradlew installDebug` |
 | Unit tests | `./gradlew test` |
-| One test class | `./gradlew test --tests "com.happypuppy.memorylights.SimonGameViewModelTest"` |
+| One test class | `./gradlew test --tests "com.happypuppy.memorylights.ui.viewmodels.SimonGameViewModelTest"` |
 | Instrumented tests (device needed) | `./gradlew connectedAndroidTest` |
 | Lint | `./gradlew lint` |
 
@@ -91,17 +95,17 @@ app/src/main/java/com/happypuppy/memorylights/
 ├── di/            # Koin module
 ├── domain/        # game state, enums (buttons, modes, sound packs), models
 └── ui/            # screens, components, navigation, theme, game ViewModel
-tools/sounds/      # scripts that synthesize the Musical, Nature and Sci-Fi packs
+tools/sounds/      # reproducible Python generators for all 7 sound packs
 playstore/         # store listing copy, graphics and release checklist
 docs/              # GitHub Pages site (privacy policy)
 specs/             # roadmap and per-session engineering notes
 ```
 
-The game logic lives in `SimonGameViewModel`. It moves through five states (`WaitingToStart`, `ShowingSequence`, `PlayerRepeating`, `GameOver`, `Settings`) and exposes one immutable UI state that the Compose screens render. State changes use `.update { it.copy(...) }`, and all coroutines run on `viewModelScope`, so the game pauses and resumes with the app lifecycle.
+The game logic lives in `SimonGameViewModel`. It moves through five states (`WaitingToStart`, `ShowingSequence`, `PlayerRepeating`, `Paused`, `GameOver`) and exposes one immutable UI state that the Compose screens render. State changes use `.update { it.copy(...) }`, and all coroutines run on `viewModelScope`, so the game pauses and resumes with the app lifecycle.
 
 ## Sound packs
 
-The Standard and Funny packs are original recordings. The Musical, Nature and Sci-Fi packs are synthesized by deterministic Python scripts in [`tools/sounds`](tools/sounds), so re-running a script reproduces the same files. There are no third-party samples; see [`SOUND_LICENSES.md`](tools/sounds/SOUND_LICENSES.md).
+All seven sound packs (`standard`, `electronic`, `retro`, `funny`, `musical`, `scifi`, and `nature`) are synthesized in-house by deterministic Python generators in [`tools/sounds`](tools/sounds), so re-running a script reproduces the same WAV files (`standard`, `electronic`, `retro`, and `funny` use Python stdlib only; `musical`, `scifi`, and `nature` use NumPy/SciPy). There are no third-party samples; see [`SOUND_LICENSES.md`](tools/sounds/SOUND_LICENSES.md).
 
 ## Privacy
 

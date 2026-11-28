@@ -1,6 +1,25 @@
-# Resume note for next session (written 2026-11-27, Wave 22 - Custom Typography, Light Theme & Tactile Craft)
+# Resume note for next session (updated 2026-11-28, `1.0.7 (8)` live on Google Play Production)
 
-## State at session end (2026-11-27, Wave 22 - `ux/wave-22-fonts-light-craft`)
+## Current state (2026-11-28, `1.0.7 / versionCode 8` — live on Production)
+
+- **Production release live:** Memory Lights `1.0.7` (`versionCode 8`, commit `a85dc65`, tag `v1.0.7`) cleared Google Play review and is **live on Google Play Production** (verified Nov 27, 2026): `https://play.google.com/store/apps/details?id=com.happypuppy.memorylights`.
+- **`1.0.7` changes:**
+  - Added `ThemeMode.SYSTEM` as the default theme (follows device light/dark mode, alongside `LIGHT`, `DARK`, and `AMOLED`), covered by `ThemeModeTest`.
+  - Moved the Privacy Policy link from Settings into the bottom of `AboutDialog` (`48.dp` touch target, underlined link, snackbar fallback).
+- **Verification:** `151` JVM unit tests passing (including `ThemeModeTest`).
+- **Completed post-approval Play Store polish (`gplay` edit `15486954345333134825`, 2026-11-27):**
+  - Closed `#74`: updated `en-US` Play Store listing title to **"Memory Lights: Sequence Game"** (`28/30` chars) and refreshed short/full descriptions (`playstore/listing.md`).
+  - Restyled `playstore/feature_graphic.png` (`1024×500` RGB PNG matching Wave 16 icon) and uploaded (`id: 6722794424865100309`).
+  - Refreshed all 7 `1.0.7` phone screenshots on `Pixel_10` and uploaded in gameplay-first order.
+  - Added Google Play Store badge & install link to `README.md`.
+- **Remaining minor follow-ups:**
+  - Update GitHub repository About section (Play Store link) and upload a GitHub social preview image (web UI).
+  - Verify Android 13+ monochrome themed icon on a real phone that applies themed icons.
+  - Optional v1.1+ roadmap (`#32` onboarding, `F13` per-button color picker, `F11` GPGS, `F17` IAP).
+
+---
+
+## Previous session (2026-11-27, Wave 22 - Custom Typography, Light Theme & Tactile Craft)
 
 - **Wave 22 changes (completes `F12` Light theme + `android-ux-design` typography/shapes/motion/haptics):**
   - **Bundled OFL variable typography (`ui/theme/Type.kt`, `res/font/`):** Bundled `space_grotesk_variable.ttf` (`DisplayFontFamily` for big scores, headlines, HUD round, top bars) and `plus_jakarta_sans_variable.ttf` (`BodyFontFamily` for section headers, cards, subtitles, badges) — 100% offline with zero network permissions, native `tnum` support, and explicit M3 `letterSpacing` tracking across all 13 text styles.
